@@ -86,18 +86,21 @@ if __name__ == "__main__":
 
     ## DRAWING SECTION START ##
     origin = DPoint(0, 0)
-    resonators_dx: float = 900e3
+    resonators_dx = 900e3
     # resonators parameters
-    L_coupling_list = [1e3 * x for x in [310, 320, 320, 310, 300]]
+    L_coupling_list = [1e3 * x for x in [230, 225, 225, 220, 215]]
     # corresponding to resonanse freq is linspaced in interval [6,9) GHz
     L0 = 1150e3
-    L1_list = [1e3 * x for x in [50.7218, 96.3339, 138.001, 142.77, 84.9156]]
+    L1_list = [1e3 * x for x in [60.7218, 91.3339, 133.001, 137.77, 79.9156]]
+    r = 60e3
+    N_coils = [3] * len(L1_list)
+    to_line_list = [56e3] * len(L1_list)
+
     estimated_res_freqs_init = [6.5, 6.59, 6.68, 6.77, 6.86]  # GHz
     freqs_span_corase = 1.0  # GHz
     corase_only = False
     freqs_span_fine = 0.005
-    r = 60e3
-    N = 3
+
     L2_list = [r] * len(L1_list)
     L3_list = [0e3] * len(L1_list)
     L4_list = [r] * len(L1_list)
@@ -106,27 +109,26 @@ if __name__ == "__main__":
     Z_res = CPW(width_res, gap_res, origin, origin)
 
     # xmon cross parameters
+    xmon_x_distance: float = 545e3  # from simulation of g_12
+    xmon_dys_Cg_coupling = [14e3] * 5
+
     cross_len_x = 180e3
     cross_width_x = 60e3
     cross_gnd_gap_x = 20e3
     cross_len_y = 155e3
     cross_width_y = 60e3
     cross_gnd_gap_y = 20e3
-    xmon_x_distance = 545e3
 
     # fork at the end of resonator parameters
     fork_metal_width = 20e3
     fork_gnd_gap = 10e3
     xmon_fork_gnd_gap = 25e3
+    xmon_fork_penetration_list = [-25e3] * len(L1_list)
     fork_x_span = cross_width_x + 2 * (xmon_fork_gnd_gap + fork_metal_width)
-    fork_y_span = None
+    fork_y_spans = [x * 1e3 for x in [8.73781, 78.3046, 26.2982, 84.8277, 35.3751]]
     # Xmon-fork parameters
     # -20e3 for Xmons in upper sweet-spot
     # -10e3 for Xmons in lower sweet-spot
-    xmon_fork_penetration_list = [-25e3] * len(L1_list)
-    xmon_dys_Cg_coupling = [12e3] * len(L1_list)
-
-    to_line_list = [56e3] * len(L1_list)
 
     ### RESONATORS TAILS CALCULATIONS SECTION START ###
     # key to the calculations can be found in hand-written format here:
@@ -186,21 +188,18 @@ if __name__ == "__main__":
     from itertools import product
 
     pars = list(
-        product(
-            zip(
-                L1_list, estimated_res_freqs_init,
-                to_line_list, L_coupling_list,
-                xmon_fork_penetration_list, tail_segment_lengths_list,
-                tail_turn_angles_list, tail_trans_in_list,
-                xmon_dys_Cg_coupling, L0_list,
-                list(range(0, 5))
-            ),
-            [-20e3, -5e3, 10e3]
-        )
+          zip(
+              L1_list, estimated_res_freqs_init,
+              to_line_list, L_coupling_list,
+              xmon_fork_penetration_list, tail_segment_lengths_list,
+              tail_turn_angles_list, tail_trans_in_list,
+              xmon_dys_Cg_coupling, L0_list,
+              list(range(0, 5)), fork_y_spans, N_coils
+          )
     )
-    for params, dL1 in pars[3:4]:
+    for params in pars:
         # parameters exctraction
-        L1 = params[0] + dL1
+        L1 = params[0]
         estimated_freq = params[1]
         to_line = params[2]
         L_coupling = params[3]
@@ -211,6 +210,8 @@ if __name__ == "__main__":
         xmon_dy_Cg_coupling = params[8]
         L0 = params[9]
         resonator_idx = params[10]
+        fork_y_span = params[11]
+        N = params[12]
         print(resonator_idx)
 
         # frequency and span approximation cycle in 2 steps
@@ -229,7 +230,11 @@ if __name__ == "__main__":
                 that do not affect empty regions (so their bbox stays the same)
                 actual region bbox is over exaggerated
             """
-            fork_y_span = xmon_fork_penetration + xmon_fork_gnd_gap
+            print(
+                L_coupling, L0, L1, r, N, res_tail_shape, tail_turn_radiuses,
+                tail_segment_lengths, tail_turn_angles, tail_trans_in, fork_x_span, fork_y_span,
+                fork_metal_width, fork_gnd_gap
+            )
             worm_test = EMResonatorTL3QbitWormRLTailXmonFork(
                 Z_res, origin, L_coupling, L0, L1, r, N,
                 tail_shape=res_tail_shape, tail_turn_radiuses=r,
@@ -326,6 +331,9 @@ if __name__ == "__main__":
                 # then delete this polygon
                 if shape.is_polygon and shape.polygon.inside(xmon_center):
                     shape.delete()
+
+
+            # fine_resonance_success = True
 
             ## DRAWING SECTION END ##
             lv.zoom_fit()
