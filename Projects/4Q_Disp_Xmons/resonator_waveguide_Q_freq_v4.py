@@ -91,10 +91,10 @@ if __name__ == "__main__":
     L_coupling_list = [1e3 * x for x in [230, 225, 225, 220, 215]]
     # corresponding to resonanse freq is linspaced in interval [6,9) GHz
     L0 = 1150e3
-    L1_list = [1e3 * x for x in [60.7218, 91.3339, 133.001, 137.77, 79.9156]]
+    L1_list = [1e3 * x for x in [60.7218, 81, 133.001, 137.77, 79.9156]]
     r = 60e3
     N_coils = [3] * len(L1_list)
-    to_line_list = [56e3] * len(L1_list)
+    to_line_list = [54e3] * len(L1_list)
 
     estimated_res_freqs_init = [6.5, 6.59, 6.68, 6.77, 6.86]  # GHz
     freqs_span_corase = 1.0  # GHz
