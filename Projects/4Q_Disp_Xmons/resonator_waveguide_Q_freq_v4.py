@@ -88,15 +88,15 @@ if __name__ == "__main__":
     origin = DPoint(0, 0)
     resonators_dx = 900e3
     # resonators parameters
-    L_coupling_list = [1e3 * x for x in [230, 225, 225, 220, 215]]
+    L_coupling_list = [1e3 * x for x in [310, 320, 320, 310, 300]]
     # corresponding to resonanse freq is linspaced in interval [6,9) GHz
     L0 = 1150e3
-    L1_list = [1e3 * x for x in [60.7218, 81, 133.001, 137.77, 79.9156]]
+    L1_list = [1e3 * x for x in [50.7218, 96.3339, 138.001, 142.77, 84.9156]]
     r = 60e3
     N_coils = [3] * len(L1_list)
-    to_line_list = [54e3] * len(L1_list)
+    to_line_list = [56e3] * len(L1_list)
 
-    estimated_res_freqs_init = [6.5, 6.59, 6.68, 6.77, 6.86]  # GHz
+    estimated_res_freqs_init = [6.3, 6.3, 6.4, 6.5, 6.86]  # GHz
     freqs_span_corase = 1.0  # GHz
     corase_only = False
     freqs_span_fine = 0.005
@@ -324,13 +324,13 @@ if __name__ == "__main__":
 
             cell.shapes(layer_photo).insert(photo_reg)
 
-            # delete Xmon cross
-            shapes = cell.shapes(layer_photo)
-            for shape in shapes.each_overlapping(pya.Box(xmon_center, xmon_center)):
-                # if shape is polygon and contains xmon_center inside
-                # then delete this polygon
-                if shape.is_polygon and shape.polygon.inside(xmon_center):
-                    shape.delete()
+            # # delete Xmon cross
+            # shapes = cell.shapes(layer_photo)
+            # for shape in shapes.each_overlapping(pya.Box(xmon_center, xmon_center)):
+            #     # if shape is polygon and contains xmon_center inside
+            #     # then delete this polygon
+            #     if shape.is_polygon and shape.polygon.inside(xmon_center):
+            #         shape.delete()
 
 
             # fine_resonance_success = True
