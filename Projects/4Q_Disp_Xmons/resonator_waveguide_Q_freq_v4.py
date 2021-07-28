@@ -120,11 +120,11 @@ if __name__ == "__main__":
     cross_gnd_gap_y = 20e3
 
     # fork at the end of resonator parameters
-    fork_metal_width = 20e3
-    fork_gnd_gap = 10e3
-    xmon_fork_gnd_gap = 25e3
+    fork_metal_width = 10e3
+    fork_gnd_gap = 15e3
+    xmon_fork_gnd_gap = 14e3
     xmon_fork_penetration_list = [-25e3] * len(L1_list)
-    fork_x_span = cross_width_x + 2 * (xmon_fork_gnd_gap + fork_metal_width)
+    fork_x_span = cross_width_y + 2 * (xmon_fork_gnd_gap + fork_metal_width)
     fork_y_spans = [x * 1e3 for x in [8.73781, 78.3046, 26.2982, 84.8277, 35.3751]]
     # Xmon-fork parameters
     # -20e3 for Xmons in upper sweet-spot
@@ -235,7 +235,7 @@ if __name__ == "__main__":
                 tail_segment_lengths, tail_turn_angles, tail_trans_in, fork_x_span, fork_y_span,
                 fork_metal_width, fork_gnd_gap
             )
-            worm_test = EMResonatorTL3QbitWormRLTailXmonFork(
+            worm = EMResonatorTL3QbitWormRLTailXmonFork(
                 Z_res, origin, L_coupling, L0, L1, r, N,
                 tail_shape=res_tail_shape, tail_turn_radiuses=r,
                 tail_segment_lengths=tail_segment_lengths,
@@ -243,17 +243,20 @@ if __name__ == "__main__":
                 fork_x_span=fork_x_span, fork_y_span=fork_y_span,
                 fork_metal_width=fork_metal_width, fork_gnd_gap=fork_gnd_gap
             )
-            xmon_center_test = (worm_test.fork_y_cpw1.end + worm_test.fork_y_cpw2.end) / 2 + DVector(0,
-                                                                                                     -xmon_dy_Cg_coupling)
-            xmon_center_test += DPoint(0, -(cross_len_y + cross_width_x / 2) + xmon_fork_penetration)
-            xmonCross_test = XmonCross(
-                xmon_center_test,
+            xmon_center = (worm.fork_x_cpw.start + worm.fork_x_cpw.end) / 2 + \
+                          DVector(0, -xmon_dy_Cg_coupling - worm.fork_metal_width / 2)
+            xmon_center += DPoint(
+                0,
+                -(cross_len_y + cross_width_x / 2 + min(cross_gnd_gap_y, xmon_fork_gnd_gap))
+            )
+            xmonCross = XmonCross(
+                xmon_center,
                 sideX_length=cross_len_x, sideX_width=cross_width_x, sideX_gnd_gap=cross_gnd_gap_x,
                 sideY_length=cross_len_y, sideY_width=cross_width_y, sideY_gnd_gap=cross_gnd_gap_y
             )
             tmp_reg = Region()
-            worm_test.place(tmp_reg)
-            xmonCross_test.place(tmp_reg)
+            worm.place(tmp_reg)
+            xmonCross.place(tmp_reg)
             bbox = tmp_reg.bbox()
             import math
 
@@ -271,7 +274,7 @@ if __name__ == "__main__":
 
             # clear this cell and layer
             cell.clear()
-            fork_y_span = xmon_fork_penetration + xmon_fork_gnd_gap
+            
             import math
 
             if math.copysign(1, tail_turn_angles[0]) > 0:
@@ -289,9 +292,12 @@ if __name__ == "__main__":
                 fork_x_span=fork_x_span, fork_y_span=fork_y_span,
                 fork_metal_width=fork_metal_width, fork_gnd_gap=fork_gnd_gap
             )
-
-            xmon_center = (worm.fork_y_cpw1.end + worm.fork_y_cpw2.end) / 2 + DVector(0, -xmon_dy_Cg_coupling)
-            xmon_center += DPoint(0, -(cross_len_y + cross_width_x / 2) + xmon_fork_penetration)
+            xmon_center = (worm.fork_x_cpw.start + worm.fork_x_cpw.end) / 2 + \
+                               DVector(0, -xmon_dy_Cg_coupling - worm.fork_metal_width / 2)
+            xmon_center += DPoint(
+                0,
+                -(cross_len_y + cross_width_x / 2 + min(cross_gnd_gap_y, xmon_fork_gnd_gap))
+            )
             xmonCross = XmonCross(
                 xmon_center,
                 sideX_length=cross_len_x, sideX_width=cross_width_x, sideX_gnd_gap=cross_gnd_gap_x,
