@@ -230,7 +230,7 @@ class Design5Q(ChipDesign):
         self.L_coupling_list: list[float] = [1e3 * x for x in [310, 320, 320, 310, 300]]
         # corresponding to resonanse freq is linspaced in interval [6,9) GHz
         self.L0 = 1150e3
-        self.L1_list = [1e3 * x for x in [50.7218, 96.3339, 138.001, 142.77, 84.9156]]
+        self.L1_list = [1e3 * x for x in [57.94293048, 85.84821562, 138.21119481, 131.12841218, 79.78515414]]
         self.r = 60e3
         self.N_coils = [3] * len(self.L1_list)
         self.L2_list = [self.r] * len(self.L1_list)

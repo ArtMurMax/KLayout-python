@@ -91,7 +91,7 @@ if __name__ == "__main__":
     L_coupling_list = [1e3 * x for x in [310, 320, 320, 310, 300]]
     # corresponding to resonanse freq is linspaced in interval [6,9) GHz
     L0 = 1150e3
-    L1_list = [1e3 * x for x in [50.7218, 96.3339, 138.001, 142.77, 84.9156]]
+    L1_list = [1e3 * x for x in [57.94293048, 85.84821562, 138.21119481, 131.12841218,  79.78515414]]
     r = 60e3
     N_coils = [3] * len(L1_list)
     to_line_list = [56e3] * len(L1_list)
@@ -186,20 +186,23 @@ if __name__ == "__main__":
 
     time.sleep(0.5)  # waiting for print of parameters above
     from itertools import product
-
+    dL1_list = [0]
     pars = list(
-          zip(
+        product(
+            zip(
               L1_list, estimated_res_freqs_init,
               to_line_list, L_coupling_list,
               xmon_fork_penetration_list, tail_segment_lengths_list,
               tail_turn_angles_list, tail_trans_in_list,
               xmon_dys_Cg_coupling, L0_list,
               list(range(0, 5)), fork_y_spans, N_coils
-          )
+            ),
+        dL1_list
+        )
     )
-    for params in pars:
+    for params, dL1 in pars:
         # parameters exctraction
-        L1 = params[0]
+        L1 = params[0] + dL1
         estimated_freq = params[1]
         to_line = params[2]
         L_coupling = params[3]
