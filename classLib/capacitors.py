@@ -9,7 +9,7 @@ from classLib.shapes import *
 
 class CWave2CPW(ElementBase):
     '''
-    Draws a semi-circle coupler from coplanar waveguide to jelly capacitance plates.
+    Draws width semi-circle coupler from coplanar waveguide to jelly capacitance plates.
     '''
 
     def __init__(self, c_wave_cap, params, n_pts=50, trans_in=None):
@@ -76,7 +76,7 @@ class CWave2CPW(ElementBase):
 
 class CWave(ComplexBase):
     '''
-    Draws a condensator from a circle cutted into 2 pieces.
+    Draws width condensator from width circle cutted into 2 pieces.
     '''
 
     def __init__(self, center, r_out, dr, n_segments, s, alpha, r_curve, delta=40e3, n_pts=50, solid=True,
@@ -86,11 +86,11 @@ class CWave(ComplexBase):
         center: DPoint
             A center of circle.
         r_out: float
-            The outer outer_r of a circle (along to the edge of the ground).
+            The outer outer_r of width circle (along to the edge of the ground).
         dr: float
             The gap in between the common ground and the circle perimeter.
         n_segments: int
-            The number of segments (without turns) composed into a condensator gap.
+            The number of segments (without turns) composed into width condensator gap.
         s: float
             The half-width of the gap.
         alpha: rad
@@ -115,7 +115,7 @@ class CWave(ComplexBase):
         self.n_pts = n_pts
         self.delta = delta
         self.L_full = 2 * (self.r_out - self.dr) - 2 * self.delta
-        # calculating parameters of the CPW_RL_Path #
+        # calculating parameters of the CPWDPath #
         L_full = self.L_full
         alpha = self.alpha
         if abs(self.alpha) != pi:
@@ -125,7 +125,7 @@ class CWave(ComplexBase):
             raise ValueError("180 degrees turns in CWave are not supported.")
 
         if (self.L0 < 0):
-            print("CPW_RL_Path: impossible parameters combination")
+            print("CPWDPath: impossible parameters combination")
 
         super().__init__(center, trans_in)
 
@@ -147,7 +147,7 @@ class CWave(ComplexBase):
         shapes += 'LRL'
         angles.extend([self.alpha])
         lengths.extend([self.delta, self.L0])
-        # rl_path_start = CPW_RL_Path(self.RL_start, "LRLR", Z, self.r_curve, [self.delta, self.L0], [self.alpha,-self.alpha] )
+        # rl_path_start = CPWDPath(self.RL_start, "LRLR", Z, self.r_curve, [self.delta, self.L0], [self.alpha,-self.alpha] )
         # self.primitives["rl_start"] = rl_path_start
 
         # intermidiate RLRs
@@ -160,7 +160,7 @@ class CWave(ComplexBase):
             angles.extend([-2 * m_x * self.alpha])
             lengths.extend([self.L1])
             # prev_path = list(self.primitives.values())[-1]
-            # rl_path_p = CPW_RL_Path( prev_path.end, "RLR", Z, self.r_curve, [self.L1], [-m_x*self.alpha,m_x*self.alpha])
+            # rl_path_p = CPWDPath( prev_path.end, "RLR", Z, self.r_curve, [self.L1], [-m_x*self.alpha,m_x*self.alpha])
             # self.primitives["rl_path_" + str(k)] = rl_path_p
             # ending RLR
         if (self.n_segments % 2 == 1):
@@ -170,7 +170,7 @@ class CWave(ComplexBase):
         shapes += 'RLRL'
         angles.extend([2 * m_x * self.alpha, -m_x * self.alpha])
         lengths.extend([self.L0, self.delta])
-        cut = CPW_RL_Path(self.RL_start, shapes, Z, self.r_curve, lengths, angles)
+        cut = CPWRLPath(self.RL_start, shapes, Z, self.r_curve, lengths, angles)
         # prev_path = list(self.primitives.values())[-1]
-        # rl_path_end = CPW_RL_Path( prev_path.end, "RLRL", Z, self.r_curve, [self.L0, self.delta], [m_x*self.alpha,-m_x*self.alpha])
+        # rl_path_end = CPWDPath( prev_path.end, "RLRL", Z, self.r_curve, [self.L0, self.delta], [m_x*self.alpha,-m_x*self.alpha])
         self.primitives["cut"] = cut

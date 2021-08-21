@@ -10,7 +10,7 @@
     and call the function with desired arguments.
 
     Executing this script itself will present an example:
-    Circle with a lot of vertices that is devided such that it has
+    Circle with width lot of vertices that is devided such that it has
     no more than 200 points per polygon.
     ```
 """

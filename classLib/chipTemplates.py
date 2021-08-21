@@ -7,7 +7,7 @@ import itertools
 
 from classLib.baseClasses import ComplexBase
 from classLib.shapes import Rectangle
-from classLib.coplanars import CPWParameters, CPW, CPW_arc
+from classLib.coplanars import CPWParameters, CPW, CPWArc
 from classLib.contactPads import ContactPad
 
 from typing import Union, List
@@ -23,7 +23,7 @@ class FABRICATION:
     perpendicular to the edge itself from empty space
     to polygon's body by FABRICATION.OVERETCHING distance in nm.
         To account for overetching polygons has to be constructed
-    in a way that results in software design with polygons "widened" by
+    in width way that results in software design with polygons "widened" by
     FABRICATIO.OVERETCHING value. For e.g. witdth of the coplanar
     waveguide central conductor has to be "widened" by 2*FABRICATION.OVERETCHING
     while preseving symmetry along center of the wavegiude.
@@ -120,7 +120,7 @@ class CHIP_10x10_12pads:
     chip_Z = CPWParameters(chip_cpw_width, chip_cpw_gap)
 
     @staticmethod
-    def get_contact_pads(chip_Z_list: List[Union[CPWParameters, CPW, CPW_arc]]=None,
+    def get_contact_pads(chip_Z_list: List[Union[CPWParameters, CPW, CPWArc]]=None,
                          overetching: float =0.0e3):
         """
         Constructs objects that represent contact pads. Each pad
@@ -130,7 +130,7 @@ class CHIP_10x10_12pads:
 
         Parameters
         ----------
-        chip_Z_list : List[Union[CPWParams, CPW, CPW_arc]]
+        chip_Z_list : List[Union[CPWParams, CPW, CPWArc]]
             list of 12 structures containing dimensions of the coplanar
             waveguides on chip-side of every contact pad.
             Order starts from top-left (index 0) in counter_clockwise direction:

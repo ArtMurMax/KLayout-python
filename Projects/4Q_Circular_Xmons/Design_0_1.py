@@ -11,7 +11,7 @@ import classLib
 reload(classLib)
 
 from classLib.baseClasses import ElementBase, ComplexBase
-from classLib.coplanars import CPWParameters, CPW_RL_Path, CPW2CPW, Bridge1
+from classLib.coplanars import CPWParameters, CPWRLPath, CPW2CPW, Bridge1
 from classLib.shapes import XmonCross, Circle, Rectangle
 from classLib.resonators import EMResonatorTL3QbitWormRLTailXmonFork
 from classLib.josJ import AsymSquidParams, AsymSquid
@@ -20,7 +20,7 @@ from classLib.chipDesign import ChipDesign
 from classLib.marks import MarkBolgar
 
 # imports for docstrings generation
-from classLib.coplanars import CPW, CPW_arc
+from classLib.coplanars import CPW, CPWArc
 
 from typing import List, Dict, Union, Optional
 from classLib.contactPads import ContactPad
@@ -36,7 +36,7 @@ FABRICATION.OVERETCHING = 0.0e3  # nm
 class FluxLineEnd(ElementBase):
     def __init__(self, origin, fc_cpw_params, width, trans_in=None):  # width = 5e3
 
-        self._fc_cpw_params: Union[CPW, CPWParameters, CPW_arc] = fc_cpw_params
+        self._fc_cpw_params: Union[CPW, CPWParameters, CPWArc] = fc_cpw_params
         self._width = width
 
         super().__init__(origin, trans_in)
@@ -77,7 +77,7 @@ class MDriveLineEnd(ComplexBase):
 
         Parameters
         ----------
-        z0_cpw : Union[CPW, CPW_arc]
+        z0_cpw : Union[CPW, CPWArc]
             last part of the md coplanar
         z1_cpw_params : Union[CPWParameters, CPW]
             parameters of the thin coplanar
@@ -88,7 +88,7 @@ class MDriveLineEnd(ComplexBase):
         trans_in : DCplxTrans
             initial transformation
         """
-        self.z0_cpw: Union[CPW, CPW_arc] = z0_cpw
+        self.z0_cpw: Union[CPW, CPWArc] = z0_cpw
         self.z1_params: Union[CPWParameters, CPW] = z1_cpw_params
         self.transition_length: float = transition_length
         self.z1_length: float = z1_length
@@ -214,7 +214,7 @@ class Design4QSquare(ChipDesign):
         # readout line parameters
         self.ro_line_turn_radius: float = 200e3
         self.ro_line_dy: float = 1600e3
-        self.cpwrl_ro_line: CPW_RL_Path = None
+        self.cpwrl_ro_line: CPWRLPath = None
         self.Z0: CPWParameters = CHIP_10x10_12pads.chip_Z
 
         ## resonator parameters ##
@@ -266,24 +266,24 @@ class Design4QSquare(ChipDesign):
         self.shift_md_x = 60e3
         self.shift_md_y = 510e3
 
-        self.cpwrl_md1: List[Union[CPW_RL_Path, CPW]] = []
+        self.cpwrl_md1: List[Union[CPWRLPath, CPW]] = []
         self.cpwrl_md1_end: MDriveLineEnd = None
-        self.cpwrl_fl1: List[Union[CPW_RL_Path, CPW]] = []
+        self.cpwrl_fl1: List[Union[CPWRLPath, CPW]] = []
         self.cpwrl_fl1_end: FluxLineEnd = None
 
-        self.cpwrl_md2: List[Union[CPW_RL_Path, CPW]] = []
+        self.cpwrl_md2: List[Union[CPWRLPath, CPW]] = []
         self.cpwrl_md2_end: MDriveLineEnd = None
-        self.cpwrl_fl2: List[Union[CPW_RL_Path, CPW]] = []
+        self.cpwrl_fl2: List[Union[CPWRLPath, CPW]] = []
         self.cpwrl_fl2_end: FluxLineEnd = None
 
-        self.cpwrl_md3: List[Union[CPW_RL_Path, CPW]] = []
+        self.cpwrl_md3: List[Union[CPWRLPath, CPW]] = []
         self.cpwrl_md3_end: MDriveLineEnd = None
-        self.cpwrl_fl3: List[Union[CPW_RL_Path, CPW]] = []
+        self.cpwrl_fl3: List[Union[CPWRLPath, CPW]] = []
         self.cpwrl_fl3_end: FluxLineEnd = None
 
-        self.cpwrl_md4: List[Union[CPW_RL_Path, CPW]] = []
+        self.cpwrl_md4: List[Union[CPWRLPath, CPW]] = []
         self.cpwrl_md4_end: MDriveLineEnd = None
-        self.cpwrl_fl4: List[Union[CPW_RL_Path, CPW]] = []
+        self.cpwrl_fl4: List[Union[CPWRLPath, CPW]] = []
         self.cpwrl_fl4_end: FluxLineEnd = None
 
         # marks
@@ -530,7 +530,7 @@ class Design4QSquare(ChipDesign):
         fl1_diag_len = fl1_diag.abs()
         fl1_diag_angle = atan2(fl1_diag.y, fl1_diag.x)
         self.cpwrl_fl1.append(
-            CPW_RL_Path(
+            CPWRLPath(
                 self.contact_pads[2].end, "LRLRL", z_md_fl_corrected,
                 [md_fl_turn_radius] * 2,
                 [
@@ -554,7 +554,7 @@ class Design4QSquare(ChipDesign):
         md1_diag_len = md1_diag.abs()
         md1_diag_angle = atan2(md1_diag.y, md1_diag.x)
         self.cpwrl_md1.append(
-            CPW_RL_Path(
+            CPWRLPath(
                 self.contact_pads[3].end, "LRLRL", z_md_fl_corrected,
                 [md_fl_turn_radius] * 2,
                 [
@@ -614,7 +614,7 @@ class Design4QSquare(ChipDesign):
         fl2_diag_len = fl2_diag.abs()
         fl2_diag_angle = atan2(fl2_diag.y, fl2_diag.x)
         self.cpwrl_fl2.append(
-            CPW_RL_Path(
+            CPWRLPath(
                 self.contact_pads[6].end, "LRLRL", z_md_fl_corrected,
                 [md_fl_turn_radius] * 2,
                 [
@@ -636,7 +636,7 @@ class Design4QSquare(ChipDesign):
         md2_diag_len = md2_diag.abs()
         md2_diag_angle = atan2(md2_diag.y, md2_diag.x)
         self.cpwrl_md2.append(
-            CPW_RL_Path(
+            CPWRLPath(
                 t4_left, "LRLRL", z_md_fl_corrected,
                 [md_fl_turn_radius] * 2,
                 [
@@ -668,7 +668,7 @@ class Design4QSquare(ChipDesign):
         md2_diag_len = md2_diag.abs()
         md2_diag_angle = atan2(md2_diag.y, md2_diag.x)
         self.cpwrl_md2.append(
-            CPW_RL_Path(
+            CPWRLPath(
                 self.contact_pads[5].end, "LRLRL", z_md_fl_corrected,
                 [md_fl_turn_radius] * 2,
                 [
@@ -690,7 +690,7 @@ class Design4QSquare(ChipDesign):
         fl3_diag_len = fl3_diag.abs()
         fl3_diag_angle = atan2(fl3_diag.y, fl3_diag.x)
         self.cpwrl_fl3.append(
-            CPW_RL_Path(
+            CPWRLPath(
                 self.contact_pads[1].end, "LRLRL", z_md_fl_corrected,
                 [md_fl_turn_radius] * 2,
                 [
@@ -714,7 +714,7 @@ class Design4QSquare(ChipDesign):
         md3_diag_len = md3_diag.abs()
         md3_diag_angle = atan2(md3_diag.y, md3_diag.x)
         self.cpwrl_md3.append(
-            CPW_RL_Path(
+            CPWRLPath(
                 self.contact_pads[0].end, "LRLRL", z_md_fl_corrected,
                 [md_fl_turn_radius] * 2,
                 [
@@ -753,7 +753,7 @@ class Design4QSquare(ChipDesign):
         fl4_diag_len = fl4_diag.abs()
         fl4_diag_angle = atan2(fl4_diag.y, fl4_diag.x)
         self.cpwrl_fl4.append(
-            CPW_RL_Path(
+            CPWRLPath(
                 self.contact_pads[7].end, "LRLRL", z_md_fl_corrected,
                 [md_fl_turn_radius] * 2,
                 [
@@ -775,7 +775,7 @@ class Design4QSquare(ChipDesign):
         md4_diag_len = md4_diag.abs()
         md4_diag_angle = atan2(md4_diag.y, md4_diag.x)
         self.cpwrl_md4.append(
-            CPW_RL_Path(
+            CPWRLPath(
                 t1_left, "LRLRL", z_md_fl_corrected,
                 [md_fl_turn_radius] * 2,
                 [
@@ -807,7 +807,7 @@ class Design4QSquare(ChipDesign):
         md4_diag_len = md4_diag.abs()
         md4_diag_angle = atan2(md4_diag.y, md4_diag.x)
         self.cpwrl_md4.append(
-            CPW_RL_Path(
+            CPWRLPath(
                 self.contact_pads[8].end, "LRLRL", z_md_fl_corrected,
                 [md_fl_turn_radius] * 2,
                 [
@@ -849,7 +849,7 @@ class Design4QSquare(ChipDesign):
         dx1 = self.contact_pads[4].connections[0].x - \
               (self.resonators[0].connections[0].x - self.resonators[0].L_coupling -
                get_res_extension(self.resonators[0]) / 2)
-        seg1 = CPW_RL_Path(
+        seg1 = CPWRLPath(
             self.contact_pads[4].end, "LRLRLRL", self.ro_Z,
             [self.ro_line_turn_radius] * 3,
             [dy1 / 2, 2 * dx1, dy1 / 2, dx1],
@@ -897,7 +897,7 @@ class Design4QSquare(ChipDesign):
                    )
 
         ro_bridges_l = 50e3
-        seg5 = CPW_RL_Path(
+        seg5 = CPWRLPath(
             seg4.end, "LRL", self.ro_Z,
             [self.ro_line_turn_radius],
             [seg5_dx1, self.cpwrl_md2[1].end.y - seg4.end.y - ro_bridges_l / 2],
@@ -908,7 +908,7 @@ class Design4QSquare(ChipDesign):
 
         def open_cpw_ends(cpw, sides="both"):
             if sides == "both":
-                CPW(width=0, gap=cpw.b/2, start=cpw.start, end=cpw.start + DPoint(0, cpw.gap)).place(self.region_ph)
+                CPW(width=0, gap=cpw.b / 2, start=cpw.start, end=cpw.start + DPoint(0, cpw.gap)).place(self.region_ph)
                 CPW(width=0, gap=cpw.b / 2, start=cpw.end, end=cpw.end - DPoint(0, cpw.gap)).place(self.region_ph)
             elif sides == "start":
                 CPW(width=0, gap=cpw.b / 2, start=cpw.start, end=cpw.start + DPoint(0, cpw.gap)).place(self.region_ph)
@@ -968,7 +968,7 @@ class Design4QSquare(ChipDesign):
         bridge78.place(self.region_bridges1, region_name="bridges_1")
         bridge78.place(self.region_bridges2, region_name="bridges_2")
 
-        seg9 = CPW_RL_Path(
+        seg9 = CPWRLPath(
             seg8.end + DPoint(0, ro_bridges_l), "LRL", self.ro_Z,
             [self.ro_line_turn_radius],
             [
@@ -1022,7 +1022,7 @@ class Design4QSquare(ChipDesign):
         dx9 = self.contact_pads[10].connections[0].x - \
               (self.resonators[2].connections[0].x -
                get_res_extension(self.resonators[2]) / 2)
-        seg13 = CPW_RL_Path(
+        seg13 = CPWRLPath(
             seg12.end, "LRLRLRL", self.ro_Z,
             [self.ro_line_turn_radius] * 3, [dx9, dy9 / 2, 2 * dx9, dy9 / 2],
             [-pi / 2, -pi / 2, pi / 2],
@@ -1228,7 +1228,7 @@ class Design4QSquare(ChipDesign):
                             avoid_points=[squid.origin for squid in self.squids],
                             avoid_distance=200e3
                         )
-                elif isinstance(val, (CPW, CPW_arc, CPW_RL_Path)):
+                elif isinstance(val, (CPW, CPWArc, CPWRLPath)):
                     cpw = val
                     Bridge1.bridgify_CPW(
                         cpw, bridges_step,
@@ -1245,7 +1245,7 @@ class Design4QSquare(ChipDesign):
                             avoid_points=[squid.origin for squid in self.squids],
                             avoid_distance=500e3
                         )
-                elif isinstance(val, (CPW, CPW_arc, CPW_RL_Path)):
+                elif isinstance(val, (CPW, CPWArc, CPWRLPath)):
                     cpw = val
                     Bridge1.bridgify_CPW(
                         cpw, bridges_step,

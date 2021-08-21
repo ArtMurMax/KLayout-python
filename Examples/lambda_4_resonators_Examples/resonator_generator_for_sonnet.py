@@ -58,9 +58,9 @@ class EMResonator_TL2Qbit_worm2(ComplexBase):
             self.primitives[name] = getattr( self, name )
             
         # draw the "tail"
-        self.arc_tail = CPW_arc( self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1/2, -pi/2 )
+        self.arc_tail = CPWArc(self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1 / 2, -pi / 2)
         self.cop_tail = CPW( self.Z0.width, self.Z0.gap, self.arc_tail.end, self.arc_tail.end - DPoint( 0,self.L2 ) )
-        self.cop_open_end = CPW( 0, self.Z0.b/2, self.cop_tail.end, self.cop_tail.end - DPoint(0,self.Z0.b) )
+        self.cop_open_end = CPW(0, self.Z0.b / 2, self.cop_tail.end, self.cop_tail.end - DPoint(0, self.Z0.b))
         self.primitives["arc_tail"] = self.arc_tail
         self.primitives["cop_tail"] = self.cop_tail
         self.primitives["cop_open_end"] = self.cop_open_end
@@ -98,9 +98,9 @@ class EMResonator_TL2Qbit_worm2(ComplexBase):
             self.primitives[name] = getattr( self, name )
             
         # draw the "tail"
-        self.arc_tail = CPW_arc( self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1/2, -pi/2 )
+        self.arc_tail = CPWArc(self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1 / 2, -pi / 2)
         self.cop_tail = CPW( self.Z0.width, self.Z0.gap, self.arc_tail.end, self.arc_tail.end - DPoint( 0,self.L2 ) )
-        self.cop_open_end = CPW( 0, self.Z0.b/2, self.cop_tail.end, self.cop_tail.end - DPoint(0,self.Z0.b) )
+        self.cop_open_end = CPW(0, self.Z0.b / 2, self.cop_tail.end, self.cop_tail.end - DPoint(0, self.Z0.b))
         self.primitives["arc_tail"] = self.arc_tail
         self.primitives["cop_tail"] = self.cop_tail
         self.primitives["cop_open_end"] = self.cop_open_end
@@ -123,9 +123,9 @@ class Coil_type_1(ComplexBase):
         
     def init_primitives( self ):
             self.cop1 = CPW( self.Z0.width, self.Z0.gap, DPoint(0,0), DPoint( self.L1,0 ) )
-            self.arc1 = CPW_arc( self.Z0, self.cop1.end, -self.r, -pi )
+            self.arc1 = CPWArc(self.Z0, self.cop1.end, -self.r, -pi)
             self.cop2 = CPW( self.Z0.width, self.Z0.gap, self.arc1.end, self.arc1.end - DPoint( self.L2,0 ) )
-            self.arc2 = CPW_arc( self.Z0, self.cop2.end, -self.r, pi )
+            self.arc2 = CPWArc(self.Z0, self.cop2.end, -self.r, pi)
             
             self.connections = [self.cop1.start,self.arc2.end]
             self.angle_connections = [self.cop1.alpha_start,self.arc2.alpha_end]

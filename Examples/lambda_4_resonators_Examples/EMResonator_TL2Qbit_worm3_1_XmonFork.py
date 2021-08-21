@@ -6,7 +6,7 @@ import pya
 from pya import Point, DPoint, DVector, DSimplePolygon, SimplePolygon, DPolygon, Polygon, Region
 from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans
 
-from classLib.coplanars import CPW, CPW_arc, Coil_type_1
+from classLib.coplanars import CPW, CPWArc, Coil_type_1
 from classLib.shapes import XmonCross
 from classLib.baseClasses import ComplexBase
 
@@ -16,7 +16,7 @@ from sonnetSim.sonnetLab import SonnetLab, SonnetPort, SimulationBox
 class EMResonator_TL2Qbit_worm3_1(ComplexBase):
     """
     same as `EMResonator_TL2Qbit_worm3` but shorted and open ends are
-    interchanged their places. In addition, a few primitives had been renamed.
+    interchanged their places. In addition, width few primitives had been renamed.
     """
     def __init__(self, Z0, start, L_coupling, L0, L1, r, L2, N, trans_in=None):
         self.Z0 = Z0
@@ -45,7 +45,7 @@ class EMResonator_TL2Qbit_worm3_1(ComplexBase):
         self.alpha_end = self.angle_connections[1]
 
     def init_primitives(self):
-        self.arc1 = CPW_arc(self.Z0, DPoint(0, 0), -self.r, pi / 2)
+        self.arc1 = CPWArc(self.Z0, DPoint(0, 0), -self.r, pi / 2)
         self.primitives["arc1"] = self.arc1
 
         p1 = self.arc1.end
@@ -55,7 +55,7 @@ class EMResonator_TL2Qbit_worm3_1(ComplexBase):
         self.cop_end_open_gap = CPW(
             0, self.Z0.b / 2,
             self.cop_end_open.end,
-            self.cop_end_open.end - DPoint(0, self.Z0.b)
+               self.cop_end_open.end - DPoint(0, self.Z0.b)
         )
         self.primitives["cpw_hor_end_open"] = self.cop_end_open
         self.primitives["cop_end_open_gap"] = self.cop_end_open_gap
@@ -73,7 +73,7 @@ class EMResonator_TL2Qbit_worm3_1(ComplexBase):
             self.primitives[name] = getattr(self, name)
 
         # draw the shorted "tail"
-        self.arc_end_shorted = CPW_arc(self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1 / 2, -pi / 2)
+        self.arc_end_shorted = CPWArc(self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1 / 2, -pi / 2)
         self.cop_end_shoted = CPW(
             self.Z0.width, self.Z0.gap,
             self.arc_end_shorted.end, self.arc_end_shorted.end - DPoint(0, self.L2)

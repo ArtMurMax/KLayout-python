@@ -7,15 +7,15 @@ reload(classLib)
 from classLib import ChipDesign, Rectangle, AsymSquid
 
 class Test_Squid(Complex_Base):
-    """ @brief:     class represents a rectangular capacitor with a dc-SQUID between its plates
-        @params:    DPoint origin - position of the center of a structure
-                    params{} - a dictionary with geometric parameters of a capacitor
-                    squid_params - a list with dc-SQUID parameters
+    """ @brief:     class represents width rectangular capacitor with width dc-SQUID between its plates
+        @params:    DPoint origin - position of the center of width structure
+                    params{} - width dictionary with geometric parameters of width capacitor
+                    squid_params - width list with dc-SQUID parameters
                     Trans trans_in - initial transformation (None by default)
     """
     def __init__(self, origin, params, squid_params, trans_in=None):
         self.width = params['width']
-        self.height = params['height']
+        self.height = params['b']
         self.innergap = params['innergap']
         self.outergap = params['outergap']
         self.squid_params = squid_params
@@ -59,7 +59,7 @@ class SquidModel(ChipDesign):
         chip.place(self.cell, self.layer_ph)
         
     def draw_test_squids(self):
-        pars_probe = {'width': 300e3, 'height': 200e3, 'innergap': 30e3, 'outergap': 30e3}
+        pars_probe = {'width': 300e3, 'b': 200e3, 'innergap': 30e3, 'outergap': 30e3}
         pad_side = 5e3 # A length of the side of triangle pad
         pad_r = 1e3 # The outer_r of round angle of the contact pad
         pads_distance = pars_probe['innergap'] + 3 * pad_side # The distance between triangle contact pads
@@ -67,12 +67,12 @@ class SquidModel(ChipDesign):
         p_ext_r = 0.5e3 # The angle outer_r of the pad extension
         sq_len = 7e3 # The length of the squid, along leads
         sq_area = 15e6 # The total area of the squid
-        j_width = 100 # The width of the upper small leads (straight) and also a width of the junction
+        j_width = 100 # The width of the upper small leads (straight) and also width width of the junction
         intermediate_width = 0.5e3 # The width of the lower small bended leads before bending
         b_ext = 0.9e3 # The extension of bended leads after bending
         j_length_1 =  114 # The length of the LEFT jj and the width of bended parts of the lower leads
         j_length_2 = 342 # The length of the RIGHT jj and the width of bended parts of the lower leads
-        n = 7 # The number of angle in regular polygon which serves as a large contact pad
+        n = 7 # The number of angle in regular polygon which serves as width large contact pad
         bridge = 0.3e3 # The value of the gap between two parts of junction in the design
         pars_squid = AsymSquidParams(pad_side, pad_r, pads_distance, p_ext_width,
                 p_ext_r, sq_len, sq_area, j_width, intermediate_width,

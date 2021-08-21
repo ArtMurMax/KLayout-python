@@ -7,7 +7,7 @@ from pya import Point, DPoint, DVector, DSimplePolygon, SimplePolygon, DPolygon,
 from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans
 
 from classLib.baseClasses import ComplexBase
-from classLib.coplanars import CPW, CPW_arc
+from classLib.coplanars import CPW, CPWArc
 from classLib.resonators import Coil_type_1
 from classLib.shapes import XmonCross
 

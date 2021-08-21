@@ -185,7 +185,7 @@ if ( __name__ ==  "__main__" ):
         resonators.append( worm )    
         
         qbit_bbox = pya.Box().from_dbox( qbit_bbox )
-        h = qbit_bbox.height()
+        h = qbit_bbox.b()
         reg = worm.gnd_reg + ( Region( pya.Box( qbit_bbox.p1 - Point(2*h,2*h), qbit_bbox.p2 + Point( 2*h,dCap ) ) ) - Region( qbit.metal_region.bbox() ))
         new_reg = Region()
       #  reg.merged_semantics=False
@@ -238,12 +238,12 @@ if ( __name__ ==  "__main__" ):
         qbits.append(qbit)
         
         qbit_bbox = pya.DBox().from_ibox( qbit.metal_region.bbox() )
-        empty = CPW( 0, qbit_bbox.width()/2 + 2*qbit.a, worm.end, worm.end - DPoint( 0, (qbit.p11 + DPoint( qbit.B6_width/2,qbit.B6_height/2) ).y ) )
+        empty = CPW(0, qbit_bbox.width() / 2 + 2 * qbit.width, worm.end, worm.end - DPoint(0, (qbit.p11 + DPoint(qbit.B6_width / 2, qbit.B6_height / 2)).y))
         empty.place( cell, layer_photo )
         empties.append( empty )
         
         qbit_bbox = pya.Box().from_dbox( qbit_bbox )
-        h = qbit_bbox.height()
+        h = qbit_bbox.b()
         reg = worm.gnd_reg + ( Region( pya.Box( qbit_bbox.p1 - Point(2*h,dCap), qbit_bbox.p2 + Point( 2*h,2*h ) ) ) - Region( qbit.metal_region.bbox() ))
         new_reg = Region()
       #  reg.merged_semantics=False

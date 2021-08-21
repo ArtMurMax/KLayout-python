@@ -12,7 +12,7 @@ from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans
 import csv
 
 from classLib import ComplexBase
-from classLib.coplanars import CPW, CPW_arc, CPW2CPW
+from classLib.coplanars import CPW, CPWArc, CPW2CPW
 from classLib.couplers import TJunction_112, BranchLine_finger2, Coupler_BranchLine
 
 
@@ -63,7 +63,7 @@ class Path_RS(ComplexBase):
         L = abs(abs(self.dr.y) - abs(self.dr.x))
         r = min(abs(self.dr.y), abs(self.dr.x))
         if (abs(self.dr.y) > abs(self.dr.x)):
-            self.arc1 = CPW_arc(self.Z0, DPoint(0, 0), copysign(
+            self.arc1 = CPWArc(self.Z0, DPoint(0, 0), copysign(
                 r, self.dr.y), copysign(pi / 2, self.dr.x * self.dr.y))
             self.cop1 = CPW(self.Z0.width, self.Z0.gap, self.arc1.end,
                             self.arc1.end + DPoint(0, copysign(L, self.dr.y)))
@@ -72,7 +72,7 @@ class Path_RS(ComplexBase):
         else:
             self.cop1 = CPW(self.Z0.width, self.Z0.gap, DPoint(
                 0, 0), DPoint(0, 0) + DPoint(copysign(L, self.dr.x), 0))
-            self.arc1 = CPW_arc(self.Z0, self.cop1.end, copysign(
+            self.arc1 = CPWArc(self.Z0, self.cop1.end, copysign(
                 r, self.dr.y), copysign(pi / 2, self.dr.y * self.dr.x))
             self.connections = [self.cop1.start, self.arc1.end]
             self.angle_connections = [self.cop1.alpha_start, self.arc1.alpha_end]

@@ -12,7 +12,7 @@ import classLib
 
 reload(classLib)
 from classLib.baseClasses import ElementBase
-from classLib.coplanars import CPWParameters, CPW, CPW_arc, CPW_RL_Path
+from classLib.coplanars import CPWParameters, CPW, CPWArc, CPWRLPath
 from classLib.contactPads import ContactPad
 
 
@@ -159,7 +159,7 @@ class Bridge1(ElementBase):
         p2 = p1 + DPoint(0, self.surround_gap + self.gnd_touch_dy +
                             self.transition_len - self.surround_gap)
         # top left corner + `surrounding_gap` + `transition_length`
-        p3 = bot_gnd_touch_box.p1 + DPoint(0, bot_gnd_touch_box.height()) + \
+        p3 = bot_gnd_touch_box.p1 + DPoint(0, bot_gnd_touch_box.b()) + \
              DPoint(0, self.transition_len)
         bl_pts_list = [p1, p2, p3]  # bl stands for bottom-left
         ''' exploiting symmetry of reflection at x and y axes. '''
@@ -196,7 +196,7 @@ class Bridge1(ElementBase):
 
         Parameters
         ----------
-        cpw : Union[CPW, CPW_arc, CPW_RL_Path]
+        cpw : Union[CPW, CPWArc, CPWDPath]
             instance of coplanar class to be bridged during fabrication
         bridges_step : float
             distance between centers of bridges in nm
@@ -240,10 +240,10 @@ class Bridge1(ElementBase):
             for bridge in bridges:
                 bridge.place(dest=cell, layer_i=bridge_layer1, region_name="bridges_1")
                 bridge.place(dest=cell, layer_i=bridge_layer2, region_name="bridges_2")
-        elif isinstance(cpw, CPW_arc):
+        elif isinstance(cpw, CPWArc):
             # to be implemented
             pass
-        elif isinstance(cpw, CPW_RL_Path):
+        elif isinstance(cpw, CPWRLPath):
             for primitive in cpw.primitives.values():
                 if isinstance(primitive, CPW):
                     Bridge1.bridgify_CPW(
@@ -311,7 +311,7 @@ if __name__ == "__main__":
         cell=cell, bridge_layer1=layer_photo1_bridges, bridge_layer2=layer_photo2_bridges
     )
     z2 = CPWParameters(width, gap)
-    cpw2 = CPW_RL_Path(DPoint(400e3, 400e3), "LRLRL", z2, 60e3, 100e3, [pi/4, pi/3])
+    cpw2 = CPWRLPath(DPoint(400e3, 400e3), "LRLRL", z2, 60e3, 100e3, [pi / 4, pi / 3])
     cpw2.place(cell, layer_photo)
     Bridge1.bridgify_CPW(
         cpw2, bridges_step,

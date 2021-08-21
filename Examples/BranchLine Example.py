@@ -71,7 +71,7 @@ if( __name__ == "__main__" ):
         print( val )
     print( Z0.origin )'''
 
-    '''Z1 = CPW_arc( Z0, origin + DPoint(1e6,0), R1, gamma1, trans_in=DCplxTrans( 1,90,False,1e6,0 ) )
+    '''Z1 = CPWArc( Z0, origin + DPoint(1e6,0), R1, gamma1, trans_in=DCplxTrans( 1,90,False,1e6,0 ) )
     Z1.place( cell, layer_i )
     for val in Z1.connections:
         print( val )

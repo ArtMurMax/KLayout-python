@@ -116,8 +116,8 @@ cp8.place(canvas)
 turn_rad = 0.24e6
 feed_segment_lenghts = [turn_rad, 1.5e6, 0.5e6, 3e6+cp7.end.x-cp8.end.x, 0.5e6, 1.5e6, turn_rad]
 
-feedline = CPW_RL_Path(cp8.end, "LRLRLRLRLRLRL", feed_cpw_params, turn_rad,
-     feed_segment_lenghts, [pi/2, -pi/2, -pi/2, -pi/2, -pi/2, pi/2] ,trans_in = DTrans.R90)
+feedline = CPWRLPath(cp8.end, "LRLRLRLRLRLRL", feed_cpw_params, turn_rad,
+                     feed_segment_lenghts, [pi/2, -pi/2, -pi/2, -pi/2, -pi/2, pi/2], trans_in = DTrans.R90)
 feedline.place(canvas)
 
 

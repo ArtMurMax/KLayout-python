@@ -61,32 +61,32 @@ class EMResonator_TL2Qbit_worm(ComplexBase):
     def init_primitives( self ):
         # coils filling
         self.cop1_coupling = CPW( self.Z0.width, self.Z0.gap, DPoint(0,0), DPoint( self.L_coupling,0 ) )
-        self.arc1_coupling = CPW_arc( self.Z0, self.cop1_coupling.end, -self.r, -pi )
+        self.arc1_coupling = CPWArc(self.Z0, self.cop1_coupling.end, -self.r, -pi)
         self.cop2_coupling = CPW( self.Z0.width, self.Z0.gap, self.arc1_coupling.end, self.arc1_coupling.end - DPoint( self.L1,0 ) )
-        self.arc2_coupling = CPW_arc( self.Z0, self.cop2_coupling.end, -self.r, pi )
+        self.arc2_coupling = CPWArc(self.Z0, self.cop2_coupling.end, -self.r, pi)
         self.primitives["cop1_coupling"] = self.cop1_coupling
         self.primitives["arc1_coupling"] = self.arc1_coupling
         self.primitives["cop2_coupling"] = self.cop2_coupling
         self.primitives["arc2_coupling"] = self.arc2_coupling
         
-        self.r_outer = self.r + self.Z0.b/2 + self.gnd_width/2
-        self.r_inner = self.r - self.Z0.b/2 - self.gnd_width/2
-        self.cop1_gnd_1 = CPW( self.gnd_width, 0, DPoint(0,self.Z0.b/2 + self.gnd_width/2), DPoint( self.L_coupling,self.Z0.b/2 + self.gnd_width/2 ) )
+        self.r_outer = self.r + self.Z0.b / 2 + self.gnd_width / 2
+        self.r_inner = self.r - self.Z0.b / 2 - self.gnd_width / 2
+        self.cop1_gnd_1 = CPW(self.gnd_width, 0, DPoint(0, self.Z0.b / 2 + self.gnd_width / 2), DPoint(self.L_coupling, self.Z0.b / 2 + self.gnd_width / 2))
         self.primitives_gnd["cop1_gnd_1"] = self.cop1_gnd_1
-        self.arc1_gnd_1 = CPW_arc( CPW( self.gnd_width,0, DPoint(0,0), DPoint(0,0) ), self.cop1_gnd_1.end, -self.r_outer, -pi )
+        self.arc1_gnd_1 = CPWArc(CPW(self.gnd_width, 0, DPoint(0, 0), DPoint(0, 0)), self.cop1_gnd_1.end, -self.r_outer, -pi)
         self.primitives_gnd["arc1_gnd_1"] = self.arc1_gnd_1
         self.cop2_gnd_1 = CPW( self.gnd_width, 0, self.arc1_gnd_1.end, self.arc1_gnd_1.end - DPoint( self.L1,0 ) )
         self.primitives_gnd["cop2_gnd_1"] = self.cop2_gnd_1
-        self.arc2_gnd_1 = CPW_arc( CPW( self.gnd_width,0, DPoint(0,0), DPoint(0,0) ), self.cop2_gnd_1.end, -self.r_inner, pi )
+        self.arc2_gnd_1 = CPWArc(CPW(self.gnd_width, 0, DPoint(0, 0), DPoint(0, 0)), self.cop2_gnd_1.end, -self.r_inner, pi)
         self.primitives_gnd["arc2_gnd_1"] = self.arc2_gnd_1
         
-        self.cop1_gnd_2 = CPW( self.gnd_width, 0, -DPoint(0,self.Z0.b/2 + self.gnd_width/2), DPoint( self.L_coupling, -(self.Z0.b/2 + self.gnd_width/2) ) )
+        self.cop1_gnd_2 = CPW(self.gnd_width, 0, -DPoint(0, self.Z0.b / 2 + self.gnd_width / 2), DPoint(self.L_coupling, -(self.Z0.b / 2 + self.gnd_width / 2)))
         self.primitives_gnd["cop1_gnd_2"] = self.cop1_gnd_2
-        self.arc1_gnd_2 = CPW_arc( CPW( self.gnd_width,0, DPoint(0,0), DPoint(0,0) ), self.cop1_gnd_2.end, -self.r_inner, -pi )
+        self.arc1_gnd_2 = CPWArc(CPW(self.gnd_width, 0, DPoint(0, 0), DPoint(0, 0)), self.cop1_gnd_2.end, -self.r_inner, -pi)
         self.primitives_gnd["arc1_gnd_2"] = self.arc1_gnd_2
         self.cop2_gnd_2 = CPW( self.gnd_width, 0, self.arc1_gnd_2.end, self.arc1_gnd_2.end - DPoint( self.L1,0 ) )
         self.primitives_gnd["cop2_gnd_2"] = self.cop2_gnd_2
-        self.arc2_gnd_2 = CPW_arc( CPW( self.gnd_width,0, DPoint(0,0), DPoint(0,0) ), self.cop2_gnd_2.end, -self.r_outer, pi )
+        self.arc2_gnd_2 = CPWArc(CPW(self.gnd_width, 0, DPoint(0, 0), DPoint(0, 0)), self.cop2_gnd_2.end, -self.r_outer, pi)
         self.primitives_gnd["arc2_gnd_2"] = self.arc2_gnd_2
 
         
@@ -96,24 +96,24 @@ class EMResonator_TL2Qbit_worm(ComplexBase):
             self.primitives[name] = getattr( self, name )
             
         # draw the "tail"
-        self.arc_tail = CPW_arc( self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1/2, -pi/2 )
+        self.arc_tail = CPWArc(self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1 / 2, -pi / 2)
         self.cop_tail = CPW( self.Z0.width, self.Z0.gap, self.arc_tail.end, self.arc_tail.end - DPoint( 0,self.L2 ) )
-        self.cop_open_end = CPW( 0, self.Z0.b/2, self.cop_tail.end, self.cop_tail.end - DPoint(0,self.Z0.b) )
+        self.cop_open_end = CPW(0, self.Z0.b / 2, self.cop_tail.end, self.cop_tail.end - DPoint(0, self.Z0.b))
         self.primitives["arc_tail"] = self.arc_tail
         self.primitives["cop_tail"] = self.cop_tail
         self.primitives["cop_open_end"] = self.cop_open_end
         
-        self.arc_tail_gnd_1 = CPW_arc( CPW( self.gnd_width,0, DPoint(0,0), DPoint(0,0) ), self.primitives["coil" + str(self.N)].end + DPoint(0,self.Z0.b/2 + self.gnd_width/2), -self.L1/2 - self.Z0.b/2 - self.gnd_width/2, -pi/2 )
+        self.arc_tail_gnd_1 = CPWArc(CPW(self.gnd_width, 0, DPoint(0, 0), DPoint(0, 0)), self.primitives["coil" + str(self.N)].end + DPoint(0, self.Z0.b / 2 + self.gnd_width / 2), -self.L1 / 2 - self.Z0.b / 2 - self.gnd_width / 2, -pi / 2)
         self.cop_tail_gnd_1 = CPW( self.gnd_width, self.Z0.gap, self.arc_tail_gnd_1.end, self.arc_tail_gnd_1.end - DPoint( 0,self.L2 ) )
-        self.cop_open_end_gnd_1 = CPW( 0, self.Z0.b/2, self.cop_tail_gnd_1.end, self.cop_tail_gnd_1.end - DPoint(0,self.Z0.b) )
+        self.cop_open_end_gnd_1 = CPW(0, self.Z0.b / 2, self.cop_tail_gnd_1.end, self.cop_tail_gnd_1.end - DPoint(0, self.Z0.b))
         
         self.primitives_gnd["arc_tail_gnd_1"] = self.arc_tail_gnd_1
         self.primitives_gnd["cop_tail_gnd_1"] = self.cop_tail_gnd_1
         self.primitives_gnd["cop_open_end_gnd_1"] = self.cop_open_end_gnd_1
         
-        self.arc_tail_gnd_2 = CPW_arc( CPW( self.gnd_width,0, DPoint(0,0), DPoint(0,0) ), self.primitives["coil" + str(self.N)].end - DPoint(0,self.Z0.b/2 + self.gnd_width/2), -self.L1/2 + self.Z0.b/2 + self.gnd_width/2, -pi/2 )
+        self.arc_tail_gnd_2 = CPWArc(CPW(self.gnd_width, 0, DPoint(0, 0), DPoint(0, 0)), self.primitives["coil" + str(self.N)].end - DPoint(0, self.Z0.b / 2 + self.gnd_width / 2), -self.L1 / 2 + self.Z0.b / 2 + self.gnd_width / 2, -pi / 2)
         self.cop_tail_gnd_2 = CPW( self.gnd_width, self.Z0.gap, self.arc_tail_gnd_2.end, self.arc_tail_gnd_2.end - DPoint( 0,self.L2 ) )
-        self.cop_open_end_gnd_2 = CPW( 0, self.Z0.b/2, self.cop_tail_gnd_2.end, self.cop_tail_gnd_2.end - DPoint(0,self.Z0.b) )
+        self.cop_open_end_gnd_2 = CPW(0, self.Z0.b / 2, self.cop_tail_gnd_2.end, self.cop_tail_gnd_2.end - DPoint(0, self.Z0.b))
         
         self.primitives_gnd["arc_tail_gnd_2"] = self.arc_tail_gnd_2
         self.primitives_gnd["cop_tail_gnd_2"] = self.cop_tail_gnd_2
@@ -160,29 +160,29 @@ class Coil_type_1(ComplexBase):
         
     def init_primitives( self ):
             self.cop1 = CPW( self.Z0.width, self.Z0.gap, DPoint(0,0), DPoint( self.L1,0 ) )
-            self.arc1 = CPW_arc( self.Z0, self.cop1.end, -self.r, -pi )
+            self.arc1 = CPWArc(self.Z0, self.cop1.end, -self.r, -pi)
             self.cop2 = CPW( self.Z0.width, self.Z0.gap, self.arc1.end, self.arc1.end - DPoint( self.L1,0 ) )
-            self.arc2 = CPW_arc( self.Z0, self.cop2.end, -self.r, pi )
+            self.arc2 = CPWArc(self.Z0, self.cop2.end, -self.r, pi)
             
-            self.r_outer = self.r + self.Z0.b/2 + self.gnd_width/2
-            self.r_inner = self.r - self.Z0.b/2 - self.gnd_width/2
-            self.cop1_gnd_1 = CPW( self.gnd_width, 0, DPoint(0,self.Z0.b/2 + self.gnd_width/2), DPoint( self.L1,self.Z0.b/2 + self.gnd_width/2 ) )
+            self.r_outer = self.r + self.Z0.b / 2 + self.gnd_width / 2
+            self.r_inner = self.r - self.Z0.b / 2 - self.gnd_width / 2
+            self.cop1_gnd_1 = CPW(self.gnd_width, 0, DPoint(0, self.Z0.b / 2 + self.gnd_width / 2), DPoint(self.L1, self.Z0.b / 2 + self.gnd_width / 2))
             self.primitives_gnd["cop1_gnd_1"] = self.cop1_gnd_1
-            self.arc1_gnd_1 = CPW_arc( CPW( self.gnd_width,0, DPoint(0,0), DPoint(0,0) ), self.cop1_gnd_1.end, -self.r_outer, -pi )
+            self.arc1_gnd_1 = CPWArc(CPW(self.gnd_width, 0, DPoint(0, 0), DPoint(0, 0)), self.cop1_gnd_1.end, -self.r_outer, -pi)
             self.primitives_gnd["arc1_gnd_1"] = self.arc1_gnd_1
             self.cop2_gnd_1 = CPW( self.gnd_width, 0, self.arc1_gnd_1.end, self.arc1_gnd_1.end - DPoint( self.L1,0 ) )
             self.primitives_gnd["cop2_gnd_1"] = self.cop2_gnd_1
-            self.arc2_gnd_1 = CPW_arc( CPW( self.gnd_width,0, DPoint(0,0), DPoint(0,0) ), self.cop2_gnd_1.end, -self.r_inner, pi )
+            self.arc2_gnd_1 = CPWArc(CPW(self.gnd_width, 0, DPoint(0, 0), DPoint(0, 0)), self.cop2_gnd_1.end, -self.r_inner, pi)
             self.primitives_gnd["arc2_gnd_1"] = self.arc2_gnd_1
             
         
-            self.cop1_gnd_2 = CPW(self.gnd_width, 0, -DPoint(0,self.Z0.b/2 + self.gnd_width/2), DPoint( self.L1, -(self.Z0.b/2 + self.gnd_width/2) ) )
+            self.cop1_gnd_2 = CPW(self.gnd_width, 0, -DPoint(0, self.Z0.b / 2 + self.gnd_width / 2), DPoint(self.L1, -(self.Z0.b / 2 + self.gnd_width / 2)))
             self.primitives_gnd["cop1_gnd_2"] = self.cop1_gnd_2
-            self.arc1_gnd_2 = CPW_arc( CPW( self.gnd_width,0, DPoint(0,0), DPoint(0,0) ), self.cop1_gnd_2.end, -self.r_inner, -pi )
+            self.arc1_gnd_2 = CPWArc(CPW(self.gnd_width, 0, DPoint(0, 0), DPoint(0, 0)), self.cop1_gnd_2.end, -self.r_inner, -pi)
             self.primitives_gnd["arc1_gnd_2"] = self.arc1_gnd_2
             self.cop2_gnd_2 = CPW( self.gnd_width, 0, self.arc1_gnd_2.end, self.arc1_gnd_2.end - DPoint( self.L1,0 ) )
             self.primitives_gnd["cop2_gnd_2"] = self.cop2_gnd_2
-            self.arc2_gnd_2 = CPW_arc( CPW( self.gnd_width,0, DPoint(0,0), DPoint(0,0) ), self.cop2_gnd_2.end, -self.r_outer, pi )
+            self.arc2_gnd_2 = CPWArc(CPW(self.gnd_width, 0, DPoint(0, 0), DPoint(0, 0)), self.cop2_gnd_2.end, -self.r_outer, pi)
             self.primitives_gnd["arc2_gnd_2"] = self.arc2_gnd_2
             
             self.connections = [self.cop1.start,self.arc2.end]
@@ -329,7 +329,7 @@ if ( __name__ ==  "__main__" ):
     empty.place( cell, layer_photo )
 #    r_cell.merged_semantics=False   
     qbit_bbox = pya.Box().from_dbox( qbit_bbox )
-    h = qbit_bbox.height()
+    h = qbit_bbox.b()
     reg = worm.gnd_reg + ( Region( pya.Box( qbit_bbox.p1 - Point(2*h,dCap), qbit_bbox.p2 + Point( 2*h,2*h ) ) ) - Region( qbit.metal_region.bbox() ))
     new_reg = Region()
     r_cell = Region( cell.begin_shapes_rec( layer_photo ) )    

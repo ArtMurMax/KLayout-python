@@ -5,7 +5,7 @@ from pya import Point, DPoint, DSimplePolygon, SimplePolygon, DPolygon, Polygon,
 from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans
 
 from classLib.baseClasses import ComplexBase
-from classLib.coplanars import CPW, CPW_arc
+from classLib.coplanars import CPW, CPWArc
 from classLib.resonators import Coil_type_1
 from classLib.shapes import XmonCross
 
@@ -32,7 +32,7 @@ class EMResonator_TL2Qbit_worm2(ComplexBase):
         self.alpha_end = self.angle_connections[1]
 
     def init_primitives(self):
-        self.arc1 = CPW_arc(self.Z0, DPoint(0, 0), -self.r, pi / 2)
+        self.arc1 = CPWArc(self.Z0, DPoint(0, 0), -self.r, pi / 2)
         self.primitives["arc1"] = self.arc1
 
         # making coil
@@ -50,7 +50,7 @@ class EMResonator_TL2Qbit_worm2(ComplexBase):
             self.primitives[name] = getattr(self, name)
 
         # draw the "tail"
-        self.arc_tail = CPW_arc(self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1 / 2, -pi / 2)
+        self.arc_tail = CPWArc(self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1 / 2, -pi / 2)
         self.cop_tail = CPW(self.Z0.width, self.Z0.gap, self.arc_tail.end, self.arc_tail.end - DPoint(0, self.L2))
 
         # tail face is separated from ground by `b = width + 2*gap`

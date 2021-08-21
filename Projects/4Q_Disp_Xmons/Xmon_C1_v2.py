@@ -3,7 +3,7 @@ import pya
 from math import cos, sin, atan2, pi
 from pya import Point, DPoint, DSimplePolygon, SimplePolygon, DPolygon, Polygon, Region
 from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans
-from classLib.coplanars import CPW, CPW_arc
+from classLib.coplanars import CPW, CPWArc
 from classLib.resonators import Coil_type_1
 from classLib.baseClasses import ComplexBase, ElementBase
 
@@ -155,7 +155,7 @@ if __name__ == "__main__":
         output_filepath = os.path.join(project_dir, "Xmon_C1.csv")
         if os.path.exists(output_filepath):
             # append data to file
-            with open(output_filepath, "a", newline='') as csv_file:
+            with open(output_filepath, "width", newline='') as csv_file:
                 writer = csv.writer(csv_file)
                 writer.writerow([cross_width_x / 1e3, cross_len_x / 1e3, cross_gnd_gap_x / 1e3, cross_len_y, C1])
         else:

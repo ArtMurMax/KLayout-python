@@ -22,7 +22,7 @@ from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans
 class PROGRAM:
     LAYER1_NUM = 70
     LAYER2_NUM = 80
-    ARC_PTS_N = 20
+    ARC_PTS_N = 50
 
 
 class LAYERS:

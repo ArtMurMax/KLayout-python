@@ -21,7 +21,7 @@ class CWave(ComplexBase):
         self.delta = 2e3 # 2 mkm from each side of circle will be erased along the diameter
         
         self.L_x = 2*self.r_out - 2*self.delta
-        # calculating parameters of the CPW_RL_Path #
+        # calculating parameters of the CPWDPath #
         L_x = self.L_x
         r = self.r_curve
         n = self.n_semiwaves
@@ -34,7 +34,7 @@ class CWave(ComplexBase):
             self.L0 = ( ( L_x + 2*(n-1)*r*tan(alpha/2) ) / ( 2*n ) - 2*r*sin(alpha) ) / cos(alpha)
         self.L1 = 2*r*tan(alpha/2) + 2*self.L0
         if( self.L0 < 0 or self.L1 < 0 ):
-            print( "CPW_RL_Path: impossible parameters combination" )
+            print( "CPWDPath: impossible parameters combination" )
         
         super( CWave,self ). __init__( center,trans_in )
             
@@ -61,7 +61,7 @@ class CWave(ComplexBase):
         
         # starting RLR
         self.RL_start = origin + DPoint( -self.in_circle.r + self.delta,0 )
-        rl_path_start = CPW_RL_Path( self.RL_start, "RLR", Z, self.r_curve, [self.L0], [self.alpha,-self.alpha])
+        rl_path_start = CPWRLPath(self.RL_start, "RLR", Z, self.r_curve, [self.L0], [self.alpha, -self.alpha])
         self.primitives["rl_start"] = rl_path_start
         
         # ending RLR
@@ -70,7 +70,7 @@ class CWave(ComplexBase):
         else:
             m_x = True
         self.RL_end = origin + DPoint( self.in_circle.r - self.delta,0 )
-        rl_path_end = CPW_RL_Path( self.RL_end, "RLR", Z, self.r_curve, [self.L0], [self.alpha,-self.alpha], trans_in = DCplxTrans( 1,180, m_x, 0,0 ) )
+        rl_path_end = CPWRLPath(self.RL_end, "RLR", Z, self.r_curve, [self.L0], [self.alpha, -self.alpha], trans_in = DCplxTrans(1, 180, m_x, 0, 0))
 
         
         # intermidiate RLRs
@@ -81,7 +81,7 @@ class CWave(ComplexBase):
                 m_x = True 
                 
             prev_path = list(self.primitives.values())[-1]
-            rl_path_p = CPW_RL_Path( prev_path.end, "RLR", [Z], [self.r_curve], [self.L1], [-self.alpha,self.alpha], trans_in=DCplxTrans( 1,0,m_x,0,0 ) )
+            rl_path_p = CPWRLPath(prev_path.end, "RLR", [Z], [self.r_curve], [self.L1], [-self.alpha, self.alpha], trans_in=DCplxTrans(1, 0, m_x, 0, 0))
             self.primitives["rl_path_" + str(i)] = rl_path_p
         
         self.primitives["rl_path_end"] = rl_path_end

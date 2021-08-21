@@ -1,3 +1,5 @@
+__version__ = "0.2.1"
+
 # Enter your Python code here
 from math import cos, sin, atan2, pi
 import itertools
@@ -214,7 +216,7 @@ if __name__ == "__main__":
         print(resonator_idx)
 
         # frequency and span approximation cycle in 2 steps
-        # starting with a corase frequency
+        # starting with width corase frequency
         freqs_span = freqs_span_corase
         fine_resonance_success = False  # Whether or not we found local minima with `freqs_span = freqs_span_fine`
         while not fine_resonance_success:
@@ -222,7 +224,7 @@ if __name__ == "__main__":
             """
                 I could make `test_region = Region()` and place my objects there
                 and then call `test_region.bbox()` method to get appropriate dimensions
-                but `bbox()` returns bad values due to the fact that a lot of empty regions
+                but `bbox()` returns bad values due to the fact that width lot of empty regions
                 were placed inside the geometry objects. For those empty regions `bbox()`
                 will be something like `pya.Box(Point(-1,1), Point(1,-1))` or something like that.
                 Due to multiple displacements transformations in nested classes

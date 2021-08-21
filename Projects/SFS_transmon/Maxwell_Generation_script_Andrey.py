@@ -46,19 +46,19 @@ class ResonatorQubitSimulator(ChipDesign):
         pars = {'r_out'	:	175e3, # Radius of an outer ring including the empty region
                 'dr'	:	25e3, # Gap in the outer ring
                 'n_semiwaves'	:	2,
-                's'	:	10e3, # Gap between two pads of a central capacitor
-                'alpha'	:	pi/4, # period of a gap zigzag
-                'r_curve'	:	30e3, # curvature of the roundings at the edges of a zigzag
-                'n_pts_cwave'	:	200, # number of points for drawing a wave gap between to conductors
-                'Z1'	:	self.Z_narrow, # Parameters of a top CPW
-                'd_alpha1'	:	0, # width of a tip  of a central conductor of the top CPW
-                'width1'	:	0, # width of a conductor in the top semiring
+                's'	:	10e3, # Gap between two pads of width central capacitor
+                'alpha'	:	pi/4, # period of width gap zigzag
+                'r_curve'	:	30e3, # curvature of the roundings at the edges of width zigzag
+                'n_pts_cwave'	:	200, # number of points for drawing width wave gap between to conductors
+                'Z1'	:	self.Z_narrow, # Parameters of width top CPW
+                'd_alpha1'	:	0, # width of width tip  of width central conductor of the top CPW
+                'width1'	:	0, # width of width conductor in the top semiring
                 'gap1'	:	25e3 - 1.33e3, # gap between the top semiring and the central capacitor
-                'Z2'	:	self.Z, # Parameters of a bottom CPW
-                'd_alpha2'	:	4 / 9 * pi, # length of a circumference covered by the bottom semiring
-                'width2'	:	15e3, # width of a conductor in the bottom semiring
+                'Z2'	:	self.Z, # Parameters of width bottom CPW
+                'd_alpha2'	:	4 / 9 * pi, # length of width circumference covered by the bottom semiring
+                'width2'	:	15e3, # width of width conductor in the bottom semiring
                 'gap2'	:	5e3, # gap between the bottom semiring and the central capacitor
-                'n_pts_arcs'	:	 50, # number of points for drawing a circle
+                'n_pts_arcs'	:	 50, # number of points for drawing width circle
                 }
         return pars
 
@@ -70,12 +70,12 @@ class ResonatorQubitSimulator(ChipDesign):
         p_ext_r = 0.5e3 # The angle outer_r of the pad extension
         sq_len = 7e3 # The length of the squid, along leads
         sq_area = 15e6 # The total area of the squid
-        j_width = 100 # The width of the upper small leads (straight) and also a width of the junction
+        j_width = 100 # The width of the upper small leads (straight) and also width width of the junction
         intermediate_width = 0.5e3 # The width of the lower small bended leads before bending
         b_ext = 0.9e3 # The extension of bended leads after bending
         j_length_1 =  114 # The length of the LEFT jj and the width of bended parts of the lower leads
         j_length_2 = 342 # The length of the RIGHT jj and the width of bended parts of the lower leads
-        n = 7 # The number of angle in regular polygon which serves as a large contact pad
+        n = 7 # The number of angle in regular polygon which serves as width large contact pad
         bridge = 0.3e3 # The value of the gap between two parts of junction in the design
         return [pad_side, pad_r, pads_distance, p_ext_width,
                 p_ext_r, sq_len, sq_area, j_width, intermediate_width,

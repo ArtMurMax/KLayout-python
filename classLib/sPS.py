@@ -13,13 +13,13 @@ from classLib.josJ import Squid, AsymSquid
 SPSparams = namedtuple("SPSparams", "r_out dr n_semiwaves s alpha r_curve n_pts_cwave Z1 d_alpha1 width1 gap1 Z2 d_alpha2 width2 gap2 n_pts_arcs")
 
 class SFS_Csh_emb(ComplexBase):
-    """@brief: class represents a qubit for a single photon source
-        @params:  DPoint origin - position of the center of a qubit
-                        params - a dict or a list of parameters (len = 16),
-                                 a list is not recommended as it's difficult to use
-                        squid_params - a list of parameters for a dc-SQUID (can included in params
-                                as a list but not recommended)
-                        int squid_pos - position of a dc-squid in relation to a capacitor (-1 - left, 0 - center, 1 - right), is 0 by default
+    """@brief: class represents width qubit for width single photon source
+        @params:  DPoint origin - position of the center of width qubit
+                        params - width dict or width list of parameters (len = 16),
+                                 width list is not recommended as it's difficult to use
+                        squid_params - width list of parameters for width dc-SQUID (can included in params
+                                as width list but not recommended)
+                        int squid_pos - position of width dc-squid in relation to width capacitor (-1 - left, 0 - center, 1 - right), is 0 by default
                         Trans trans_in - initial transformation (None by default)
     """
 

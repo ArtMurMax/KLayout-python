@@ -82,8 +82,8 @@ cpw_params = CPWParameters(20e3, 10e3)
 
 segment_lenghts = [2.5e6, cp7.end.x-cp8.end.x, 2.5e6]
 
-feedline = CPW_RL_Path(cp8.end, "LRLRL", cpw_params, 100e3, 
-      segment_lenghts, [-pi/2,-pi/2] ,trans_in = DTrans.R90)
+feedline = CPWRLPath(cp8.end, "LRLRL", cpw_params, 100e3,
+                     segment_lenghts, [-pi/2,-pi/2], trans_in = DTrans.R90)
 feedline.place(cell, layer_photo)
 
 #Second feedline
@@ -93,7 +93,7 @@ turn2 = cp1.end+DPoint(0.5e6, 1e6)
 segment_lengths += [(cp5.end.y-turn2.y)*2/sqrt(2)]
 segment_lengths += [cp5.end.x-turn2.x-segment_lengths[-1]*sqrt(2)/2]
 
-feedline = CPW_RL_Path(cp1.end, "LRLRLRL", cpw_params, 200e3, segment_lengths, [pi/2,-pi/4, -pi/4])
+feedline = CPWRLPath(cp1.end, "LRLRLRL", cpw_params, 200e3, segment_lengths, [pi / 2, -pi / 4, -pi / 4])
 feedline.place(cell, layer_photo)
 
 
@@ -102,7 +102,7 @@ feedline.place(cell, layer_photo)
 
 segment_lengths = [1e6]*5
 
-feedline = CPW_RL_Path(cp2.end, "LRRLRRLRRLRRL", cpw_params, 200e3, segment_lengths, [pi/2, pi/2, -pi/2, -pi/2]*2)
+feedline = CPWRLPath(cp2.end, "LRRLRRLRRLRRL", cpw_params, 200e3, segment_lengths, [pi / 2, pi / 2, -pi / 2, -pi / 2] * 2)
 feedline.place(cell, layer_photo)
 
 

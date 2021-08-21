@@ -5,7 +5,7 @@ from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans
 
 from classLib.baseClasses import ComplexBase
 from classLib.shapes import Ring, Circle, Rectangle, Cross, IsoTrapezoid, Cross2
-from classLib.coplanars import CPW, CPWParameters, CPW_arc
+from classLib.coplanars import CPW, CPWParameters, CPWArc
 
 
 class Mark1(ComplexBase):
@@ -41,13 +41,13 @@ class Mark1(ComplexBase):
         for i in range(self.leafs_N):
             start_angle = i * (self.leaf_angle + self.empty_leaf_angle) - self.leaf_angle / 2
             trans = DCplxTrans(1, start_angle + 90, False, 0, -self.avg_r)
-            self.primitives["leaf_" + str(i)] = CPW_arc(Z, origin, self.avg_r, self.leaf_angle * pi / 180,
-                                                        trans_in=trans)
+            self.primitives["leaf_" + str(i)] = CPWArc(Z, origin, self.avg_r, self.leaf_angle * pi / 180,
+                                                       trans_in=trans)
 
         Z_empty = CPWParameters(0, self.empty_rings_width / 2)
         for i in range(1, self.empty_rings_N + 1):
             r = self.leaf_inner + (self.leaf_outer - self.leaf_inner) / (self.empty_rings_N + 1) * i
-            self.primitives["empty_ring_" + str(i)] = CPW_arc(Z_empty, DVector(0, -r), r, 2 * pi)
+            self.primitives["empty_ring_" + str(i)] = CPWArc(Z_empty, DVector(0, -r), r, 2 * pi)
 
 
 class Mark2(ComplexBase):

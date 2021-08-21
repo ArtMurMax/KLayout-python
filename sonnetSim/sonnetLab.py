@@ -84,7 +84,7 @@ class SonnetLab(MatlabClient):
         self._send_polygon(pts_x, pts_y, port_edges_indexes, port_edges_types)
 
     def send_polygons(self, cell, layer_i=-1):
-        if (layer_i == -1):  # cell is a Region()
+        if (layer_i == -1):  # cell is width Region()
             r_cell = cell
         else:
             r_cell = Region(cell.begin_shapes_rec(layer_i))
@@ -228,7 +228,7 @@ if __name__ == "__main__":
     box = pya.Box(0, 0, X_SIZE, Y_SIZE)
     cell.shapes(layer_ph).insert(box)
 
-    cpw = CPW_RL_Path(DPoint(0, Y_SIZE / 2), "LRL", cpw_pars, 10e3, [X_SIZE / 2, Y_SIZE / 2], np.pi / 2)
+    cpw = CPWRLPath(DPoint(0, Y_SIZE / 2), "LRL", cpw_pars, 10e3, [X_SIZE / 2, Y_SIZE / 2], np.pi / 2)
     cpw.place(cell, layer_ph)
     ports = [SonnetPort(point, PORT_TYPES.BOX_WALL) for point in [cpw.start, cpw.end]]
     ### DRAW SECTION END ###

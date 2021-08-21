@@ -151,7 +151,7 @@ data = {"size": sizesy,
 pd.DataFrame(data=data)
 
 #%%
-# fun = lambda x, a, b, c: a / x**b + c
+# fun = lambda x, width, b, c: width / x**b + c
 # popt, pconv = opt.curve_fit(fun, to_line_params, G1_arr)
 # xdata = np.linspace(25, 80)
 # ydata = fun(xdata, popt[0], popt[1], popt[2])

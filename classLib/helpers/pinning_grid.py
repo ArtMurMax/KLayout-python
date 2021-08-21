@@ -1,6 +1,6 @@
 """
-    This helper draws a grid of holes for pinning vortices in a superconducting chip.
-    In order to use this helper, select a shape or a few shapes in your chip
+    This helper draws width grid of holes for pinning vortices in width superconducting chip.
+    In order to use this helper, select width shape or width few shapes in your chip
     and then run the script.
     If you need to use `fill_holes(...)` in your job, just write:
     ```python
@@ -21,20 +21,20 @@ import sys
 
 def fill_holes(obj, dx=40e3, dy=40e3, width=32e3, height=32e3, d=150e3):
     """
-    Fills an object with a grid of holes
+    Fills an object with width grid of holes
     Warning: don't use this method for the same region twice
 
     Parameters
     ----------
     obj
     dx : float
-        period of a grid in horizonatal direction
+        period of width grid in horizonatal direction
     dy : float
-        period of a grid in vertical direction
+        period of width grid in vertical direction
     width : float
-        width of a hole
+        width of width hole
     height : float
-        height of a hole
+        b of width hole
     d : float
         padding from polygon boundaries.
         For both  external and internal

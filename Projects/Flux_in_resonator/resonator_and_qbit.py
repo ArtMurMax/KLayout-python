@@ -152,10 +152,10 @@ if ( __name__ ==  "__main__" ):
     qbit_bbox = pya.DBox().from_ibox( qbit.metal_regions["photo"].bbox() )
     #print(qbit.metal_regions)
     #qbit_bbox = qbit.metal_region.bbox() 
-    print(0, qbit_bbox.p2,qbit_bbox.height(), qbit_bbox.width())
-    empty = CPW( 0, qbit_bbox.height()/2 + 2*qbit.a, 
-        qbit_bbox.p1 + DPoint(0,qbit_bbox.height()/2), 
-        qbit_bbox.p2 - DPoint(qbit.B4.width() + qbit.B3.width()/2,qbit_bbox.height()/2 )  )
+    print(0, qbit_bbox.p2, qbit_bbox.b(), qbit_bbox.width())
+    empty = CPW(0, qbit_bbox.b() / 2 + 2 * qbit.a,
+                qbit_bbox.p1 + DPoint(0, qbit_bbox.b() / 2),
+                qbit_bbox.p2 - DPoint(qbit.B4.width() + qbit.B3.width() / 2, qbit_bbox.b() / 2))
   
     empty.place( cell, layer_photo )
     qbit.place( cell, layer_photo, layer_el )

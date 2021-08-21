@@ -157,8 +157,8 @@ turn_rad = 0.24e6
 feed_segment_lenghts = [turn_rad, 2 * turn_rad, 0.5e6, 4 * turn_rad + cp7.end.x - cp8.end.x, 0.5e6, 2 * turn_rad,
                         turn_rad]
 
-feedline = CPW_RL_Path(cp8.end, "LRLRLRLRLRLRL", feed_cpw_params, turn_rad,
-                       feed_segment_lenghts, [pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, pi / 2], trans_in=DTrans.R90)
+feedline = CPWRLPath(cp8.end, "LRLRLRLRLRLRL", feed_cpw_params, turn_rad,
+                     feed_segment_lenghts, [pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, pi / 2], trans_in=DTrans.R90)
 feedline.place(canvas)
 
 # ======= Chain loop =========
@@ -235,7 +235,7 @@ res_test2.place(canvas)
 # tmon1_md_segment_lengths =\
 #   [300e3, qubit_ports[0].y - cp1.end.y-tmon_JJ_arm_len - tmon_JJ_site_span-tmon_cpw_params.width/2,
 #    qubit_ports[0].x - cp1.end.x-300e3 - tmon_arm_len*2]
-# tmon1_md = CPW_RL_Path(cp1.end, "LRLRL", md_cpw_params, 240e3,
+# tmon1_md = CPWDPath(cp1.end, "LRLRL", md_cpw_params, 240e3,
 #   tmon1_md_segment_lengths, [pi/2, -pi/2] ,trans_in = None)
 # tmon1_md.place(canvas)
 
@@ -245,7 +245,7 @@ res_test2.place(canvas)
 # tmon_m1_md_segment_lengths =\
 #   [300e3, qubit_ports[-1].y - cp6.end.y-tmon_JJ_arm_len - tmon_JJ_site_span-tmon_cpw_params.width/2,
 #    -qubit_ports[-1].x + cp6.end.x-300e3 - tmon_arm_len*2]
-# tmon_m1_md = CPW_RL_Path(cp6.end, "LRLRL", md_cpw_params, 240e3,
+# tmon_m1_md = CPWDPath(cp6.end, "LRLRL", md_cpw_params, 240e3,
 #   tmon_m1_md_segment_lengths, [pi/2, -pi/2] ,trans_in = DTrans.M90)
 # tmon_m1_md.place(canvas)
 
@@ -258,8 +258,8 @@ res_test2.place(canvas)
 tmon1_fc_segment_lengths = \
     [(qubit_ports[0].x - cp1.end.x) / 3, -cp1.end.y + qubit_ports[0].y + 0.35e6,
      (qubit_ports[0].x - cp1.end.x) / 2 + 0.495e6 + 2e3, (-cp1.end.y + qubit_ports[0].y) / 3 - 120e3 + 7.5e3]
-tmon1_fc = CPW_RL_Path(cp1.end, "LRLRLRL", fc_cpw_params, 240e3,
-                       tmon1_fc_segment_lengths, [pi / 2, -pi / 2, -pi / 2], trans_in=None, bridged=True)
+tmon1_fc = CPWRLPath(cp1.end, "LRLRLRL", fc_cpw_params, 240e3,
+                     tmon1_fc_segment_lengths, [pi / 2, -pi / 2, -pi / 2], trans_in=None, bridged=True)
 tmon1_fc.place(canvas, region_name="photo")
 tmon1_fc.place(bridges, region_name="bridges")
 tmon1_fc.place(bridge_patches, region_name="bridge_patches")
@@ -269,8 +269,8 @@ tmon1_fc_end.place(canvas)
 
 tmon2_fc_segment_lengths = \
     [0.5e6, (qubit_ports[1].x - cp2.end.x) - 0.5e6, -(-cp2.end.y + qubit_ports[1].y) / 2 + 0.26e6 + 4.25e3]
-tmon2_fc = CPW_RL_Path(cp2.end, "LRRLRL", fc_cpw_params, 150e3,
-                       tmon2_fc_segment_lengths, [-pi / 2, pi / 2, -pi / 2], trans_in=None, bridged=True)
+tmon2_fc = CPWRLPath(cp2.end, "LRRLRL", fc_cpw_params, 150e3,
+                     tmon2_fc_segment_lengths, [-pi / 2, pi / 2, -pi / 2], trans_in=None, bridged=True)
 tmon2_fc.place(canvas, region_name="photo")
 tmon2_fc.place(bridges, region_name="bridges")
 tmon2_fc.place(bridge_patches, region_name="bridge_patches")
@@ -281,8 +281,8 @@ tmon1_fc_end.place(canvas)
 tmon3_fc_segment_lengths = \
     [(-cp3.end.y + qubit_ports[2].y) / 50, 3 * (-cp3.end.x + qubit_ports[2].x) / 4 + 0.5e6,
      -(-cp3.end.y + qubit_ports[2].y) / 3 + 0.775e6 + 2.2e3]
-tmon3_fc = CPW_RL_Path(cp3.end, "LRLRL", fc_cpw_params, 150e3,
-                       tmon3_fc_segment_lengths, [pi / 2, -pi / 2], trans_in=DTrans.R90, bridged=True)
+tmon3_fc = CPWRLPath(cp3.end, "LRLRL", fc_cpw_params, 150e3,
+                     tmon3_fc_segment_lengths, [pi / 2, -pi / 2], trans_in=DTrans.R90, bridged=True)
 tmon3_fc.place(canvas, region_name="photo")
 tmon3_fc.place(bridges, region_name="bridges")
 tmon3_fc.place(bridge_patches, region_name="bridge_patches")
@@ -293,8 +293,8 @@ tmon1_fc_end.place(canvas)
 tmon4_fc_segment_lengths = \
     [(-cp4.end.y + qubit_ports[3].y) / 50, -3 * (-cp4.end.x + qubit_ports[3].x) / 4 + 0.34e6 - 3e3,
      -(-cp4.end.y + qubit_ports[3].y) / 3 + 0.771e6 + 6.2e3]
-tmon4_fc = CPW_RL_Path(cp4.end, "LRLRL", fc_cpw_params, 150e3,
-                       tmon4_fc_segment_lengths, [-pi / 2, pi / 2], trans_in=DTrans.R90, bridged=True)
+tmon4_fc = CPWRLPath(cp4.end, "LRLRL", fc_cpw_params, 150e3,
+                     tmon4_fc_segment_lengths, [-pi / 2, pi / 2], trans_in=DTrans.R90, bridged=True)
 tmon4_fc.place(canvas, region_name="photo")
 tmon4_fc.place(bridges, region_name="bridges")
 tmon4_fc.place(bridge_patches, region_name="bridge_patches")
@@ -304,8 +304,8 @@ tmon1_fc_end.place(canvas)
 
 tmon_m1_fc_segment_lengths = \
     [0.5e6, -qubit_ports[-1].x + cp5.end.x - 0.5e6, cp5.end.y - qubit_ports[-1].y - 0.320e6 + 4e3]
-tmon_m1_fc = CPW_RL_Path(cp5.end, "LRRLRL", fc_cpw_params, 150e3,
-                         tmon_m1_fc_segment_lengths, [-pi / 2, pi / 2, -pi / 2], trans_in=DTrans.M90, bridged=True)
+tmon_m1_fc = CPWRLPath(cp5.end, "LRRLRL", fc_cpw_params, 150e3,
+                       tmon_m1_fc_segment_lengths, [-pi / 2, pi / 2, -pi / 2], trans_in=DTrans.M90, bridged=True)
 tmon_m1_fc.place(canvas, region_name="photo")
 tmon_m1_fc.place(bridges, region_name="bridges")
 tmon_m1_fc.place(bridge_patches, region_name="bridge_patches")

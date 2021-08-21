@@ -8,8 +8,8 @@ from importlib import reload
 from classLib.baseClasses import *
 from classLib.coplanars import *
 from .baseClasses import ComplexBase
-from .coplanars import CPW_RL_Path, CPW
-from .coplanars import Coil_type_1, CPW_arc # backward compatibility TODO: delete classes
+from .coplanars import CPWRLPath, CPW
+from .coplanars import Coil_type_1, CPWArc # backward compatibility TODO: delete classes
 
 
 class CPWResonator():
@@ -23,9 +23,9 @@ class CPWResonator():
         A CPW resonator of wavelength fraction with automatic length calculation
         from given frequency.
 
-        It's also possible to attach a primitive to the end of the resonator which
-        should provide a get_phase_shift(   ) method to calculate it's effective length
-        as if it was just a straight CPW piece.
+        It's also possible to attach width primitive to the end of the resonator which
+        should provide width get_phase_shift(   ) method to calculate it's effective length
+        as if it was just width straight CPW piece.
 
         Parameters:
             origin: DPoint
@@ -98,9 +98,9 @@ class CPWResonator():
 #        print(self._length)
 #        print(segment_lengths)
 
-        self._line = CPW_RL_Path(DPoint(0,0), shape,
-            self._cpw_parameters, self._turn_radius, segment_lengths, turn_angles,
-                    DTrans(DPoint(-self._coupling_length+meander_length/2, 0)), bridged=False)
+        self._line = CPWRLPath(DPoint(0, 0), shape,
+                               self._cpw_parameters, self._turn_radius, segment_lengths, turn_angles,
+                               DTrans(DPoint(-self._coupling_length+meander_length/2, 0)), bridged=False)
         # print("Connections[0] 1:", self._line.connections[0])
         # print("Primitive_start:", list(self._line.primitives.values())[0].connections[0])
         self._line.make_trans(self._trans_in)
@@ -147,11 +147,11 @@ class CPWResonator2(ComplexBase):
         A CPW resonator of wavelength fraction with automatic length calculation
         from given frequency.
 
-        Modification: with a neck along the resonator
+        Modification: with width neck along the resonator
 
-        It is also possible to attach a primitive to the end of the resonator which
-        should provide a get_phase_shift(   ) method to calculate its effective length
-        as if it was just a straight CPW piece.
+        It is also possible to attach width primitive to the end of the resonator which
+        should provide width get_phase_shift(   ) method to calculate its effective length
+        as if it was just width straight CPW piece.
 
         Parameters:
             origin: DPoint
@@ -211,11 +211,11 @@ class CPWResonator2(ComplexBase):
         segment_lengths = [self.cpl_L, meander_length] + 2 * self.N * [meander_length] + [meander_length + 3 * self.R + self.extra_neck_length] + ([self.neck] if not self.no_neck else [])
         turn_angles = [pi] + self.N * [-pi, pi]+[-pi] + ([-pi/2] if not self.no_neck else [])
 
-        self.line = CPW_RL_Path(origin, shape, self.Z, self.R, segment_lengths, turn_angles)
+        self.line = CPWRLPath(origin, shape, self.Z, self.R, segment_lengths, turn_angles)
         self.primitives['line'] = self.line
 
         if self.open_end == None:
-            self.open_end = CPW(0, self.Z.b/2, self.line.end, self.line.end + (DPoint(0, -self.Z.b) if not self.no_neck else DPoint(-self.Z.b, 0)))
+            self.open_end = CPW(0, self.Z.b / 2, self.line.end, self.line.end + (DPoint(0, -self.Z.b) if not self.no_neck else DPoint(-self.Z.b, 0)))
         self.primitives['open_end'] = self.open_end
 
     def _calculate_total_length(self):
@@ -251,9 +251,9 @@ class EMResonator_TL2Qbit_worm(ComplexBase):
             self.primitives[name] = getattr( self, name )
 
         # draw the "tail"
-        self.arc_tail = CPW_arc( self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1/2, -pi/2 )
+        self.arc_tail = CPWArc(self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1 / 2, -pi / 2)
         self.cop_tail = CPW( self.Z0.width, self.Z0.gap, self.arc_tail.end, self.arc_tail.end - DPoint( 0,self.L2 ) )
-        self.cop_open_end = CPW( 0, self.Z0.b/2, self.cop_tail.end, self.cop_tail.end - DPoint(0,self.Z0.b) )
+        self.cop_open_end = CPW(0, self.Z0.b / 2, self.cop_tail.end, self.cop_tail.end - DPoint(0, self.Z0.b))
         self.primitives["arc_tail"] = self.arc_tail
         self.primitives["cop_tail"] = self.cop_tail
         self.primitives["cop_open_end"] = self.cop_open_end
@@ -281,7 +281,7 @@ class EMResonator_TL2Qbit_worm2(ComplexBase):
         self.alpha_end = self.angle_connections[1]
 
     def init_primitives( self ):
-        self.arc1 = CPW_arc( self.Z0, DPoint(0,0), -self.r, pi/2 )
+        self.arc1 = CPWArc(self.Z0, DPoint(0, 0), -self.r, pi / 2)
         self.primitives["arc1"] = self.arc1
 
         # making coil
@@ -295,9 +295,9 @@ class EMResonator_TL2Qbit_worm2(ComplexBase):
             self.primitives[name] = getattr( self, name )
 
         # draw the "tail"
-        self.arc_tail = CPW_arc( self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1/2, -pi/2 )
+        self.arc_tail = CPWArc(self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1 / 2, -pi / 2)
         self.cop_tail = CPW( self.Z0.width, self.Z0.gap, self.arc_tail.end, self.arc_tail.end - DPoint( 0,self.L2 ) )
-        self.cop_open_end = CPW( 0, self.Z0.b/2, self.cop_tail.end, self.cop_tail.end - DPoint(0,self.Z0.b) )
+        self.cop_open_end = CPW(0, self.Z0.b / 2, self.cop_tail.end, self.cop_tail.end - DPoint(0, self.Z0.b))
         self.primitives["arc_tail"] = self.arc_tail
         self.primitives["cop_tail"] = self.cop_tail
         self.primitives["cop_open_end"] = self.cop_open_end
@@ -403,7 +403,7 @@ class EMResonator_TL2Qbit_worm3(ComplexBase):
         self.alpha_end = self.angle_connections[1]
 
     def init_primitives(self):
-        self.arc1 = CPW_arc(self.Z0, DPoint(0, 0), -self.r, pi / 2)
+        self.arc1 = CPWArc(self.Z0, DPoint(0, 0), -self.r, pi / 2)
         self.primitives["arc1"] = self.arc1
 
         p1 = self.arc1.end
@@ -424,7 +424,7 @@ class EMResonator_TL2Qbit_worm3(ComplexBase):
             self.primitives[name] = getattr(self, name)
 
         # draw the "tail"
-        self.arc_tail = CPW_arc(self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1 / 2, -pi / 2)
+        self.arc_tail = CPWArc(self.Z0, self.primitives["coil" + str(self.N)].end, -self.L1 / 2, -pi / 2)
         self.cop_tail = CPW(self.Z0.width, self.Z0.gap, self.arc_tail.end, self.arc_tail.end - DPoint(0, self.L2))
 
         # tail face is separated from ground by `b = width + 2*gap`
@@ -560,7 +560,7 @@ class EMResonator_TL2Qbit_worm4_XmonFork(EMResonator_TL2Qbit_worm4):
 class EMResonator_TL2Qbit_worm3_2(ComplexBase):
     """
     same as `EMResonator_TL2Qbit_worm3` but shorted and open ends are
-    interchanged their places. In addition, a few primitives had been renamed.
+    interchanged their places. In addition, width few primitives had been renamed.
     """
     def __init__(self, Z0, start, L_coupling, L0, L1, r, L2, N, L3=0, trans_in=None):
         self.Z0 = Z0
@@ -590,7 +590,7 @@ class EMResonator_TL2Qbit_worm3_2(ComplexBase):
         self.alpha_end = self.angle_connections[1]
 
     def init_primitives(self):
-        self.arc1 = CPW_arc(self.Z0, DPoint(0, 0), -self.r, pi / 2)
+        self.arc1 = CPWArc(self.Z0, DPoint(0, 0), -self.r, pi / 2)
         self.primitives["arc1"] = self.arc1
 
         p1 = self.arc1.end
@@ -602,7 +602,7 @@ class EMResonator_TL2Qbit_worm3_2(ComplexBase):
 
         # draw the open-circuited "tail"
         p1 = self.cop_vertical
-        self.arc1_end_open = CPW_arc(
+        self.arc1_end_open = CPWArc(
             self.Z0, self.cop_vertical.end,
             (self.L_coupling + 2*self.r) / 4, pi / 2,
             trans_in=DTrans.R270
@@ -611,7 +611,7 @@ class EMResonator_TL2Qbit_worm3_2(ComplexBase):
             self.Z0.width, self.Z0.gap,
             self.arc1_end_open.end, self.arc1_end_open.end + DPoint(self.L2, 0)
         )
-        self.arc2_end_open = CPW_arc(
+        self.arc2_end_open = CPWArc(
             self.Z0, self.cpw_hor_end_open.end,
             -(self.L_coupling + 2 * self.r) / 4, -pi / 2
         )
@@ -628,13 +628,13 @@ class EMResonator_TL2Qbit_worm3_2(ComplexBase):
             self.cpw_end_open_gap = CPW(
                 0, self.Z0.b / 2,
                 self.cpw_vert_end_open.end,
-                self.cpw_vert_end_open.end - DPoint(0, self.Z0.b)
+                   self.cpw_vert_end_open.end - DPoint(0, self.Z0.b)
             )
         else:
             self.cpw_end_open_gap = CPW(
                 0, self.Z0.b / 2,
                 self.arc2_end_open.end,
-                self.arc2_end_open.end - DPoint(0, self.Z0.b)
+                   self.arc2_end_open.end - DPoint(0, self.Z0.b)
             )
 
         self.primitives["cpw_end_open_gap"] = self.cpw_end_open_gap
@@ -732,7 +732,7 @@ class EMResonator_TL2Qbit_worm3_2_XmonFork(EMResonator_TL2Qbit_worm3_2):
 class EMResonatorTL3QbitWormRLTail(ComplexBase):
     """
     same as `EMResonator_TL3Qbit_worm3` but shorted and open ends are
-    interchanged their places. In addition, a few primitives had been renamed.
+    interchanged their places. In addition, width few primitives had been renamed.
     """
 
     def __init__(self, Z0, start, L_coupling, L0, L1, r, N,
@@ -789,7 +789,7 @@ class EMResonatorTL3QbitWormRLTail(ComplexBase):
         self.alpha_end = self.angle_connections[1]
 
     def init_primitives(self):
-        self.arc1 = CPW_arc(self.Z0, DPoint(0, 0), -self.r, pi / 2)
+        self.arc1 = CPWArc(self.Z0, DPoint(0, 0), -self.r, pi / 2)
         self.primitives["arc1"] = self.arc1
 
         p1 = self.arc1.end
@@ -801,7 +801,7 @@ class EMResonatorTL3QbitWormRLTail(ComplexBase):
 
         # draw the open-circuited "tail"
 
-        self.cpw_end_open_RLPath = CPW_RL_Path(
+        self.cpw_end_open_RLPath = CPWRLPath(
             self.cop_vertical.end, self.tail_shape, cpw_parameters=self.Z0,
             turn_radiuses=self.tail_turn_radiuses,
             segment_lengths=self.tail_segment_lengths,
@@ -813,7 +813,7 @@ class EMResonatorTL3QbitWormRLTail(ComplexBase):
         self.cpw_end_open_gap = CPW(
             0, self.Z0.b / 2,
             self.cpw_end_open_RLPath.end,
-            self.cpw_end_open_RLPath.end - DPoint(0, self.Z0.b)
+               self.cpw_end_open_RLPath.end - DPoint(0, self.Z0.b)
         )
         self.primitives["cpw_end_open_gap"] = self.cpw_end_open_gap
 

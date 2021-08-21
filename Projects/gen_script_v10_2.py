@@ -186,7 +186,7 @@ if __name__ == "__main__":
     sfs.place( cell, layer_photo)
 
     f_l = sfs.connections[0] - cp_list[3].end
-    feedline = CPW_RL_Path(cp_list[3].end, "L", Z, 100e3, [f_l.y-17e3], [] ,trans_in = DTrans.R90)
+    feedline = CPWRLPath(cp_list[3].end, "L", Z, 100e3, [f_l.y - 17e3], [], trans_in = DTrans.R90)
     feedline.place(cell,layer_photo)
 
 
@@ -197,8 +197,8 @@ if __name__ == "__main__":
     constr = 200e3
     out_l_segments = [ 300e3,out_dist.x/2-constr/2, constr, out_dist.x/2-constr/2,300e3+out_dist2.y]
     out_l_segments = [ 300e3,out_dist.x,300e3+out_dist2.y]
-    outline = CPW_RL_Path(sfs.connections[1], "LRLRL", Z, r_turn,
-    out_l_segments, [pi/2,pi/2],trans_in = DTrans.R270)
+    outline = CPWRLPath(sfs.connections[1], "LRLRL", Z, r_turn,
+                        out_l_segments, [pi/2,pi/2], trans_in = DTrans.R270)
     outline.place(cell,layer_photo)
 
     # drawing stick qubit (sq)
@@ -207,7 +207,7 @@ if __name__ == "__main__":
     sq_y = bb.bottom
     sq_x = bb.center().x
     chip_center = DPoint( chip.chip_x/2, chip.chip_y/2)
-    jj = Line_N_JJCross(chip_center)
+    jj = LineNJJ(chip_center)
 
     sq_c = StickQubit_Cap(DPoint(sq_x,sq_y-10e3),20e3,200e3,6e3,8e3)
     sq_c.place(cell,layer_photo)

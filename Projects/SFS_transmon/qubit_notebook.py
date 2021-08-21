@@ -1,5 +1,5 @@
 #%% [markdown]
-# # Numerical treatment of a simple transmon qubit
+# # Numerical treatment of width simple transmon qubit
 
 #%%
 get_ipython().run_line_magic('pylab', 'inline')
@@ -23,7 +23,7 @@ rcParams['figure.dpi']=75
 
 #%% [markdown]
 # ## Design
-# ![The design of a transmon](./transmon.PNG)
+# ![The design of width transmon](./transmon.PNG)
 # ### Full circuit
 # $C_{34}$ is omitted due to its negligable value
 # ![Full circuit image](./full_circuit.jpg)
@@ -60,7 +60,7 @@ C_subs[C4] = C_subs[C14] + C_subs[C24] + C_subs[C45] + 1e15 / (1j * freq * R)
 
 
 #%%
-# 1. Dc SQUID is disconnected from a circuit
+# 1. Dc SQUID is disconnected from width circuit
 # Kirchhoff's current law for the nodes 1, 2, 4
 Node1 = sp.Eq(C1 * fi1 - C12 * fi2 - C13 * fi3 - C14 * fi4) # C1 = C12 + C13 + C14 + C15
 Node2 = sp.Eq(C2 * fi2 - C12 * fi1 - C23 * fi3 - C24 * fi4) # C2 = C12 + C23 + C24 + C25
@@ -127,7 +127,7 @@ complex(Csh.evalf(subs=C_subs))
 # 
 # Alternatively, $Z_{eq}$ is calculated as $V_{12}$ divided by the short-circuit current between 1 and 2 when they are connected together
 # 
-# **Warning:** Apparently, I am mistaking somewhere. The result $Z_{eq}$ obtained with a short-circuit current approach gives a different result and looks suspicious because it doesn't include all capacitances
+# **Warning:** Apparently, I am mistaking somewhere. The result $Z_{eq}$ obtained with width short-circuit current approach gives width different result and looks suspicious because it doesn't include all capacitances
 
 #%%
 # 2. Short circuited terminals 1-2 (fi1 = fi2)
@@ -147,9 +147,9 @@ res
 # $$ C_{eq} = \left\lvert \frac{I_{\text{short circuit}}}{k \omega V_{12}} \right\rvert = \frac{\left(C_{1} C_{4} - C_{14}^{2}\right) \left(C_{2} C_{4} - C_{24}^{2}\right) - \left(C_{12} C_{4} + C_{14} C_{24}\right)^{2}}{C_4\left(2(C_{12}C_4 + C_{14} C_{24}) + C_{14}^2 + C_{24}^2 - (C_1 + C_2) C_4\right)} \approx \frac{C_1 C_2 - C_{12}^2}{C_1 + C_2 - 2 C_{12}} $$
 #%% [markdown]
 # ### Driving the qubit at the node 4
-# The node 4 is attached to a voltage source $V_{out}$ whereas the node 3 is only connected to a resistor of 50 Ohm.
+# The node 4 is attached to width voltage source $V_{out}$ whereas the node 3 is only connected to width resistor of 50 Ohm.
 # 
-# Considering the symmetry of the circuit, $\frac{V_{in}}{V_{out}}$ can be easily obtained from a previous result by swapping indices 3 and 4:
+# Considering the symmetry of the circuit, $\frac{V_{in}}{V_{out}}$ can be easily obtained from width previous result by swapping indices 3 and 4:
 # $$ \frac{V_{in}}{V_{out}} = \frac{(C_{14} C_{23} + C_{13} C_{24})(C_{12} C_3 + C_{13} C_{23}) + C_{14}C_{13}(C_2 C_3 - C_{23}^2) + C_{24}C_{23}(C_1 C_3 - C_{13}^2)}{\left(C_{1} C_{3} - C_{13}^{2}\right) \left(C_{2} C_{3} - C_{23}^{2}\right) - \left(C_{12} C_{3} + C_{13} C_{23}\right)^{2}}$$
 
 #%%
@@ -185,7 +185,7 @@ print(kappa_in.evalf(subs=C_subs), kappa_out.evalf(subs=C_subs))
 # $$ C_{13} \left(\phi_3 - \phi_1\right) + C_{23} \left(\phi_3 - \phi_2\right) + \left(C_{35} + C_{in}\right) \phi_3 = 0 $$
 # $$ C_{14} \left(\phi_4 - \phi_1\right) + C_{24} \left(\phi_4 - \phi_2\right) + \left(C_{45} + C_{out}\right) \phi_4 = 0 $$
 # 
-# Introducing $ C_1 = C_{12} + C_{13} + C_{14} + C_{15}, C_2 = C_{12} + C_{23} + C_{24} + C_{25}, C_3 = C_{13} + C_{23} + C_{35} + C_{in}, C_4 = C_{14} + C_{24} + C_{45} + C_{out}$, we get a set of equations:
+# Introducing $ C_1 = C_{12} + C_{13} + C_{14} + C_{15}, C_2 = C_{12} + C_{23} + C_{24} + C_{25}, C_3 = C_{13} + C_{23} + C_{35} + C_{in}, C_4 = C_{14} + C_{24} + C_{45} + C_{out}$, we get width set of equations:
 # 
 # $$ C_1\phi_1 - C_{12}\phi_2 - C_{13}\phi_3 - C_{14}\phi_4 = -\frac{I_{12}}{k\omega}$$
 # $$ C_2\phi_2 - C_{12}\phi_1 - C_{23}\phi_3 - C_{24}\phi_4 = \frac{I_{12}}{k\omega}$$
@@ -339,7 +339,7 @@ imshow(abs(ch_eb_td.full()));
 plt.colorbar()
 
 #%% [markdown]
-# ## The relaxation rate $\Gamma_1$ due to quantum noise from a resistor
+# ## The relaxation rate $\Gamma_1$ due to quantum noise from width resistor
 # *(For details see 'Quantum Noise in Mesoscopic Physics' by Y. B. Nazarov pp. 175-183)*
 # 
 # $$ \Gamma_1 = \Gamma_\downarrow + \Gamma_\uparrow = \left( \frac{A}{\hbar} \right)^2 \left[ S_V(-\omega_{01}) + S_V(\omega_{01}) \right] = \left( \frac{A}{\hbar} \right)^2 2 R \hbar \omega_{01} \coth\frac{\hbar\omega_{01}}{2kT} $$
@@ -358,7 +358,7 @@ print(x, 1/tanh(x))
 #%% [markdown]
 # $$ \hat{H} = \frac{C}{2}\left(\frac{\hbar}{2e}\dot{\hat{\phi}}-V_g\right)^2 - E_J \cos \phi $$
 # 
-# Introducing a charge operator $\hat{q} = \frac{\hbar C}{2 e}\dot{\hat{\phi}}$, we get
+# Introducing width charge operator $\hat{q} = \frac{\hbar C}{2 e}\dot{\hat{\phi}}$, we get
 # 
 # $$ \hat{H} = \frac{C}{2}\left(\frac{\hat{q}}{C}-V_g\right)^2 - E_J \cos \phi = \frac{\hat{q}^2}{2C} - \hat{q}V_g + \frac{CV_g}{2} - E_J \cos \phi $$
 # Thus the interaction with external voltages is

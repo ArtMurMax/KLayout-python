@@ -1,42 +1,50 @@
 from importlib import reload
-# print("classLib.__init__ invoked") this row executes twice.
-# Once for import classLib
-# the second time for reload(classLib)
+# print("classLib.__init__ invoked")   # this row executes twice.
+# Once for `import classLib`
+# the second time for `reload(classLib)`
 
-from . import _PROG_SETTINGS
-reload(_PROG_SETTINGS)
-from ._PROG_SETTINGS import *
+import classLib._PROG_SETTINGS
+reload(classLib._PROG_SETTINGS)
+from classLib import _PROG_SETTINGS
 
-from . import baseClasses
-reload(baseClasses)
-from .baseClasses import *
+import classLib.baseClasses
+reload(classLib.baseClasses)
+from classLib import baseClasses
 
-from . import shapes
-reload(shapes)
-from .shapes import *
+import classLib.airbridge
+reload(classLib.airbridge)
+from classLib import airbridge
 
-from . import coplanars
-reload(coplanars)
-from .coplanars import *
+import classLib.bridgedCoplanars
+reload(classLib.bridgedCoplanars)
+from classLib import bridgedCoplanars
 
-from . import capacitors
-reload(capacitors)
-from .capacitors import *
+import classLib.coplanars
+reload(classLib.coplanars)
+from classLib import coplanars
 
-from . import couplers
-reload(couplers)
-from .couplers import *
+import classLib.shapes
+reload(classLib.shapes)
+from classLib import shapes
 
-from . import josJ
-reload(josJ)
-from .josJ import *
+import classLib.capacitors
+reload(classLib.capacitors)
+from classLib import capacitors
 
-from . import qbits
-reload(qbits)
-from .qbits import *
+import classLib.couplers
+reload(classLib.couplers)
+from classLib import couplers
 
-from . import resonators
-reload(resonators)
+import classLib.josJ
+reload(classLib.josJ)
+from classLib import josJ
+
+import classLib.qbits
+reload(classLib.qbits)
+from classLib import qbits
+
+import classLib.resonators
+reload(classLib.resonators)
 from .resonators import *
 
 from . import contactPads

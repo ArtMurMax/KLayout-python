@@ -1,6 +1,9 @@
+from typing import List
+
 import pya
 from math import sqrt, cos, sin, atan2, pi, copysign
-from pya import Point, DPoint, DSimplePolygon, SimplePolygon, DPolygon, Polygon, Region, DPath, DVector, DBox
+from pya import Point, DPoint, DSimplePolygon, SimplePolygon, \
+    DPolygon, Polygon, Region, DPath, DVector, DBox
 from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans
 
 from classLib._PROG_SETTINGS import *
@@ -9,7 +12,8 @@ from classLib.coplanars import CPW
 
 
 class Rectangle(ElementBase):
-    def __init__(self, origin, width, height, trans_in=None, inverse=False):
+    def __init__(self, origin, width, height, trans_in=None,
+                 inverse=False):
         """
         Represents rectange object
 
@@ -19,8 +23,8 @@ class Rectangle(ElementBase):
             left-bottom point of rectangle
         width : float
             rectangle's width
-        height : height
-            rectangle's height
+        height : b
+            rectangle's b
         trans_in : DcplxTrans
             Initial transformation
         inverse : bool
@@ -29,20 +33,22 @@ class Rectangle(ElementBase):
             True - rectangle is substracted
             False - rectangle is added (default)
         """
-        self.a = width
-        self.b = height
+        self.width = width
+        self.height = height
         super().__init__(origin, trans_in, inverse)
 
     def init_regions(self):
         origin = DPoint(0, 0)
-        p1 = origin + DPoint(self.a, 0)
-        p2 = p1 + DPoint(0, self.b)
-        p3 = p2 + DPoint(-self.a, 0)
+        p1 = origin + DPoint(self.width, 0)
+        p2 = p1 + DPoint(0, self.height)
+        p3 = p2 + DPoint(-self.width, 0)
         pts_arr = [origin, p1, p2, p3]
         if self.inverse:
-            self.empty_region.insert(SimplePolygon().from_dpoly(DSimplePolygon(pts_arr)))
+            self.empty_region.insert(
+                SimplePolygon().from_dpoly(DSimplePolygon(pts_arr)))
         else:
-            self.metal_region.insert(SimplePolygon().from_dpoly(DSimplePolygon(pts_arr)))
+            self.metal_region.insert(
+                SimplePolygon().from_dpoly(DSimplePolygon(pts_arr)))
         self.connections = [origin]
 
     def _refresh_named_connections(self):
@@ -50,7 +56,8 @@ class Rectangle(ElementBase):
 
 
 class Cross(ElementBase):
-    def __init__(self, origin, inner_square_a, outer_square_a, trans_in=None):
+    def __init__(self, origin, inner_square_a, outer_square_a,
+                 trans_in=None):
         self.in_a = inner_square_a
         self.out_a = outer_square_a
         self.center = origin + DPoint(self.out_a / 2, self.out_a / 2)
@@ -85,11 +92,13 @@ class Cross(ElementBase):
 
 class XmonCross(ComplexBase):
     def __init__(self, origin,
-                 sideX_length, sideX_width, sideX_gnd_gap, sideX_face_gnd_gap=None,
-                 sideY_length=None, sideY_width=None, sideY_gnd_gap=None, sideY_face_gnd_gap=None,
+                 sideX_length, sideX_width, sideX_gnd_gap,
+                 sideX_face_gnd_gap=None,
+                 sideY_length=None, sideY_width=None, sideY_gnd_gap=None,
+                 sideY_face_gnd_gap=None,
                  trans_in=None):
         """
-        Draws cross for xmon qubit with a lot of customization parameters.
+        Draws cross for xmon qubit with width lot of customization parameters.
 
         Parameters
         ----------
@@ -158,14 +167,22 @@ class XmonCross(ComplexBase):
         # for saving
         self.center = origin
         super().__init__(origin, trans_in)
-        self._geometry_parameters["sideX_length, um"] = self.sideX_length / 1e3
-        self._geometry_parameters["sideY_length, um"] = self.sideY_length / 1e3
-        self._geometry_parameters["sideX_width, um"] = self.sideX_width / 1e3
-        self._geometry_parameters["sideY_width, um"] = self.sideY_width / 1e3
-        self._geometry_parameters["sideX_gnd_gap, um"] = self.sideX_gnd_gap / 1e3
-        self._geometry_parameters["sideY_gnd_gap, um"] = self.sideY_gnd_gap / 1e3
-        self._geometry_parameters["sideX_face_gnd_gap, um"] = self.sideX_face_gnd_gap / 1e3
-        self._geometry_parameters["sideY_face_gnd_gap, um"] = self.sideY_face_gnd_gap / 1e3
+        self._geometry_parameters[
+            "sideX_length, um"] = self.sideX_length / 1e3
+        self._geometry_parameters[
+            "sideY_length, um"] = self.sideY_length / 1e3
+        self._geometry_parameters[
+            "sideX_width, um"] = self.sideX_width / 1e3
+        self._geometry_parameters[
+            "sideY_width, um"] = self.sideY_width / 1e3
+        self._geometry_parameters[
+            "sideX_gnd_gap, um"] = self.sideX_gnd_gap / 1e3
+        self._geometry_parameters[
+            "sideY_gnd_gap, um"] = self.sideY_gnd_gap / 1e3
+        self._geometry_parameters[
+            "sideX_face_gnd_gap, um"] = self.sideX_face_gnd_gap / 1e3
+        self._geometry_parameters[
+            "sideY_face_gnd_gap, um"] = self.sideY_face_gnd_gap / 1e3
         self.center = self.connections[0]
 
     def init_primitives(self):
@@ -174,7 +191,8 @@ class XmonCross(ComplexBase):
         # draw central square
         from classLib.shapes import Rectangle
         lb_corner = DPoint(-self.sideX_width / 2, -self.sideY_width / 2)
-        center_square = Rectangle(lb_corner, self.sideX_width, self.sideY_width)
+        center_square = Rectangle(lb_corner, self.sideX_width,
+                                  self.sideY_width)
         self.primitives["center_square"] = center_square
 
         """ left part of Xmon cross """
@@ -220,7 +238,8 @@ class XmonCross(ComplexBase):
 
 
 class Circle(ElementBase):
-    def __init__(self, center, r, trans_in=None, n_pts=50, inverse=False, offset_angle=0):
+    def __init__(self, center, r, trans_in=None, n_pts=50, inverse=False,
+                 offset_angle=0):
         """
 
         Parameters
@@ -234,7 +253,7 @@ class Circle(ElementBase):
         n_pts : int
             number of points comprising the circumference of the ring (50 by default)
         inverse : bool
-            if True then the ring is subtracted from a layer (False by default)
+            if True then the ring is subtracted from width layer (False by default)
         offset_angle : float
             Angle in radians where the first point of the circle will be placed.
             Makes sense for small `n_pts` values.
@@ -247,9 +266,12 @@ class Circle(ElementBase):
 
     def init_regions(self):
         origin = DPoint(0, 0)
-        dpts_arr = [DPoint(self.r * cos(2 * pi * i / self.n_pts + self._offset_angle),
-                           self.r * sin(2 * pi * i / self.n_pts + self._offset_angle)) for i in range(0, self.n_pts)]
-        circle_polygon = SimplePolygon().from_dpoly(DSimplePolygon(dpts_arr))
+        dpts_arr = [DPoint(
+            self.r * cos(2 * pi * i / self.n_pts + self._offset_angle),
+            self.r * sin(2 * pi * i / self.n_pts + self._offset_angle)) for
+            i in range(0, self.n_pts)]
+        circle_polygon = SimplePolygon().from_dpoly(
+            DSimplePolygon(dpts_arr))
         if self.inverse:
             self.empty_region.insert(circle_polygon)
         else:
@@ -263,6 +285,12 @@ class Circle(ElementBase):
 
 
 class Kolbaska(ElementBase):
+    """
+    Warnings
+    ---------
+    Deprecated (Shrinks already existing DPath functionality).
+    """
+
     def __init__(self, origin, stop, width, r, trans_in=None):
         self._width = width
         self._vec = stop - origin
@@ -285,10 +313,62 @@ class Kolbaska(ElementBase):
         self.end = self.connections[1]
 
 
+class DPathCL(DPath, ElementBase):
+    def __init__(self, pts: List[DPoint], width: float, bgn_ext: float = 0,
+                 end_ext: float = 0, round: bool = False, bendings_r=0,
+                 trans_in=None, inverse=None):
+        """
+        Constructor given the points of the path's spine, the width,
+        the extensions and the round end flag.
+
+        Parameters
+        ----------
+        pts : List[DPoint]
+            The points forming the spine of the path
+        width : float
+            The width of the path
+        bgn_ext : float
+            The begin extension of the path
+        end_ext : float
+            The end extension of the path
+        round : bool
+            If this flag is true, the path will get rounded ends
+        bendings_r : float
+            Creates bended DPath by calling `DPath.round(r=bendings_r)`
+        """
+        if bendings_r < width:
+            Warning("inner roundings will be rendered incorrectly due to "
+                    "`bendings_r` is lesser than width `width` of width `DPath`")
+        self.pts: List[DPoint] = pts
+        self.width = width
+        self.bgn_ext = bgn_ext
+        self.end_ext = end_ext
+        self.round = round
+        self.start: DPoint = DPoint(0, 0)
+        self.end: DPoint = DPoint(0, 0)
+        self.connections = self.pts
+        # TODO: implement connection angles
+        DPath.__init__(self, pts, width, bgn_ext, end_ext, round)
+        self.polygon = self.round_corners(
+            bendings_r, PROGRAM.ARC_PTS_N, 1
+        ).polygon()
+        ElementBase.__init__(self, DPoint(0, 0), trans_in=trans_in)
+
+    def init_regions(self):
+        self.connections = self.pts
+        self.start = self.connections[0]
+        self.end = self.connections[-1]
+        self.metal_region.insert(self.polygon)
+
+    def _refresh_named_connections(self):
+        self.pts = self.connections
+        self.start = self.connections[0]
+        self.end = self.connections[-1]
 
 
 class Circle_arc(ElementBase):
-    def __init__(self, center, r, alpha_start=0, alpha_end=pi, trans_in=None, n_pts=50, solid=True):
+    def __init__(self, center, r, alpha_start=0, alpha_end=pi,
+                 trans_in=None, n_pts=50, solid=True):
         self.center = center
         self.r = r
         self.alpha_start = alpha_start
@@ -299,20 +379,26 @@ class Circle_arc(ElementBase):
 
     def init_regions(self):
         d_alpha = (self.alpha_end - self.alpha_start) / (self.n_pts - 1)
-        alphas = [(self.alpha_start + d_alpha * i) for i in range(0, self.n_pts)]
-        dpts_arr = [DPoint(self.r * cos(alpha), self.r * sin(alpha)) for alpha in alphas]
+        alphas = [(self.alpha_start + d_alpha * i) for i in
+                  range(0, self.n_pts)]
+        dpts_arr = [DPoint(self.r * cos(alpha), self.r * sin(alpha)) for
+                    alpha in alphas]
         dpts_arr.append(DPoint(0, 0))
 
         if (self.solid == True):
-            self.metal_region.insert(SimplePolygon().from_dpoly(DSimplePolygon(dpts_arr)))
+            self.metal_region.insert(
+                SimplePolygon().from_dpoly(DSimplePolygon(dpts_arr)))
         else:
-            self.empty_region.insert(SimplePolygon().from_dpoly(DSimplePolygon(dpts_arr)))
-        self.connections.extend([self._center, self._center + DVector(0, -self.r)])
+            self.empty_region.insert(
+                SimplePolygon().from_dpoly(DSimplePolygon(dpts_arr)))
+        self.connections.extend(
+            [self._center, self._center + DVector(0, -self.r)])
         self.angle_connections.extend([0, 0])
 
 
 class Ring(ElementBase):
-    def __init__(self, origin, outer_r, thickness, n_pts=50, trans_in=None, inverse=False):
+    def __init__(self, origin, outer_r, thickness, n_pts=50, trans_in=None,
+                 inverse=False):
         """
 
         Parameters
@@ -328,7 +414,7 @@ class Ring(ElementBase):
         trans_in : DCplxTrans
             initial transformation (None by default)
         inverse : bool
-            if True then the ring is subtracted from a layer (False by default)
+            if True then the ring is subtracted from width layer (False by default)
         """
         self.r = outer_r
         self.t = thickness
@@ -338,9 +424,12 @@ class Ring(ElementBase):
     def init_regions(self):
         Rout = self.r
         Rin = self.r - self.t
-        dpts_arr_Rout = [DPoint(Rout * cos(2 * pi * i / self.n_pts), Rout * sin(2 * pi * i / self.n_pts)) for i in
+        dpts_arr_Rout = [DPoint(Rout * cos(2 * pi * i / self.n_pts),
+                                Rout * sin(2 * pi * i / self.n_pts)) for i
+                         in
                          range(0, self.n_pts)]
-        dpts_arr_Rin = [DPoint(Rin * cos(2 * pi * i / self.n_pts), Rin * sin(2 * pi * i / self.n_pts)) for i in
+        dpts_arr_Rin = [DPoint(Rin * cos(2 * pi * i / self.n_pts),
+                               Rin * sin(2 * pi * i / self.n_pts)) for i in
                         range(0, self.n_pts)]
         ring_dpoly = DPolygon(dpts_arr_Rout)
         ring_dpoly.insert_hole(dpts_arr_Rin)
@@ -355,14 +444,15 @@ class Ring(ElementBase):
 class IsoTrapezoid(ElementBase):
     """@brief: class represents an isosceles trapezoid
         @params:  DPoint origin - position of the left bottom node
-                        float height - height of the trapezoid
+                        float b - b of the trapezoid
                         float bottom - length of the bottom side
                         float top - length of the top side
                         Trans trans_in - initial transformation (None by default)
-                        bool inverse - if True then the ring is subtracted from a layer (False by default)
+                        bool inverse - if True then the ring is subtracted from width layer (False by default)
     """
 
-    def __init__(self, origin, height, bottom, top, trans_in=None, inverse=False):
+    def __init__(self, origin, height, bottom, top, trans_in=None,
+                 inverse=False):
         self.h = height
         self.b = bottom
         self.t = top
@@ -376,29 +466,34 @@ class IsoTrapezoid(ElementBase):
         p3 = p2 + DPoint(dx, -self.h)
         pts_arr = [origin, p1, p2, p3]
         if self.inverse:
-            self.empty_region.insert(SimplePolygon().from_dpoly(DSimplePolygon(pts_arr)))
+            self.empty_region.insert(
+                SimplePolygon().from_dpoly(DSimplePolygon(pts_arr)))
         else:
-            self.metal_region.insert(SimplePolygon().from_dpoly(DSimplePolygon(pts_arr)))
+            self.metal_region.insert(
+                SimplePolygon().from_dpoly(DSimplePolygon(pts_arr)))
 
 
 class Cross2(ElementBase):
-    """@brief: class represents a cross
+    """@brief: class represents width cross
         @params:  DPoint origin - center of the cross
                         float thickness - thickness of the line
                         float length - size of the cross
                         Trans trans_in - initial transformation (None by default)
-                        bool inverse - if True then the ring is subtracted from a layer (False by default)
+                        bool inverse - if True then the ring is subtracted from width layer (False by default)
     """
 
-    def __init__(self, origin, thickness, length, trans_in=None, inverse=False):
+    def __init__(self, origin, thickness, length, trans_in=None,
+                 inverse=False):
         self.l = length
         self.t = thickness
         super().__init__(origin, trans_in, inverse)
 
     def init_regions(self):
         origin = DPoint(0, 0)
-        hor_box = DBox(origin - DPoint(self.l / 2, self.t / 2), DPoint(self.l / 2, self.t / 2))
-        vert_box = DBox(origin - DPoint(self.t / 2, self.l / 2), DPoint(self.t / 2, self.l / 2))
+        hor_box = DBox(origin - DPoint(self.l / 2, self.t / 2),
+                       DPoint(self.l / 2, self.t / 2))
+        vert_box = DBox(origin - DPoint(self.t / 2, self.l / 2),
+                        DPoint(self.t / 2, self.l / 2))
         cross = (Region(hor_box) + Region(vert_box)).merge()
         if self.inverse:
             self.empty_region.insert(cross)

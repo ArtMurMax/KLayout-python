@@ -22,7 +22,7 @@ class CPW_RL_Path(ComplexBase):
         self.delta_alpha_list = delta_alpha_list
         
         self.start = start
-        super( CPW_RL_Path, self ).__init__( start, trans_in )
+        super(CPWRLPath, self).__init__(start, trans_in)
         '''self.start = self.connections[0]
         self.end = self.connections[1]
         self.alpha_start = self.angle_connections[0]
@@ -36,7 +36,7 @@ class CPW_RL_Path(ComplexBase):
         # placing the first element
         symbol_0 = self.RL_str[0]
         if( symbol_0 == 'R' ):
-            self.primitives["arc_0"] = CPW_arc( self.Z_list[0],origin, self.R_list[0], self.delta_alpha_list[0] )
+            self.primitives["arc_0"] = CPWArc(self.Z_list[0], origin, self.R_list[0], self.delta_alpha_list[0])
             R_index += 1
         elif( symbol_0 == 'L' ):
             self.primitives["cpw_0"] = CPW( self.Z_list[0].width, self.Z_list[0].gap, self.start, self.start + DPoint( self.L_list[0],0 ) )
@@ -57,8 +57,8 @@ class CPW_RL_Path(ComplexBase):
                 R = self.R_list[R_index]*sgn
                 delta_alpha = self.delta_alpha_list[R_index]
             
-                cpw_arc = CPW_arc( self.Z_list[i],prev_primitive.end, R, delta_alpha, 
-                                                    trans_in=DCplxTrans(1,prev_primitive.alpha_end*180/pi, False,0,0) )
+                cpw_arc = CPWArc(self.Z_list[i], prev_primitive.end, R, delta_alpha,
+                                 trans_in=DCplxTrans(1,prev_primitive.alpha_end*180/pi, False,0,0))
                 self.primitives["arc_"+str(R_index)] = cpw_arc
                 R_index += 1
                 

@@ -37,13 +37,13 @@ class BranchLine_finger(ComplexBase):
         self.angle_connections = [0,0]
         
         self.coplanar1 = CPW( self.width, self.gap, DPoint(0,0), DPoint(0,0) + DPoint(self.L1,0), self.gndWidth )
-        self.arc1 = CPW_arc( self.coplanar1, self.coplanar1.end, self.R1, self.gamma, self.gndWidth, Trans( Trans.M0 ) )        
+        self.arc1 = CPWArc(self.coplanar1, self.coplanar1.end, self.R1, self.gamma, self.gndWidth, Trans(Trans.M0))
         self.coplanar2 = CPW( self.width, self.gap, self.arc1.end, self.arc1.end + DPoint( cos(self.gamma),-sin(self.gamma) )*self.L2, self.gndWidth )
-        self.arc2 = CPW_arc( self.coplanar1, self.coplanar2.end, self.R2, self.gamma, self.gndWidth, DCplxTrans( 1,-self.gamma*180/pi,False,0,0 ) )
+        self.arc2 = CPWArc(self.coplanar1, self.coplanar2.end, self.R2, self.gamma, self.gndWidth, DCplxTrans(1, -self.gamma * 180 / pi, False, 0, 0))
         self.coplanar3 = CPW( self.width, self.gap, self.arc2.end, self.arc2.end + DPoint( L3, 0 ), self.gndWidth )
-        self.arc3 = CPW_arc( self.coplanar1, self.coplanar3.end, self.R2, self.gamma, self.gndWidth )
+        self.arc3 = CPWArc(self.coplanar1, self.coplanar3.end, self.R2, self.gamma, self.gndWidth)
         self.coplanar4 = CPW( self.width, self.gap, self.arc3.end, self.arc3.end + DPoint( cos(self.gamma),sin(self.gamma) )*self.L2, self.gndWidth )
-        self.arc4 = CPW_arc( self.coplanar1, self.coplanar4.end, self.R1, self.gamma, self.gndWidth, DCplxTrans( 1,self.gamma*180/pi,True,0,0 ) )        
+        self.arc4 = CPWArc(self.coplanar1, self.coplanar4.end, self.R1, self.gamma, self.gndWidth, DCplxTrans(1, self.gamma * 180 / pi, True, 0, 0))
         self.coplanar5 = CPW( self.width, self.gap, self.arc4.end, self.arc4.end + DPoint(self.L1,0), self.gndWidth )
         self.primitives = {"coplanar1":self.coplanar1,"arc1":self.arc1,"coplanar2":self.coplanar2,"arc2":self.arc2,
                                 "coplanar3":self.coplanar3, "arc3":self.arc3,"coplanar4":self.coplanar4,"arc4":self.arc4,
@@ -87,21 +87,21 @@ class BranchLine_finger2(ComplexBase):
         self.angle_connections = [0,0]
         
         self.coplanar1 = CPW( self.width, self.gap, DPoint(0,0), DPoint(0,0) + DPoint(self.L1,0), self.gndWidth )
-        self.arc1 = CPW_arc( self.coplanar1, self.coplanar1.end, self.R1, self.gamma1, self.gndWidth, Trans( Trans.M0 ) )        
+        self.arc1 = CPWArc(self.coplanar1, self.coplanar1.end, self.R1, self.gamma1, self.gndWidth, Trans(Trans.M0))
         self.coplanar2 = CPW( self.width, self.gap, self.arc1.end, self.arc1.end + DPoint( cos(self.gamma1),-sin(self.gamma1) )*self.L2, self.gndWidth )
-        self.arc2 = CPW_arc( self.coplanar1, self.coplanar2.end, self.R2, self.gamma1, self.gndWidth, DCplxTrans( 1,-self.gamma1*180/pi,False,0,0 ) )
+        self.arc2 = CPWArc(self.coplanar1, self.coplanar2.end, self.R2, self.gamma1, self.gndWidth, DCplxTrans(1, -self.gamma1 * 180 / pi, False, 0, 0))
         self.coplanar3 = CPW( self.width, self.gap, self.arc2.end, self.arc2.end + DPoint( self.L3, 0 ), self.gndWidth )
-        self.arc3 = CPW_arc( self.coplanar1, self.coplanar3.end, self.R3, self.gamma2, self.gndWidth )
+        self.arc3 = CPWArc(self.coplanar1, self.coplanar3.end, self.R3, self.gamma2, self.gndWidth)
         self.coplanar4 = CPW( self.width, self.gap, self.arc3.end, self.arc3.end + DPoint( cos(self.gamma2),sin(self.gamma2) )*self.L4, self.gndWidth )
-        self.arc4 = CPW_arc( self.coplanar1, self.coplanar4.end, self.R4, self.gamma2, self.gndWidth, DCplxTrans( 1,self.gamma2*180/pi,True,0,0 ) )        
+        self.arc4 = CPWArc(self.coplanar1, self.coplanar4.end, self.R4, self.gamma2, self.gndWidth, DCplxTrans(1, self.gamma2 * 180 / pi, True, 0, 0))
         self.coplanar5 = CPW( self.width, self.gap, self.arc4.end, self.arc4.end + DPoint(self.L5,0), self.gndWidth )
-        self.arc5 = CPW_arc( self.coplanar1, self.coplanar5.end, self.R4, self.gamma2, self.gndWidth, Trans( Trans.M0 ) )
+        self.arc5 = CPWArc(self.coplanar1, self.coplanar5.end, self.R4, self.gamma2, self.gndWidth, Trans(Trans.M0))
         self.coplanar6 = CPW( self.width, self.gap, self.arc5.end, self.arc5.end + DPoint( cos(self.gamma2),-sin(self.gamma2) )*self.L4, self.gndWidth )
-        self.arc6 = CPW_arc( self.coplanar1, self.coplanar6.end, self.R3, self.gamma2, self.gndWidth, DCplxTrans( 1,-self.gamma2*180/pi, False,0,0 ) )
+        self.arc6 = CPWArc(self.coplanar1, self.coplanar6.end, self.R3, self.gamma2, self.gndWidth, DCplxTrans(1, -self.gamma2 * 180 / pi, False, 0, 0))
         self.coplanar7 = CPW( self.width, self.gap, self.arc6.end, self.arc6.end + DPoint( self.L3,0 ), self.gndWidth )
-        self.arc7 = CPW_arc( self.coplanar1, self.coplanar7.end, self.R2, self.gamma1, self.gndWidth )
+        self.arc7 = CPWArc(self.coplanar1, self.coplanar7.end, self.R2, self.gamma1, self.gndWidth)
         self.coplanar8 = CPW( self.width, self.gap, self.arc7.end, self.arc7.end + DPoint( cos(self.gamma1),sin(self.gamma1) )*self.L2, self.gndWidth )
-        self.arc8 = CPW_arc( self.coplanar1, self.coplanar8.end, self.R1, self.gamma1, self.gndWidth, DCplxTrans( 1,self.gamma1*180/pi,True,0,0 ) )        
+        self.arc8 = CPWArc(self.coplanar1, self.coplanar8.end, self.R1, self.gamma1, self.gndWidth, DCplxTrans(1, self.gamma1 * 180 / pi, True, 0, 0))
         self.coplanar9 = CPW( self.width, self.gap, self.arc8.end, self.arc8.end + DPoint( self.L1,0 ), self.gndWidth )
         self.primitives = {"coplanar1":self.coplanar1,"coplanar2":self.coplanar2,"coplanar3":self.coplanar3,
                                 "coplanar4":self.coplanar4,"coplanar5":self.coplanar5,"coplanar6":self.coplanar6,

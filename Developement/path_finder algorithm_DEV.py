@@ -50,7 +50,7 @@ class Path_finder():
         self.Nx = Nx
         self.Ny = Ny
         self.width = self.bbox.width()/Nx
-        self.height = self.bbox.height()/Ny
+        self.height = self.bbox.b() / Ny
         self.field = np.full( (self.Nx,self.Ny), -1, dtype=np.int32 )
         field_start = Point( int(start.x/self.width), int(start.y/self.height) )
         field_end = Point( int(end.x/self.width), int(end.y/self.height) )

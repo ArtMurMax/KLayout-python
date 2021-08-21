@@ -14,7 +14,7 @@ import classLib
 reload(classLib)
 
 from classLib.baseClasses import ElementBase, ComplexBase
-from classLib.coplanars import CPWParameters, CPW_RL_Path, CPW2CPW, Bridge1
+from classLib.coplanars import CPWParameters, CPWRLPath, CPW2CPW, Bridge1
 from classLib.shapes import XmonCross, Circle, Rectangle
 from classLib.resonators import EMResonatorTL3QbitWormRLTailXmonFork
 from classLib.josJ import AsymSquidParams, AsymSquid
@@ -23,7 +23,7 @@ from classLib.chipDesign import ChipDesign
 from classLib.marks import Mark2
 
 # imports for docstrings generation
-from classLib.coplanars import CPW, CPW_arc
+from classLib.coplanars import CPW, CPWArc
 from typing import List, Dict, Union, Optional
 from classLib.contactPads import ContactPad
 
@@ -38,7 +38,7 @@ from sonnetSim.sonnetLab import SonnetLab, SonnetPort, SimulationBox
 class FluxLineEnd(ElementBase):
     def __init__(self, origin, fc_cpw_params, width, trans_in=None):  # width = 5e3
 
-        self._fc_cpw_params: Union[CPW, CPWParameters, CPW_arc] = fc_cpw_params
+        self._fc_cpw_params: Union[CPW, CPWParameters, CPWArc] = fc_cpw_params
         self._width = width
 
         super().__init__(origin, trans_in)
@@ -79,7 +79,7 @@ class MDriveLineEnd(ComplexBase):
 
         Parameters
         ----------
-        z0_cpw : Union[CPW, CPW_arc]
+        z0_cpw : Union[CPW, CPWArc]
             last part of the md coplanar
         z1_cpw_params : Union[CPWParameters, CPW]
             parameters of the thin coplanar
@@ -90,7 +90,7 @@ class MDriveLineEnd(ComplexBase):
         trans_in : DCplxTrans
             initial transformation
         """
-        self.z0_cpw: Union[CPW, CPW_arc] = z0_cpw
+        self.z0_cpw: Union[CPW, CPWArc] = z0_cpw
         self.z1_params: Union[CPWParameters, CPW] = z1_cpw_params
         self.transition_length: float = transition_length
         self.z1_length: float = z1_length
@@ -218,7 +218,7 @@ class Design5Q(ChipDesign):
         # readout line parameters
         self.ro_line_turn_radius: float = 200e3
         self.ro_line_dy: float = 1600e3
-        self.cpwrl_ro_line: CPW_RL_Path = None
+        self.cpwrl_ro_line: CPWRLPath = None
         self.Z0 = CHIP_10x10_12pads.chip_Z
 
         # resonators objects list
@@ -272,29 +272,29 @@ class Design5Q(ChipDesign):
         self.shift_md_x = 60e3
         self.shift_md_y = 510e3
 
-        self.cpwrl_md1: CPW_RL_Path = None
+        self.cpwrl_md1: CPWRLPath = None
         self.cpwrl_md1_end: MDriveLineEnd = None
-        self.cpwrl_fl1: CPW_RL_Path = None
+        self.cpwrl_fl1: CPWRLPath = None
         self.cpwrl_fl1_end: FluxLineEnd = None
 
-        self.cpwrl_md2: CPW_RL_Path = None
+        self.cpwrl_md2: CPWRLPath = None
         self.cpwrl_md2_end: MDriveLineEnd = None
-        self.cpwrl_fl2: CPW_RL_Path = None
+        self.cpwrl_fl2: CPWRLPath = None
         self.cpwrl_fl2_end: FluxLineEnd = None
 
-        self.cpwrl_md3: CPW_RL_Path = None
+        self.cpwrl_md3: CPWRLPath = None
         self.cpwrl_md3_end: MDriveLineEnd = None
-        self.cpwrl_fl3: CPW_RL_Path = None
+        self.cpwrl_fl3: CPWRLPath = None
         self.cpwrl_fl3_end: FluxLineEnd = None
 
-        self.cpwrl_md4: CPW_RL_Path = None
+        self.cpwrl_md4: CPWRLPath = None
         self.cpwrl_md4_end: MDriveLineEnd = None
-        self.cpwrl_fl4: CPW_RL_Path = None
+        self.cpwrl_fl4: CPWRLPath = None
         self.cpwrl_fl4_end: FluxLineEnd = None
 
-        self.cpwrl_md5: CPW_RL_Path = None
+        self.cpwrl_md5: CPWRLPath = None
         self.cpwrl_md5_end: MDriveLineEnd = None
-        self.cpwrl_fl5: CPW_RL_Path = None
+        self.cpwrl_fl5: CPWRLPath = None
         self.cpwrl_fl5_end: FluxLineEnd = None
 
         # marks
@@ -487,7 +487,7 @@ class Design5Q(ChipDesign):
                            res_line_total_length - self.chip.pcb_feedline_d,
                            ro_line_dy / 2]
 
-        self.cpwrl_ro_line = CPW_RL_Path(
+        self.cpwrl_ro_line = CPWRLPath(
             self.contact_pads[-1].end, shape="LR" + ''.join(['L'] * len(res_line_segments_lengths)) + "RLRLRL",
             cpw_parameters=CPWParameters(self.Z0.width + 2 * FABRICATION.OVERETCHING,
                                          self.Z0.gap - 2 * FABRICATION.OVERETCHING),
@@ -586,7 +586,7 @@ class Design5Q(ChipDesign):
         shift_md_x_side = md_z1_length + md_transition + md_z1_params.b / 2 + cross_len_x + cross_width_x / 2 + cross_gnd_gap_x
 
         # place caplanar line 1md
-        self.cpwrl_md1 = CPW_RL_Path(
+        self.cpwrl_md1 = CPWRLPath(
             contact_pads[0].end, shape="LRLRL", cpw_parameters=z_md_fl,
             turn_radiuses=[ctr_line_turn_radius] * 2,
             segment_lengths=[
@@ -613,7 +613,7 @@ class Design5Q(ChipDesign):
         self.cpwrl_md1_end.place(tmp_reg)
 
         # place caplanar line 1 fl
-        self.cpwrl_fl1 = CPW_RL_Path(
+        self.cpwrl_fl1 = CPWRLPath(
             contact_pads[1].end, shape="LRL", cpw_parameters=z_md_fl,
             turn_radiuses=[ctr_line_turn_radius],
             segment_lengths=[
@@ -630,7 +630,7 @@ class Design5Q(ChipDesign):
         self.cpwrl_fl1_end.place(tmp_reg)
 
         # place caplanar line 2md
-        self.cpwrl_md2 = CPW_RL_Path(
+        self.cpwrl_md2 = CPWRLPath(
             contact_pads[3].end, shape="LRLRLRL", cpw_parameters=z_md_fl,
             turn_radiuses=[ctr_line_turn_radius] * 3,
             segment_lengths=[
@@ -662,7 +662,7 @@ class Design5Q(ChipDesign):
 
         # place caplanar line 2 fl
 
-        self.cpwrl_fl2 = CPW_RL_Path(
+        self.cpwrl_fl2 = CPWRLPath(
             contact_pads[2].end, shape="LRLRL", cpw_parameters=z_md_fl,
             turn_radiuses=[ctr_line_turn_radius] * 2,
             segment_lengths=[(-contact_pads[2].end.x + xmon_center.x - 3 * xmon_x_distance) / 4, (
@@ -681,7 +681,7 @@ class Design5Q(ChipDesign):
         self.cpwrl_fl2_end.place(tmp_reg)
 
         # place caplanar line 3md
-        self.cpwrl_md3_1 = CPW_RL_Path(
+        self.cpwrl_md3_1 = CPWRLPath(
             contact_pads[5].end, shape="LRLRLRL", cpw_parameters=z_md_fl,
             turn_radiuses=[ctr_line_turn_radius] * 3,
             segment_lengths=[
@@ -707,7 +707,7 @@ class Design5Q(ChipDesign):
         dy = self.cpwrl_md2.end.y - self.cpwrl_md3_1.end.y
         dx = self.cpwrl_md3_1.end.x - (self.xmons[2].center.x + shift_md_x)
         md3_2_radius = ctr_line_turn_radius - 50e3
-        self.cpwrl_md3_2 = CPW_RL_Path(
+        self.cpwrl_md3_2 = CPWRLPath(
             self.cpwrl_md3_1.end, shape="LRLR", cpw_parameters=z_md_fl,
             turn_radiuses=[md3_2_radius] * 2,
             segment_lengths=[dy - md3_2_radius, dx],
@@ -728,7 +728,7 @@ class Design5Q(ChipDesign):
         dr.y = dr.y - fl_l1 - fl_l3 - z_md_fl.width
         turn_angle = atan2(-dr.x, dr.y)
         fl_l2 = dr.abs()
-        self.cpwrl_fl3 = CPW_RL_Path(
+        self.cpwrl_fl3 = CPWRLPath(
             self.contact_pads[4].end, shape="LRLRL", cpw_parameters=z_md_fl,
             turn_radiuses=[ctr_line_turn_radius] * 2,
             segment_lengths=[fl_l1, fl_l2, fl_l3],
@@ -740,7 +740,7 @@ class Design5Q(ChipDesign):
         self.cpwrl_fl3_end.place(tmp_reg)
 
         # place caplanar line 4 md
-        self.cpwrl_md4 = CPW_RL_Path(
+        self.cpwrl_md4 = CPWRLPath(
             contact_pads[7].end, shape="LRL", cpw_parameters=z_md_fl,
             turn_radiuses=[ctr_line_turn_radius / 2],
             segment_lengths=[contact_pads[7].end.x - xmon_center.x + xmon_x_distance - shift_md_x,
@@ -756,7 +756,7 @@ class Design5Q(ChipDesign):
         self.cpwrl_md4_end.place(tmp_reg)
 
         # place caplanar line 4 fl
-        self.cpwrl_fl4 = CPW_RL_Path(
+        self.cpwrl_fl4 = CPWRLPath(
             contact_pads[6].end, shape="LRLRL", cpw_parameters=z_md_fl,
             turn_radiuses=[ctr_line_turn_radius] * 2,
             segment_lengths=[(contact_pads[6].end.x - xmon_center.x + xmon_x_distance) / 4,
@@ -775,7 +775,7 @@ class Design5Q(ChipDesign):
         self.cpwrl_fl4_end.place(tmp_reg)
 
         # place caplanar line 5 md
-        self.cpwrl_md5 = CPW_RL_Path(
+        self.cpwrl_md5 = CPWRLPath(
             contact_pads[9].end, shape="LRLRL", cpw_parameters=z_md_fl,
             turn_radiuses=[ctr_line_turn_radius] * 2,
             segment_lengths=[
@@ -806,7 +806,7 @@ class Design5Q(ChipDesign):
         self.cpwrl_md5_end.place(tmp_reg)
 
         # place caplanar line 5 fl
-        self.cpwrl_fl5_1 = CPW_RL_Path(
+        self.cpwrl_fl5_1 = CPWRLPath(
             contact_pads[8].end, shape="LRLRLR", cpw_parameters=z_md_fl,
             turn_radiuses=[ctr_line_turn_radius] * 3,
             segment_lengths=[
@@ -827,7 +827,7 @@ class Design5Q(ChipDesign):
             trans_in=Trans.R180
         )
         self.cpwrl_fl5_1.place(tmp_reg)
-        self.cpwrl_fl5_2 = CPW_RL_Path(
+        self.cpwrl_fl5_2 = CPWRLPath(
             self.cpwrl_fl5_1.end,
             shape="LRL", cpw_parameters=z_md_fl,
             turn_radiuses=[ctr_line_turn_radius],
@@ -1166,8 +1166,8 @@ if __name__ == "__main__":
 
         ml_terminal._send(CMD.SAY_HELLO)
         ml_terminal.clear()
-        simBox = SimulationBox(crop_box.width(), crop_box.height(),
-                               crop_box.width() / 1e3, crop_box.height() / 1e3)
+        simBox = SimulationBox(crop_box.width(), crop_box.b(),
+                               crop_box.width() / 1e3, crop_box.b() / 1e3)
         ml_terminal.set_boxProps(simBox)
         # print("sending cell and layer")
         from sonnetSim.pORT_TYPES import PORT_TYPES
@@ -1217,7 +1217,7 @@ if __name__ == "__main__":
         output_filepath = os.path.join(project_dir, "Xmon_resonatov_Cg_results.csv")
         if os.path.exists(output_filepath):
             # append data to file
-            with open(output_filepath, "a", newline='') as csv_file:
+            with open(output_filepath, "width", newline='') as csv_file:
                 writer = csv.writer(csv_file)
                 writer.writerow(
                     [design.xmon_dys_Cg_coupling[k] / 1e3, C12, C1]

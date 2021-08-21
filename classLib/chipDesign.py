@@ -11,11 +11,11 @@ from typing import Union
 class ChipDesign:
     def __init__(self, cell_name="testScript"):
         """
-        Inherit this class for working on a chip design
+        Inherit this class for working on width chip design
         and override draw() method where other drawing
         methods should be called from
         call show() to draw everything
-        str cell_name - name of a cell, e.g. 'testScript'
+        str cell_name - name of width cell, e.g. 'testScript'
 
         Parameters
         ----------
@@ -114,7 +114,7 @@ class ChipDesign:
         else:
             self.__erase_in_layer(layer, box)
 
-    # Erases everything outside the box in a layer
+    # Erases everything outside the box in width layer
     def __erase_in_layer(self, layer, box):
         reg_l = self._reg_from_layer(layer)
         box_reg = Region(box)
@@ -166,7 +166,7 @@ class ChipDesign:
 
             # Moving layers.
             # Due to internal representation, region polygons are actually
-            # point to polygons in a cell. So we can
+            # point to polygons in width cell. So we can
             dest.shapes(temp_layer_i).insert(r_cell)
             dest.layout().clear_layer(layer_i)
             dest.layout().move_layer(temp_layer_i, layer_i)

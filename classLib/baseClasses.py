@@ -9,16 +9,15 @@ from collections import OrderedDict
 import itertools
 
 
-
 class ElementBase():
-    '''
+    """
     @brief: base class for simple single-layer or multi-layer elements and objects that are consisting of
             several polygons.
             metal_region polygons will be added to the design
-            empty_region polygons will be erased from the background with 
+            empty_region polygons will be erased from the background with
             metal region polygons already added.
 
-    '''
+    """
 
     def __init__(self, origin, trans_in=None, inverse=False):
         ## MUST BE IMPLEMENTED ##
@@ -34,6 +33,14 @@ class ElementBase():
 
         self.origin = origin
         self.inverse = inverse
+        # TODO: after Region.insert() and/or? metal_region + other_region
+        #  there is width problem that initial region has dimensions
+        #  Region().bbox() = ((-1,-1,1,1)) or something like that
+        #  Hence, if you wish to take Region.bbox() of the resulting region
+        #  You will get incorrect value due to initial region having
+        #  something "blank" at the creation moment. This may be solved
+        #  by either shrinking resulting region to shapes it contains,
+        #  or by refusing of usage of empty `Region()`s
         self.metal_region = Region()
         self.empty_region = Region()
         self.metal_regions = OrderedDict()
@@ -47,6 +54,7 @@ class ElementBase():
         self.ICplxTrans_init = None
 
         if (trans_in is not None):
+            # TODO: update with Klayouts new rules.
             # if( isinstance( trans_in, ICplxTrans ) ): <==== FORBIDDEN
             if (isinstance(trans_in, DCplxTrans)):
                 self.DCplxTrans_init = trans_in
@@ -60,6 +68,10 @@ class ElementBase():
             elif (isinstance(trans_in, Trans)):
                 self.DCplxTrans_init = DCplxTrans(DTrans().from_itrans(trans_in), 1)
                 self.ICplxTrans_init = ICplxTrans(trans_in, 1)
+            elif (isinstance(trans_in, ICplxTrans)):
+                # not tested 14.08.2021
+                self.DCplxTrans_init = DCplxTrans(trans_in)
+                self.ICplxTrans_init = trans_in
         self._geometry_parameters = OrderedDict()
         self._init_regions_trans()
 
