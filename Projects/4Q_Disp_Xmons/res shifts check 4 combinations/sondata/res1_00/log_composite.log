@@ -1,0 +1,79 @@
+Run 1:  Mon Aug 02 19:10:11 2021.  .
+        Em version 14.52 (64-bit Windows) on DESKTOP-4GF3P7O local.
+
+  Project:  C:\Users\Labiks\Documents\GitHub\KLayout-python\SonnetLab_Matlab_server\Sonnet_projects\matlab_proj.son.
+
+    Frequency:  6.2725 GHZ
+      Subsectioning at 6.2775 GHz with Eeff of 6.225.
+      Subsectioning time:  1 minute 42 seconds.
+      De-embedding information for left box wall port(s):
+        Left SOC Electric Wall: 850 microns length, 950 subsections, 67 MB.
+        Left SOC Magnetic Wall: 1700 microns length, 919 subsections, 67 MB.
+      De-embedding information for right box wall port(s):
+        Right SOC Electric Wall: 850 microns length, 950 subsections, 67 MB.
+        Right SOC Magnetic Wall: 1700 microns length, 919 subsections, 67 MB.
+      Em license feature:  emhighperformance.
+      Circuit requires 25798 subsections and 2874 MB of memory.
+
+      Subsections by level and type:
+      Level 0:
+        Staircase:  25798
+
+      Required memory by type:
+        System matrix:            2539 MB
+        Elemental subsections:
+          Primary structure:      102 MB
+          Left standard:          109 MB
+          Right standard:         109 MB
+        Fourier transform:        7 MB
+        Waveguide mode:           4 MB
+        Adaptive band synthesis:  2 MB
+        Miscellaneous:            1 MB
+        TOTAL REQUIRED MEMORY:    2874 MB
+
+      Matrix solver:  internal 64-bit SSE lossless.
+      Simulation mode:  local machine.
+      Threads:  using 12 thread(s), 12 core(s) available.
+      Waveguide mode time:  0.079 seconds.
+      Fourier transform time:  0.284 seconds.
+      Coupling time:  3 minutes 26 seconds.
+      Loss time:  0 seconds.
+      Matrix fill time:  3 minutes 27 seconds.
+      Matrix solve time:  1 minute 38 seconds.
+      De-embedding time for left box wall:
+        SOC Electric Wall Std: 5 seconds.
+        SOC Magnetic Wall Std: 5 seconds.
+        Total:                 11 seconds.
+      Frequency completed Mon Aug 02 19:17:14 2021.
+      De-embedded S-Parameters. 50.0 Ohm Port Terminations.
+      Magnitude/Angle. Touchstone Format. (S11 S21 S12 S22).
+        6.27250000 0.136683 144.11 0.990615 -39.84 0.990615 -39.84 0.136683 -43.78
+        !< P1 F=6.2725 Eeff=(6.22475766 0.0) Z0=(49.1886343 0.0) R=0.0 C=0.00625471 
+        !< P2 F=6.2725 Eeff=(6.22475766 0.0) Z0=(49.1886343 0.0) R=0.0 C=0.00625471 
+      Total time per frequency:  5 minutes 20 seconds.
+
+    Frequency:  6.2775 GHZ
+      Frequency completed Mon Aug 02 19:22:32 2021.
+      De-embedded S-Parameters. 50.0 Ohm Port Terminations.
+      Magnitude/Angle. Touchstone Format. (S11 S21 S12 S22).
+        6.27750000 0.060394 -34.69 0.998175 -28.58 0.998175 -28.58 0.060394 157.53
+        !< P1 F=6.2775 Eeff=(6.22475675 0.0) Z0=(49.1886288 0.0) R=0.0 C=0.00625471 
+        !< P2 F=6.2775 Eeff=(6.22475675 0.0) Z0=(49.1886288 0.0) R=0.0 C=0.00625471 
+      Total time per frequency:  5 minutes 18 seconds.
+      ABS time:  0.121 seconds.
+
+    Frequency:  6.27404 GHZ
+      Frequency completed Mon Aug 02 19:27:48 2021.
+      De-embedded S-Parameters. 50.0 Ohm Port Terminations.
+      Magnitude/Angle. Touchstone Format. (S11 S21 S12 S22).
+        6.27404000 0.998795 56.051 0.049080 55.186 0.049080 55.186 0.998795 -125.7
+        !< P1 F=6.27404 Eeff=(6.22475738 0.0) Z0=(49.1886326 0.0) R=0.0 C=0.00625471 
+        !< P2 F=6.27404 Eeff=(6.22475738 0.0) Z0=(49.1886326 0.0) R=0.0 C=0.00625471 
+      Total time per frequency:  5 minutes 15 seconds.
+      ABS time:  0.121 seconds.
+
+    Post-Analysis:
+      Total time for 3 frequencies:  17 minutes 38 seconds.
+      Errors detected: 0    Warnings detected: 0.
+
+Analysis completed Mon Aug 02 19:27:49 2021.
