@@ -597,7 +597,8 @@ class CPWRLPath(ComplexBase):
 
                 if(self._segment_lengths[idx_l] < 0):
                     raise Warning(
-                        f"{self.__name__} warning: segment length "
+                        f"{self.__class__.__name__} warning: segment "
+                        f"length "
                         "is less than zero"
                     )
 

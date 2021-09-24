@@ -1,9 +1,9 @@
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 """
 Version notes:
-Changed in 0.1.1
-Fix discontinuous readout line. One of the segment occurred to be 
-shortened to the ground plane. 
+Changed in 0.2.0
+instead of single discontinuous readout line these version
+utilizes 2 independent readout lines. 
 """
 
 # built-in packages import
@@ -1042,7 +1042,6 @@ class Design4QSquare(ChipDesign):
         dx9 = self.contact_pads[10].connections[0].x - \
               (self.resonators[2].connections[0].x -
                get_res_extension(self.resonators[2]) / 2)
-        print([self.ro_line_turn_radius] * 3, [dx9, dy9 / 2, 2 * dx9, dy9 / 2])
         seg13 = CPWRLPath(
             seg12.end, "LRLRLRL", self.ro_Z,
             [self.ro_line_turn_radius] * 3, [dx9, dy9 / 2, 2 * dx9, dy9 / 2],

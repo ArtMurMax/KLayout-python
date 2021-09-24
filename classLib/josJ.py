@@ -253,12 +253,13 @@ AsymSquidDCFluxParams = namedtuple(
         "flux_line_dy",
         "flux_line_outer_width",
         "flux_line_inner_width",
+        "flux_line_contact_width",
         "flux_line_IO_transition_L"
     ],
     defaults=[
         5e3, 30e3, 10e3, 200, 15e3, 200e6,
         96, 348, 500, 1e3, 94, 20, 180, 250,
-        30e3, 10e3, 1e3, 370, 100
+        30e3, 10e3, 1e3, 370, 5e3, 100
     ]
 )
 
@@ -412,10 +413,14 @@ class AsymSquidDCFlux(ComplexBase):
                 pars.flux_line_outer_width / 2
             ),
             shape="LRL",
-            cpw_parameters=CPWParameters(
-                width=pars.flux_line_outer_width, gap=0
-            ),
-            turn_radiuses=pars.flux_line_outer_width,
+            cpw_parameters=
+            [
+                CPWParameters(width=pars.flux_line_contact_width, gap=0),
+                CPWParameters(smoothing=True),
+                CPWParameters(width=pars.flux_line_outer_width, gap=0)
+            ],
+            turn_radiuses=max(pars.flux_line_outer_width,
+                              pars.flux_line_contact_width),
             segment_lengths=[
                 pars.flux_line_dy + pars.flux_line_outer_width,
                 pars.flux_line_dx / 2 - self.bot_inter_lead_dx
@@ -433,10 +438,14 @@ class AsymSquidDCFlux(ComplexBase):
                 pars.flux_line_outer_width / 2
             ),
             shape="LRL",
-            cpw_parameters=CPWParameters(
-                width=pars.flux_line_outer_width, gap=0
-            ),
-            turn_radiuses=pars.flux_line_outer_width,
+            cpw_parameters=
+            [
+                CPWParameters(width=pars.flux_line_contact_width, gap=0),
+                CPWParameters(smoothing=True),
+                CPWParameters(width=pars.flux_line_outer_width, gap=0)
+            ],
+            turn_radiuses=max(pars.flux_line_outer_width,
+                              pars.flux_line_contact_width),
             segment_lengths=[
                 pars.flux_line_dy + pars.flux_line_outer_width,
                 pars.flux_line_dx / 2 - self.bot_inter_lead_dx

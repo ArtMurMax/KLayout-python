@@ -1,11 +1,11 @@
 import pya
-from math import sqrt, cos, sin, atan2, pi, copysign, tan
+from math import cos, sin, atan2, pi
 from numpy import sign
 from pya import Point, DPoint, DSimplePolygon, SimplePolygon, DPolygon, Polygon, Region
 from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans
 
-from classLib.baseClasses import *
-from classLib.airbridge import *
+from classLib.baseClasses import ElementBase
+from classLib.airbridge import Airbridge
 
 
 class BridgedCPW(ElementBase):
