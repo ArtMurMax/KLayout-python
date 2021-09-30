@@ -1,4 +1,4 @@
-__version__ = "0.3.0.0"
+__version__ = "0.3.0.1"
 
 # Enter your Python code here
 from math import cos, sin, tan, atan2, pi, degrees
@@ -1037,6 +1037,7 @@ class Design5Q(ChipDesign):
 
     def draw_bridges(self):
         bridges_step = 150e3
+        fl_bridges_step = 150e3
 
         # for resonators
         for resonator in self.resonators:
@@ -1072,11 +1073,18 @@ class Design5Q(ChipDesign):
                 )
             elif "cpwrl_fl" in key:
                 Bridge1.bridgify_CPW(
-                    val, bridges_step,
+                    val, fl_bridges_step,
                     dest=self.region_bridges1, dest2=self.region_bridges2,
                     avoid_points=[squid.origin for squid in self.squids],
-                    avoid_distance=500e3
+                    avoid_distance=400e3
                 )
+
+        for cpw_fl in self.cpw_fl_lines:
+            bridge_center1 = cpw_fl.end + DVector(0, -40e3)
+            br = Bridge1(center=bridge_center1, trans_in=Trans.R90)
+            br.place(dest=self.region_bridges1, region_name="bridges_1")
+            br.place(dest=self.region_bridges2, region_name="bridges_2")
+
         # for readout waveguide
         bridgified_primitives_idxs = list(range(2))
         bridgified_primitives_idxs += list(
