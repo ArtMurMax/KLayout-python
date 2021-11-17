@@ -329,14 +329,14 @@ class Design4QSquare(ChipDesign):
         self.draw_xmons()
         self.draw_josephson_loops()
         self.draw_el_protection()
-
         self.draw_resonators()
-        self.draw_md_and_flux_lines()
-        self.draw_readout_waveguide()
+
+        # self.draw_md_and_flux_lines()
+        # self.draw_readout_waveguide()
 
         # self.draw_test_structures()
 
-        self.draw_el_dc_contacts()
+        # self.draw_el_dc_contacts()
 
         # self.draw_photo_el_marks()
         # self.draw_bridges()
