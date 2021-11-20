@@ -11,7 +11,7 @@ import csv
 
 class SonnetPort:
     def __init__(self, point=None, port_type=None):
-        self.point = point
+        self.point : Union[Point, DPoint] = point
         self.port_type = port_type
 
     def __deepcopy__(self, memodict={}):
@@ -75,8 +75,8 @@ class SonnetLab(MatlabClient):
                 for port in self.ports:
                     r_middle = (edge.p1 + edge.p2) * 0.5
                     R = port.point.distance(r_middle)
-                    # print(r_middle, port.point, R)
-                    if R < 10:  # distance from connection point to the middle of the edge <10 nm
+                    # print(r_middle, "\t", port.point, "\t", R)
+                    if R < 10:  # distance from connection point to the middle of the edge <10 nm => add port there
                         port_edges_indexes.append(i + 1)  # matlab polygon edge indexing starts from 1
                         port_edges_types.append(port.port_type)  # choosing appropriate port type
                         break

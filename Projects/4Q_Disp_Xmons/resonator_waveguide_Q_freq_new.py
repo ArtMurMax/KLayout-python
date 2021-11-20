@@ -27,13 +27,17 @@ from classLib.marks import MarkBolgar
 from classLib.contactPads import ContactPad
 from classLib.helpers import fill_holes, split_polygons
 
+import sonnetSim
+reload(sonnetSim)
+from sonnetSim.sonnetLab import SonnetLab, SonnetPort, SimulationBox
+
 import copy
 
 
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.8e3
+FABRICATION.OVERETCHING = 0.0e3
 SQUID_PARAMETERS = AsymSquidDCFluxParams(
     pad_r=5e3, pads_distance=30e3,
     contact_pad_width=10e3, contact_pad_ext_r=200,
@@ -1046,15 +1050,52 @@ if __name__ == "__main__":
     resonator_idx = 0
     design.draw(resonator_idx)
     design.show()
-    bbox = (
-            design.resonators[0].metal_region +
-            design.xmons[0].metal_region
+    crop_box = (
+            design.resonators[0].metal_region + design.resonators[0].empty_region +
+            design.xmons[0].metal_region + design.xmons[0].empty_region
     ).bbox()
-    bbox.top += -(design.Z_res.width/2) + \
-                design.to_line_list[resonator_idx] + \
-                design.Z0.b/2
-    bbox.bottom -= 100e3
-    bbox.top += 100e3
-    bbox.left -= 100e3
-    bbox.right += 100e3
-    design.crop(bbox)
+    # center of the readout CPW
+    crop_box.top += -design.Z_res.b/2 + design.to_line_list[resonator_idx] + design.Z0.b/2
+    box_extension = 100e3
+    crop_box.bottom -= box_extension
+    crop_box.top += box_extension
+    crop_box.left -= box_extension
+    crop_box.right += box_extension
+    design.crop(crop_box, layer=design.layer_ph)
+    design.sonnet_ports = [
+        DPoint(crop_box.left, crop_box.top - box_extension - design.Z0.b/2),
+        DPoint(crop_box.right, crop_box.top - box_extension - design.Z0.b/2)
+    ]
+
+    # transforming cropped box to the origin
+    dr = DPoint(0, 0) - crop_box.p1
+    design.transform_layer(design.layer_ph, DTrans(dr.x, dr.y), trans_ports=True)
+    design.lv.zoom_fit()
+
+    ml_terminal = SonnetLab()
+    # print("starting connection...")
+    from sonnetSim.cMD import CMD
+
+    ml_terminal._send(CMD.SAY_HELLO)
+    ml_terminal.clear()
+    simBox = SimulationBox(
+        crop_box.width(), crop_box.height(),
+        # crop_box.width() / 1e3, crop_box.height() / 1e3
+        200, 200
+    )
+    ml_terminal.set_boxProps(simBox)
+    # print("sending cell and layer")
+    from sonnetSim.pORT_TYPES import PORT_TYPES
+
+    ports = [
+        SonnetPort(design.sonnet_ports[0], PORT_TYPES.BOX_WALL),
+        SonnetPort(design.sonnet_ports[1], PORT_TYPES.BOX_WALL)
+    ]
+    [print(port.point.x, port.point.y) for port in ports]
+    ml_terminal.set_ports(ports)
+
+    ml_terminal.send_polygons(design.cell, design.layer_ph)
+    ml_terminal.set_ABS_sweep(start_f_GHz=6, stop_f_GHz=6.5)
+    print("simulating...")
+    result_path = ml_terminal.start_simulation(wait=True)
+    ml_terminal.release()

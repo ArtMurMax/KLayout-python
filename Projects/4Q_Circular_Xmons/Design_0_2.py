@@ -225,7 +225,7 @@ class Design4QSquare(ChipDesign):
         )
 
         # readout line parameters
-        self.ro_line_turn_radius: float = 200e3
+        self.ro_line_turn_radius: float = 50e3
         self.ro_line_dy: float = 1600e3
         self.cpwrl_ro_line: CPWRLPath = None
         self.Z0: CPWParameters = CHIP_10x10_12pads.chip_Z
@@ -332,13 +332,13 @@ class Design4QSquare(ChipDesign):
 
         self.draw_resonators()
         self.draw_md_and_flux_lines()
-        self.draw_readout_waveguide()
+        # self.draw_readout_waveguide()
 
-        # self.draw_test_structures()
+        self.draw_test_structures()
 
         self.draw_el_dc_contacts()
 
-        # self.draw_photo_el_marks()
+        self.draw_photo_el_marks()
         # self.draw_bridges()
         # self.draw_pinning_holes()
         # self.extend_photo_overetching()
