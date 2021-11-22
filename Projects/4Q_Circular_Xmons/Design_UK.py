@@ -6,8 +6,12 @@ instead of single discontinuous readout line these version
 utilizes 2 independent readout lines. 
 
 Changed in 0.2.1
-both bridge layers polygons are divided in order to satisfy condition that
+1. both bridge layers polygons are divided in order to satisfy condition that
 every polygon consists of less than 200 points.
+2. Splitting of polygons with holes could be resulted in > 200 points polygons
+with internal contours being resolved. Now all polygons with holes are resolved before
+splitting dividing them into pieces of <200 pts.
+
 
 TODO: 0.2.2
 Match CPW2CPW of bounding areas to the readout cpw waveguide widths. 
@@ -351,6 +355,7 @@ class Design4QSquare(ChipDesign):
         self.draw_pinning_holes()
         self.extend_photo_overetching()
         self.inverse_destination(self.region_ph)
+        self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
         self.split_polygons_in_layers(max_pts=180)
 
     def _transfer_regs2cell(self):
@@ -1325,6 +1330,32 @@ class Design4QSquare(ChipDesign):
             )
         self.region_ph = tmp_reg
 
+    # TODO: add layer or region arguments to the functions wich end with "..._in_layers()"
+    def resolve_holes(self):
+        from itertools import chain
+        tmp_reg = Region()
+        for poly in chain(self.region_ph):
+            tmp_reg.insert(poly.resolved_holes())
+        self.region_ph = tmp_reg
+
+        tmp_reg = Region()
+        for poly in chain(self.region_bridges1):
+            tmp_reg.insert(poly.resolved_holes())
+        self.region_bridges1 = tmp_reg
+
+        tmp_reg = Region()
+        for poly in chain(self.region_bridges2):
+            tmp_reg.insert(poly.resolved_holes())
+        self.region_bridges2 = tmp_reg
+
+        for poly in chain(self.region_bridges2):
+            tmp_reg.insert(poly.resolved_holes())
+        self.region_bridges2 = tmp_reg
+
+        # TODO: the following code is not working (region_bridges's polygons remain the same)
+        # for poly in chain(self.region_bridges2):
+        #     poly.resolve_holes()
+
     def split_polygons_in_layers(self, max_pts=200):
         self.region_ph = split_polygons(self.region_ph, max_pts)
         self.region_bridges2 = split_polygons(self.region_bridges2, max_pts)
@@ -1332,7 +1363,10 @@ class Design4QSquare(ChipDesign):
         for poly in self.region_ph:
             if poly.num_points() > max_pts:
                 print("exists photo")
-        for poly in self.region_ph:
+        for poly in self.region_bridges1:
+            if poly.num_points() > max_pts:
+                print("exists bridge2")
+        for poly in self.region_bridges2:
             if poly.num_points() > max_pts:
                 print("exists bridge2")
 

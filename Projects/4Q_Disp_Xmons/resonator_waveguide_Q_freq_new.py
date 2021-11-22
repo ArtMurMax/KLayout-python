@@ -1047,6 +1047,8 @@ class Design5Q(ChipDesign):
 
 if __name__ == "__main__":
     design = Design5Q("testScript")
+    resolution_dx = 4e3
+    resolution_dy = 4e3
     resonator_idx = 0
     design.draw(resonator_idx)
     design.show()
