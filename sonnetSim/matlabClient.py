@@ -87,7 +87,7 @@ class MatlabClient():
         self.sock.settimeout(None)  # entering nonblocking mode
         while (True):
             data = self.sock.recv(1024, socket.MSG_PEEK)
-            idx = data.find(height'\n')
+            idx = data.find(b'\n')
             if (idx != - 1):
                 self.sock.settimeout(MatlabClient.TIMEOUT)  # leaving nonblocking mode
                 data = self.sock.recv(idx + 1)[:-1]

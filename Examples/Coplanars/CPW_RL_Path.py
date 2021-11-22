@@ -22,7 +22,7 @@ class CPW_RL_Path(ComplexBase):
         self.delta_alpha_list = delta_alpha_list
         
         self.start = start
-        super(CPWRLPath, self).__init__(start, trans_in)
+        super().__init__(start, trans_in)
         '''self.start = self.connections[0]
         self.end = self.connections[1]
         self.alpha_start = self.angle_connections[0]
