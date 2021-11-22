@@ -1,9 +1,16 @@
-__version__ = "0.1.1"
+__version__ = "0.2.1"
 """
 Version notes:
-Changed in 0.1.1
-Fix discontinuous readout line. One of the segment occurred to be 
-shortened to the ground plane. 
+Changed in 0.2.0
+instead of single discontinuous readout line these version
+utilizes 2 independent readout lines. 
+
+Changed in 0.2.1
+both bridge layers polygons are divided in order to satisfy condition that
+every polygon consists of less than 200 points.
+
+TODO: 0.2.2
+Match CPW2CPW of bounding areas to the readout cpw waveguide widths. 
 """
 
 # built-in packages import
@@ -225,7 +232,7 @@ class Design4QSquare(ChipDesign):
         )
 
         # readout line parameters
-        self.ro_line_turn_radius: float = 200e3
+        self.ro_line_turn_radius: float = 50e3
         self.ro_line_dy: float = 1600e3
         self.cpwrl_ro_line: CPWRLPath = None
         self.Z0: CPWParameters = CHIP_10x10_12pads.chip_Z
@@ -334,16 +341,17 @@ class Design4QSquare(ChipDesign):
         self.draw_md_and_flux_lines()
         self.draw_readout_waveguide()
 
-        # self.draw_test_structures()
+        self.draw_test_structures()
 
         self.draw_el_dc_contacts()
 
-        # self.draw_photo_el_marks()
-        # self.draw_bridges()
-        # self.draw_pinning_holes()
-        # self.extend_photo_overetching()
-        # self.inverse_destination(self.region_ph)
-        # self.split_polygons_in_layers(max_pts=180)
+        self.draw_photo_el_marks()
+
+        self.draw_bridges()
+        self.draw_pinning_holes()
+        self.extend_photo_overetching()
+        self.inverse_destination(self.region_ph)
+        self.split_polygons_in_layers(max_pts=180)
 
     def _transfer_regs2cell(self):
         # this too methods assumes that all previous drawing
@@ -1042,12 +1050,13 @@ class Design4QSquare(ChipDesign):
         dx9 = self.contact_pads[10].connections[0].x - \
               (self.resonators[2].connections[0].x -
                get_res_extension(self.resonators[2]) / 2)
-        print([self.ro_line_turn_radius] * 3, [dx9, dy9 / 2, 2 * dx9, dy9 / 2])
+        print(dx9, dy9/2, 2*dx9, dy9/2, self.ro_line_turn_radius)
         seg13 = CPWRLPath(
             seg12.end, "LRLRLRL", self.ro_Z,
-            [self.ro_line_turn_radius] * 3, [dx9, dy9 / 2, 2 * dx9, dy9 / 2],
-            [-pi / 2, -pi / 2, pi / 2],
-            Trans.R180
+            turn_radiuses=[self.ro_line_turn_radius] * 3,
+            segment_lengths=[-dx9, dy9 / 2, -2 * dx9, dy9 / 2],
+            turn_angles=[-pi / 2, -pi / 2, pi / 2],
+            trans_in=Trans.R180
         )
         seg13.place(self.region_ph)
         self.ro_line_segs_list.append(seg13)
@@ -1319,6 +1328,7 @@ class Design4QSquare(ChipDesign):
     def split_polygons_in_layers(self, max_pts=200):
         self.region_ph = split_polygons(self.region_ph, max_pts)
         self.region_bridges2 = split_polygons(self.region_bridges2, max_pts)
+        self.region_bridges1 = split_polygons(self.region_bridges1, max_pts)
         for poly in self.region_ph:
             if poly.num_points() > max_pts:
                 print("exists photo")

@@ -96,7 +96,7 @@ class ElementBase():
             return tmp_dict
         else:
             print("Geometry parameters for ", self.__class__ , " does not implemented")
-            return None
+            return {}
 
     def init_regions(self):
         raise NotImplementedError

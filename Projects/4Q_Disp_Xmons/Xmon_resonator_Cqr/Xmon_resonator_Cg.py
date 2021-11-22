@@ -1140,7 +1140,7 @@ if __name__ == "__main__":
         design.crop(crop_box)
         dr = DPoint(0, 0) - crop_box.p1
         # find furthest edge of the `cpw_end_open_RLPath` primitive to center of the
-        # xmon
+        # xmon. Second port will be placed at the center of the this edge.
         design.sonnet_ports = [worm.primitives["cpw_end_open_RLPath"].start, xmonCross.cpw_b.end]
         if not crop_box.contains(design.sonnet_ports[0]):
             reg1 = worm.metal_region & Region(crop_box)
@@ -1166,9 +1166,13 @@ if __name__ == "__main__":
 
         ml_terminal._send(CMD.SAY_HELLO)
         ml_terminal.clear()
-        simBox = SimulationBox(crop_box.width(), crop_box.height(),
-                               crop_box.width() / 1e3, crop_box.height() /
-                               1e3)
+        simBox = SimulationBox(
+            crop_box.width(),
+            crop_box.height(),
+            crop_box.width() / 1e3,
+            crop_box.height() /1e3
+        )
+        
         ml_terminal.set_boxProps(simBox)
         # print("sending cell and layer")
         from sonnetSim.pORT_TYPES import PORT_TYPES
@@ -1218,7 +1222,7 @@ if __name__ == "__main__":
         output_filepath = os.path.join(project_dir, "Xmon_resonatov_Cg_results.csv")
         if os.path.exists(output_filepath):
             # append data to file
-            with open(output_filepath, "width", newline='') as csv_file:
+            with open(output_filepath, "w", newline='') as csv_file:
                 writer = csv.writer(csv_file)
                 writer.writerow(
                     [design.xmon_dys_Cg_coupling[k] / 1e3, C12, C1]

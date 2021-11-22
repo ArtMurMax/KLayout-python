@@ -24,6 +24,8 @@ class CPWParameters(ElementBase):
         self.gap = gap
         self.b = 2 * gap + width
 
+        self._geometry_parameters = {"cpw width, um": self.width, "cpw_gap, um": self.gap}
+
 
 class CPW(ElementBase):
     """@brief: class represents single coplanar waveguide
