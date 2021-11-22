@@ -1046,58 +1046,208 @@ class Design5Q(ChipDesign):
 
 
 if __name__ == "__main__":
-    design = Design5Q("testScript")
     resolution_dx = 4e3
     resolution_dy = 4e3
-    resonator_idx = 0
-    design.draw(resonator_idx)
-    design.show()
-    crop_box = (
-            design.resonators[0].metal_region + design.resonators[0].empty_region +
-            design.xmons[0].metal_region + design.xmons[0].empty_region
-    ).bbox()
-    # center of the readout CPW
-    crop_box.top += -design.Z_res.b/2 + design.to_line_list[resonator_idx] + design.Z0.b/2
-    box_extension = 100e3
-    crop_box.bottom -= box_extension
-    crop_box.top += box_extension
-    crop_box.left -= box_extension
-    crop_box.right += box_extension
-    design.crop(crop_box, layer=design.layer_ph)
-    design.sonnet_ports = [
-        DPoint(crop_box.left, crop_box.top - box_extension - design.Z0.b/2),
-        DPoint(crop_box.right, crop_box.top - box_extension - design.Z0.b/2)
-    ]
+    estimated_res_freqs_init = [6.5, 6.59, 6.68, 6.77, 6.86]  # GHz
+    freqs_span_corase = 1.0  # GHz
+    corase_only = False
+    freqs_span_fine = 0.005
+    dl_list = [10e3, 0, -10e3]
 
-    # transforming cropped box to the origin
-    dr = DPoint(0, 0) - crop_box.p1
-    design.transform_layer(design.layer_ph, DTrans(dr.x, dr.y), trans_ports=True)
-    design.lv.zoom_fit()
+    from itertools import product
 
-    ml_terminal = SonnetLab()
-    # print("starting connection...")
-    from sonnetSim.cMD import CMD
+    for dl, (resonator_idx, estimated_freq) in product(
+            dl_list,
+            list(zip(range(5), estimated_res_freqs_init)),
+    ):
+        fine_resonance_success = False
+        freqs_span = freqs_span_corase
+        while not fine_resonance_success:
+            # fine_resonance_success = True  # NOTE: FOR DEBUG
+            print("start drawing")
+            design = Design5Q("testScript")
+            design.L1_list = [L1 + dl for L1 in design.L1_list]
+            design.draw(resonator_idx)
+            design.show()
+            import os
+            project_dir = os.path.dirname(__file__)
+            design.layout.write(
+                os.path.join(project_dir, f"{resonator_idx}_{dl}_um.gds")
+            )
 
-    ml_terminal._send(CMD.SAY_HELLO)
-    ml_terminal.clear()
-    simBox = SimulationBox(
-        crop_box.width(), crop_box.height(),
-        # crop_box.width() / 1e3, crop_box.height() / 1e3
-        200, 200
-    )
-    ml_terminal.set_boxProps(simBox)
-    # print("sending cell and layer")
-    from sonnetSim.pORT_TYPES import PORT_TYPES
+            crop_box = (
+                    design.resonators[0].metal_region + design.resonators[0].empty_region +
+                    design.xmons[0].metal_region + design.xmons[0].empty_region
+            ).bbox()
+            # center of the readout CPW
+            crop_box.top += -design.Z_res.b/2 + design.to_line_list[resonator_idx] + design.Z0.b/2
+            box_extension = 100e3
+            crop_box.bottom -= box_extension
+            crop_box.top += box_extension
+            crop_box.left -= box_extension
+            crop_box.right += box_extension
+            design.crop(crop_box, layer=design.layer_ph)
+            design.sonnet_ports = [
+                DPoint(crop_box.left, crop_box.top - box_extension - design.Z0.b/2),
+                DPoint(crop_box.right, crop_box.top - box_extension - design.Z0.b/2)
+            ]
 
-    ports = [
-        SonnetPort(design.sonnet_ports[0], PORT_TYPES.BOX_WALL),
-        SonnetPort(design.sonnet_ports[1], PORT_TYPES.BOX_WALL)
-    ]
-    [print(port.point.x, port.point.y) for port in ports]
-    ml_terminal.set_ports(ports)
+            # transforming cropped box to the origin
+            dr = DPoint(0, 0) - crop_box.p1
+            design.transform_layer(design.layer_ph, DTrans(dr.x, dr.y), trans_ports=True)
+            design.lv.zoom_fit()
 
-    ml_terminal.send_polygons(design.cell, design.layer_ph)
-    ml_terminal.set_ABS_sweep(start_f_GHz=6, stop_f_GHz=6.5)
-    print("simulating...")
-    result_path = ml_terminal.start_simulation(wait=True)
-    ml_terminal.release()
+            ml_terminal = SonnetLab()
+            # print("starting connection...")
+            from sonnetSim.cMD import CMD
+
+            ml_terminal._send(CMD.SAY_HELLO)
+            ml_terminal.clear()
+            simBox = SimulationBox(
+                crop_box.width(), crop_box.height(),
+                crop_box.width() / resolution_dx, crop_box.height() / resolution_dy
+            )
+            ml_terminal.set_boxProps(simBox)
+            # print("sending cell and layer")
+            from sonnetSim.pORT_TYPES import PORT_TYPES
+
+            ports = [
+                SonnetPort(design.sonnet_ports[0], PORT_TYPES.BOX_WALL),
+                SonnetPort(design.sonnet_ports[1], PORT_TYPES.BOX_WALL)
+            ]
+            ml_terminal.set_ports(ports)
+
+            ml_terminal.send_polygons(design.cell, design.layer_ph)
+            ml_terminal.set_ABS_sweep(estimated_freq - freqs_span / 2, estimated_freq + freqs_span / 2)
+            print(f"simulating...{resonator_idx}")
+            result_path = ml_terminal.start_simulation(wait=True)
+            ml_terminal.release()
+
+            ### RESONANCE FINDING SECTION START ###
+            """
+            intended to be working ONLY IF:
+            s12 is monotonically increasing or decreasing over the chosen frequency band.
+            That generally holds true for circuits with single resonator.
+            """
+            with open(result_path.decode('ascii'), "r", newline='') as file:
+                # exctracting s-parameters in csv format
+                # though we do not have csv module
+                rows = [row.split(',') for row in list(file.readlines())[8:]]
+                freqs = [float(row[0]) for row in rows]  # rows in GHz
+                df = freqs[1] - freqs[0]  # frequency error
+                s12_list = [float(row[3]) + 1j * float(row[4]) for row in rows]
+                s12_abs_list = [abs(s12) for s12 in s12_list]
+                min_freq_idx, min_s21_abs = min(enumerate(s12_abs_list), key=lambda x: x[1])
+                min_freq = freqs[min_freq_idx]
+                min_freq_idx = len(s12_abs_list)/2  # Note: FOR DEBUG
+
+            # processing the results
+            if min_freq_idx == 0:
+                # local minimum is located to the left of current interval
+                # => shift interval to the left and try again
+                derivative = (s12_list[1] - s12_list[0]) / df
+                second_derivative = (s12_list[2] - 2 * s12_list[1] + s12_list[0]) / df ** 2
+                print('resonance located the left of the current interval')
+                # try adjacent interval to the left
+                estimated_freq -= freqs_span
+                continue
+            elif min_freq_idx == (len(freqs) - 1):
+                # local minimum is located to the right of current interval
+                # => shift interval to the right and try again
+                derivative = (s12_list[-1] - s12_list[-2]) / df
+                second_derivative = (s12_list[-1] - 2 * s12_list[-2] + s12_list[-3]) / df ** 2
+                print('resonance located the right of the current interval')
+                # try adjacent interval to the right
+                estimated_freq += freqs_span
+                continue
+            else:
+                # local minimum is within current interval
+                print(f"fr = {min_freq:3.5} GHz,  fr_err = {df:.5}")
+                estimated_freq = min_freq
+                if freqs_span == freqs_span_corase:
+                    if corase_only:
+                        # terminate simulation after corase simulation
+                        fine_resonance_success = True
+                    else:
+                        # go to fine approximation step
+                        freqs_span = freqs_span_fine
+                        continue
+                elif freqs_span == freqs_span_fine:
+                    # fine approximation ended, go to saving the result
+                    fine_resonance_success = True  # breaking frequency locating cycle condition is True
+
+            # unreachable code:
+            # TODO: add approximation of the resonance if minimum is nonlocal during corase approximation
+            # fr_approx = (2*derivative/second_derivative) + min_freq
+            # B = -4*derivative**3/second_derivative**2
+            # A = min_freq - 2*derivative**2/second_derivative
+            # print(f"fr = {min_freq:3.3} GHz,  fr_err = not implemented(")
+            ### RESONANCE FINDING SECTION END  ###
+
+            ### RESULT SAVING SECTION START ###
+            import shutil
+            import os
+            import csv
+
+            # geometry parameters gathering
+            res_params = design.resonators[resonator_idx].get_geometry_params_dict(prefix="worm_")
+            Z0_params = design.Z0.get_geometry_params_dict(prefix="S21Line_")
+
+            from collections import OrderedDict
+
+            all_params = OrderedDict(
+                itertools.chain(
+                    res_params.items(),
+                    Z0_params.items(),
+                    {
+                        "to_line, um": design.to_line_list[resonator_idx] / 1e3,
+                        "filename": None,
+                        "resonator_idx": resonator_idx
+                    }.items()
+                )
+            )
+
+            # creating directory with simulation results
+            results_dirname = "resonator_waveguide_Q_freqs_v4_results"
+            results_dirpath = os.path.join(project_dir, results_dirname)
+
+            output_metaFile_path = os.path.join(
+                results_dirpath,
+                "resonator_waveguide_Q_freq_meta.csv"
+            )
+            try:
+                # creating directory
+                os.mkdir(results_dirpath)
+            except FileExistsError:
+                # directory already exists
+                with open(output_metaFile_path, "r+", newline='') as csv_file:
+                    reader = csv.reader(csv_file)
+                    existing_entries_n = len(list(reader))
+                    all_params["filename"] = "result_" + str(existing_entries_n) + ".csv"
+
+                    writer = csv.writer(csv_file)
+                    # append new values row to file
+                    writer.writerow(list(all_params.values()))
+            else:
+                '''
+                    Directory did not exist and has been created sucessfully.
+                    So we create fresh meta-file.
+                    Meta-file contain simulation parameters and corresponding
+                    S-params filename that is located in this directory
+                '''
+                with open(output_metaFile_path, "w+", newline='') as csv_file:
+                    writer = csv.writer(csv_file)
+                    # create header of the file
+                    writer.writerow(list(all_params.keys()))
+                    # add first parameters row
+                    reader = csv.reader(csv_file)
+                    existing_entries_n = len(list(reader))
+                    all_params["filename"] = "result_1.csv"
+                    writer.writerow(list(all_params.values()))
+            finally:
+                # copy result from sonnet folder and rename it accordingly
+                shutil.copy(
+                    result_path.decode("ascii"),
+                    os.path.join(results_dirpath, all_params["filename"])
+                )
+            ### RESULT SAVING SECTION END ###

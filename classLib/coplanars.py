@@ -24,6 +24,8 @@ class CPWParameters(ElementBase):
         self.gap = gap
         self.b = 2 * gap + width
 
+        self._geometry_parameters = {"cpw width, um": self.width, "cpw_gap, um": self.gap}
+
 
 class CPW(ElementBase):
     """@brief: class represents single coplanar waveguide
@@ -74,11 +76,21 @@ class CPW(ElementBase):
                                      DPoint(0, self.width / 2)])
         self.connection_edges = [3, 1]
         self.metal_region.insert(pya.SimplePolygon().from_dpoly(metal_poly))
-        if (self.gap != 0): self.empty_region.insert(pya.Box(Point().from_dpoint(DPoint(0, self.width / 2)),
-                                                             Point().from_dpoint(
-                                                                 DPoint(self.dr.abs(), self.width / 2 + self.gap))))
-        self.empty_region.insert(pya.Box(Point().from_dpoint(DPoint(0, -self.width / 2 - self.gap)),
-                                         Point().from_dpoint(DPoint(self.dr.abs(), -self.width / 2))))
+        if (self.gap != 0):
+            self.empty_region.insert(
+                pya.Box(
+                    Point().from_dpoint(DPoint(0, self.width / 2)),
+                    Point().from_dpoint(
+                        DPoint(self.dr.abs(), self.width / 2 + self.gap)
+                    )
+                )
+            )
+            self.empty_region.insert(
+                pya.Box(
+                    Point().from_dpoint(DPoint(0, -self.width / 2 - self.gap)),
+                    Point().from_dpoint(DPoint(self.dr.abs(), -self.width / 2))
+                )
+            )
         self.metal_region.transform(alpha_trans)
         self.empty_region.transform(alpha_trans)
 
