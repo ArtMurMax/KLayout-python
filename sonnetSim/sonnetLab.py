@@ -57,6 +57,8 @@ class SonnetLab(MatlabClient):
         self.ports = deepcopy(ports)
 
     def send_polygon(self, polygon, port_edges_indexes=None, port_edges_types=None):
+        # print()
+        # print("new polygon")
         pts_x = np.zeros(polygon.num_points(), dtype=np.float64)
         pts_y = np.zeros(polygon.num_points(), dtype=np.float64)
         # print( "Sending polygon, edges: ", polygon.num_points_hull() )
@@ -75,7 +77,8 @@ class SonnetLab(MatlabClient):
                 for port in self.ports:
                     r_middle = (edge.p1 + edge.p2) * 0.5
                     R = port.point.distance(r_middle)
-                    # print(r_middle, "\t", port.point, "\t", R)
+                    # if i < 4:
+                    #     print(r_middle, "\t", port.point, "\t", R)
                     if R < 10:  # distance from connection point to the middle of the edge <10 nm => add port there
                         port_edges_indexes.append(i + 1)  # matlab polygon edge indexing starts from 1
                         port_edges_types.append(port.port_type)  # choosing appropriate port type

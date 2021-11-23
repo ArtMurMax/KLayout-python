@@ -1066,7 +1066,7 @@ if __name__ == "__main__":
             # fine_resonance_success = True  # NOTE: FOR DEBUG
             print("start drawing")
             design = Design5Q("testScript")
-            # design.L1_list = [L1 + dl for L1 in design.L1_list]
+            design.L1_list = [L1 + dl for L1 in design.L1_list]
             design.draw(resonator_idx)
 
             crop_box = (
@@ -1083,7 +1083,7 @@ if __name__ == "__main__":
             crop_box.top += box_extension
             crop_box.left -= box_extension
             crop_box.right += box_extension
-            design.crop(crop_box, layer=design.layer_ph)
+            design.crop(crop_box, region=design.region_ph)
             design.sonnet_ports = [
                 DPoint(crop_box.left, crop_box.top - box_extension - design.Z0.b/2),
                 DPoint(crop_box.right, crop_box.top - box_extension - design.Z0.b/2)

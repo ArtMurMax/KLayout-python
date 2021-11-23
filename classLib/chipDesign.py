@@ -107,24 +107,17 @@ class ChipDesign:
         self.lv.zoom_fit()
 
     # Erases everything outside the box
-    def crop(self, box, layer=None):
-        if layer is None:
-            self.__erase_in_layer(self.layer_ph, box)
-            self.__erase_in_layer(self.layer_el, box)
+    def crop(self, box, region=None):
+        if region is None:
+            self.__erase_in_region(self.region_ph, box)
+            self.__erase_in_region(self.region_el, box)
         else:
-            self.__erase_in_layer(layer, box)
+            self.__erase_in_region(region, box)
 
     # Erases everything outside the box in width layer
-    def __erase_in_layer(self, layer, box):
-        reg_l = self._reg_from_layer(layer)
+    def __erase_in_region(self, region, box):
         box_reg = Region(box)
-        reg_l &= box_reg
-
-        temp_i = self.cell.layout().layer(pya.LayerInfo(PROGRAM.LAYER1_NUM, 0))
-        self.cell.shapes(temp_i).insert(reg_l)
-        self.cell.layout().clear_layer(layer)
-        self.cell.layout().move_layer(temp_i, layer)
-        self.cell.layout().delete_layer(temp_i)
+        region &= box_reg
 
     def _reg_from_layer(self, layer):
         if layer == self.layer_el:
@@ -194,11 +187,11 @@ class ChipDesign:
 
         r_cell.transform(trans)
 
-        temp_i = self.cell.layout().layer(pya.LayerInfo(PROGRAM.LAYER1_NUM, 0))
-        self.cell.shapes(temp_i).insert(r_cell)
+        tmp_layer_idx = self.cell.layout().layer(pya.LayerInfo(PROGRAM.LAYER1_NUM, 0))
+        self.cell.shapes(tmp_layer_idx).insert(r_cell)
         self.cell.layout().clear_layer(layer_i)
-        self.cell.layout().move_layer(temp_i, layer_i)
-        self.cell.layout().delete_layer(temp_i)
+        self.cell.layout().move_layer(tmp_layer_idx, layer_i)
+        self.cell.layout().delete_layer(tmp_layer_idx)
 
         if trans_ports:
             self.sonnet_ports = list(
