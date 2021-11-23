@@ -597,21 +597,25 @@ class CPWRLPath(ComplexBase):
                         and self._shape_string[i + 1] == 'R'
                         and abs(self._turn_angles[idx_r]) < np.pi):
                     coeff = abs(np.tan(self._turn_angles[idx_r] / 2))
-                    self._segment_lengths[idx_l] -= self._turn_radiuses[
-                                                        idx_r] * coeff
+                    # print(self._segment_lengths)
+                    # print(coeff)
+                    # print(self._turn_radiuses)
+                    self._segment_lengths[idx_l] -= \
+                        self._turn_radiuses[idx_r] * coeff
                 # previous 'R' segment if exists
                 if (i - 1 > 0
                         and self._shape_string[i - 1] == 'R'
                         and abs(self._turn_angles[idx_r - 1]) < np.pi):
                     coeff = abs(np.tan(self._turn_angles[idx_r - 1] / 2))
-                    self._segment_lengths[idx_l] -= self._turn_radiuses[
-                                                        idx_r - 1] * coeff
+                    self._segment_lengths[idx_l] -= \
+                        self._turn_radiuses[idx_r - 1] * coeff
 
                 if(self._segment_lengths[idx_l] < 0):
                     raise Warning(
-                        f"{self.__class__.__name__} warning: segment "
-                        f"length "
-                        "is less than zero"
+                        f"{self.__class__.__name__} warning: segment №"
+                        f"{idx_l} length is less than zero\n\n"
+                        f"{self._segment_lengths[idx_l]}, {coeff}"
+                        f"{self._turn_radiuses[idx_r - 1]}"
                     )
 
                 cpw = CPW(self._cpw_parameters[i].width,

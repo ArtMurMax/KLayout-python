@@ -1172,7 +1172,7 @@ if __name__ == "__main__":
             crop_box.width() / 1e3,
             crop_box.height() /1e3
         )
-        
+
         ml_terminal.set_boxProps(simBox)
         # print("sending cell and layer")
         from sonnetSim.pORT_TYPES import PORT_TYPES

@@ -1066,26 +1066,16 @@ if __name__ == "__main__":
             # fine_resonance_success = True  # NOTE: FOR DEBUG
             print("start drawing")
             design = Design5Q("testScript")
-            design.L1_list = [L1 + dl for L1 in design.L1_list]
+            # design.L1_list = [L1 + dl for L1 in design.L1_list]
             design.draw(resonator_idx)
-            design.show()
-            import os
-            project_dir = os.path.dirname(__file__)
-            design.layout.write(
-                os.path.join(project_dir, f"{resonator_idx}_{dl}_um.gds")
-            )
 
             crop_box = (
-                    design.resonators[-1].metal_region + design.resonators[-1].empty_region +
-                    design.xmons[-1].metal_region + design.xmons[-1].empty_region
+                design.resonators[resonator_idx].metal_region +
+                design.resonators[resonator_idx].empty_region +
+                design.xmons[-1].metal_region +
+                design.xmons[-1].empty_region
             ).bbox()
-            print(cropbox)
-            print(
-                design.resonators[-1].metal_region.bbox(),
-                design.resonators[-1].empty_region.bbox(),
-                design.xmons[-1].metal_region.bbox(),
-                design.xmons[-1].empty_region.bbox()
-            )
+
             # center of the readout CPW
             crop_box.top += -design.Z_res.b/2 + design.to_line_list[resonator_idx] + design.Z0.b/2
             box_extension = 100e3
@@ -1098,6 +1088,13 @@ if __name__ == "__main__":
                 DPoint(crop_box.left, crop_box.top - box_extension - design.Z0.b/2),
                 DPoint(crop_box.right, crop_box.top - box_extension - design.Z0.b/2)
             ]
+
+            import os
+            design.show()
+            project_dir = os.path.dirname(__file__)
+            design.layout.write(
+                os.path.join(project_dir, f"{resonator_idx}_{dl}_um.gds")
+            )
 
             # transforming cropped box to the origin
             dr = DPoint(0, 0) - crop_box.p1
