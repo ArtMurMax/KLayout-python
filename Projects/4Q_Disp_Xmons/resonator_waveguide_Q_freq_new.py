@@ -1046,8 +1046,8 @@ class Design5Q(ChipDesign):
 
 
 if __name__ == "__main__":
-    resolution_dx = 4e3
-    resolution_dy = 4e3
+    resolution_dx = 2e3
+    resolution_dy = 2e3
     estimated_res_freqs_init = [6.5, 6.59, 6.68, 6.77, 6.86]  # GHz
     freqs_span_corase = 1.0  # GHz
     corase_only = False
@@ -1076,9 +1076,16 @@ if __name__ == "__main__":
             )
 
             crop_box = (
-                    design.resonators[0].metal_region + design.resonators[0].empty_region +
-                    design.xmons[0].metal_region + design.xmons[0].empty_region
+                    design.resonators[-1].metal_region + design.resonators[-1].empty_region +
+                    design.xmons[-1].metal_region + design.xmons[-1].empty_region
             ).bbox()
+            print(cropbox)
+            print(
+                design.resonators[-1].metal_region.bbox(),
+                design.resonators[-1].empty_region.bbox(),
+                design.xmons[-1].metal_region.bbox(),
+                design.xmons[-1].empty_region.bbox()
+            )
             # center of the readout CPW
             crop_box.top += -design.Z_res.b/2 + design.to_line_list[resonator_idx] + design.Z0.b/2
             box_extension = 100e3
