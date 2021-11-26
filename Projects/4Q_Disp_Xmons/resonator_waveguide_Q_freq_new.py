@@ -157,7 +157,9 @@ class Design5Q(ChipDesign):
         self.L_coupling_list: list[float] = [1e3 * x for x in [310, 320, 320, 310, 300]]
         # corresponding to resonanse freq is linspaced in interval [6,9) GHz
         self.L0 = 1150e3
-        self.L1_list = [1e3 * x for x in [50.7218, 96.3339, 138.001, 142.77, 84.9156]]
+        # previous commit predictions
+        self.L1_list = [1e3 * x for x in [70.73959436, 91.28326636, 137.6653485, 126.5793665, 71.58485723]]
+
         self.r = 60e3
         self.N_coils = [3] * len(self.L1_list)
         self.L2_list = [self.r] * len(self.L1_list)
@@ -1046,19 +1048,19 @@ class Design5Q(ChipDesign):
 
 
 if __name__ == "__main__":
-    resolution_dx = 2e3
-    resolution_dy = 2e3
+    resolution_dx = 1e3
+    resolution_dy = 1e3
     estimated_res_freqs_init = [6.5, 6.59, 6.68, 6.77, 6.86]  # GHz
     freqs_span_corase = 1.0  # GHz
     corase_only = False
     freqs_span_fine = 0.005
-    dl_list = [10e3, 0, -10e3]
-
+    # dl_list = [10e3, 0, -10e3]
+    dl_list = [0]
     from itertools import product
 
     for dl, (resonator_idx, estimated_freq) in product(
             dl_list,
-            list(zip(range(5), estimated_res_freqs_init)),
+            list(zip(range(5), estimated_res_freqs_init))[:1],
     ):
         fine_resonance_success = False
         freqs_span = freqs_span_corase
@@ -1105,27 +1107,29 @@ if __name__ == "__main__":
             # print("starting connection...")
             from sonnetSim.cMD import CMD
 
-            ml_terminal._send(CMD.SAY_HELLO)
-            ml_terminal.clear()
-            simBox = SimulationBox(
-                crop_box.width(), crop_box.height(),
-                crop_box.width() / resolution_dx, crop_box.height() / resolution_dy
-            )
-            ml_terminal.set_boxProps(simBox)
-            # print("sending cell and layer")
-            from sonnetSim.pORT_TYPES import PORT_TYPES
+            if freqs_span == freqs_span_corase:
+                ml_terminal._send(CMD.SAY_HELLO)
+                ml_terminal.clear()
+                simBox = SimulationBox(
+                    crop_box.width(), crop_box.height(),
+                    crop_box.width() / resolution_dx, crop_box.height() / resolution_dy
+                )
+                ml_terminal.set_boxProps(simBox)
+                # print("sending cell and layer")
+                from sonnetSim.pORT_TYPES import PORT_TYPES
 
-            ports = [
-                SonnetPort(design.sonnet_ports[0], PORT_TYPES.BOX_WALL),
-                SonnetPort(design.sonnet_ports[1], PORT_TYPES.BOX_WALL)
-            ]
-            ml_terminal.set_ports(ports)
+                ports = [
+                    SonnetPort(design.sonnet_ports[0], PORT_TYPES.BOX_WALL),
+                    SonnetPort(design.sonnet_ports[1], PORT_TYPES.BOX_WALL)
+                ]
+                ml_terminal.set_ports(ports)
 
-            ml_terminal.send_polygons(design.cell, design.layer_ph)
+                ml_terminal.send_polygons(design.cell, design.layer_ph)
             ml_terminal.set_ABS_sweep(estimated_freq - freqs_span / 2, estimated_freq + freqs_span / 2)
             print(f"simulating...{resonator_idx}")
             result_path = ml_terminal.start_simulation(wait=True)
-            ml_terminal.release()
+            if freqs_span == freqs_span_corase:
+                ml_terminal.release()
 
             ### RESONANCE FINDING SECTION START ###
             """
