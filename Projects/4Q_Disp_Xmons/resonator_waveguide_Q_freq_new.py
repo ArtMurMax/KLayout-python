@@ -1060,10 +1060,9 @@ if __name__ == "__main__":
 
     for dl, (resonator_idx, estimated_freq) in product(
             dl_list,
-            list(zip(range(5), estimated_res_freqs_init))[:1],
+            list(zip(range(5), estimated_res_freqs_init)),
     ):
         fine_resonance_success = False
-        freqs_span = freqs_span_corase
         while not fine_resonance_success:
             # fine_resonance_success = True  # NOTE: FOR DEBUG
             print("start drawing")
@@ -1103,33 +1102,35 @@ if __name__ == "__main__":
             design.transform_layer(design.layer_ph, DTrans(dr.x, dr.y), trans_ports=True)
             design.lv.zoom_fit()
 
+
+            ### SIMULATION SECTION START ###
             ml_terminal = SonnetLab()
             # print("starting connection...")
             from sonnetSim.cMD import CMD
 
-            if freqs_span == freqs_span_corase:
-                ml_terminal._send(CMD.SAY_HELLO)
-                ml_terminal.clear()
-                simBox = SimulationBox(
-                    crop_box.width(), crop_box.height(),
-                    crop_box.width() / resolution_dx, crop_box.height() / resolution_dy
-                )
-                ml_terminal.set_boxProps(simBox)
-                # print("sending cell and layer")
-                from sonnetSim.pORT_TYPES import PORT_TYPES
+            # if freqs_span == freqs_span_corase:
+            ml_terminal._send(CMD.SAY_HELLO)
+            ml_terminal.clear()
+            simBox = SimulationBox(
+                crop_box.width(), crop_box.height(),
+                crop_box.width() / resolution_dx, crop_box.height() / resolution_dy
+            )
+            ml_terminal.set_boxProps(simBox)
+            # print("sending cell and layer")
+            from sonnetSim.pORT_TYPES import PORT_TYPES
 
-                ports = [
-                    SonnetPort(design.sonnet_ports[0], PORT_TYPES.BOX_WALL),
-                    SonnetPort(design.sonnet_ports[1], PORT_TYPES.BOX_WALL)
-                ]
-                ml_terminal.set_ports(ports)
+            ports = [
+                SonnetPort(design.sonnet_ports[0], PORT_TYPES.BOX_WALL),
+                SonnetPort(design.sonnet_ports[1], PORT_TYPES.BOX_WALL)
+            ]
+            ml_terminal.set_ports(ports)
 
-                ml_terminal.send_polygons(design.cell, design.layer_ph)
+            ml_terminal.send_polygons(design.cell, design.layer_ph)
             ml_terminal.set_ABS_sweep(estimated_freq - freqs_span / 2, estimated_freq + freqs_span / 2)
             print(f"simulating...{resonator_idx}")
             result_path = ml_terminal.start_simulation(wait=True)
-            if freqs_span == freqs_span_corase:
-                ml_terminal.release()
+            # if fine_resonance_success:
+            ml_terminal.release()
 
             ### RESONANCE FINDING SECTION START ###
             """
