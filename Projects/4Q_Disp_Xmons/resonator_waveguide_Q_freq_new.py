@@ -1053,7 +1053,7 @@ if __name__ == "__main__":
     estimated_res_freqs_init = [6.5, 6.59, 6.68, 6.77, 6.86]  # GHz
     freqs_span_corase = 1.0  # GHz
     corase_only = False
-    freqs_span_fine = 0.005
+    freqs_span_fine = 0.010
     # dl_list = [10e3, 0, -10e3]
     dl_list = [0]
     from itertools import product
@@ -1063,6 +1063,7 @@ if __name__ == "__main__":
             list(zip(range(5), estimated_res_freqs_init)),
     ):
         fine_resonance_success = False
+        freqs_span = freqs_span_corase
         while not fine_resonance_success:
             # fine_resonance_success = True  # NOTE: FOR DEBUG
             print("start drawing")
