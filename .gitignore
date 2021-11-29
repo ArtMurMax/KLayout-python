@@ -82,3 +82,5 @@ SonnetLab_Matlab_server/SonnetLab Toolbox v7.4/Tutorials
 # sonnet projects
 SonnetLab_Matlab_server/sondata
 SonnetLab_Matlab_server/Sonnet_projects
+*.7z
+*.zip

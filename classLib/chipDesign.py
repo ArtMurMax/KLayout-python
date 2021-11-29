@@ -165,13 +165,13 @@ class ChipDesign:
             dest.layout().move_layer(temp_layer_i, layer_i)
             dest.layout().delete_layer(temp_layer_i)
 
-    def transform_layer(self, layer_i, trans, trans_ports=False):
+    def transform_region(self, reg, trans, trans_ports=False):
         """
         Performs transofmation of the layer desired.
 
         Parameters
         ----------
-        layer_i : int
+        reg : int
             layer index, >0
         trans : Union[DcplxTrans, DTrans]
             transformation to perform
@@ -183,15 +183,7 @@ class ChipDesign:
         -------
         None
         """
-        r_cell = Region(self.cell.begin_shapes_rec(layer_i))
-
-        r_cell.transform(trans)
-
-        tmp_layer_idx = self.cell.layout().layer(pya.LayerInfo(PROGRAM.LAYER1_NUM, 0))
-        self.cell.shapes(tmp_layer_idx).insert(r_cell)
-        self.cell.layout().clear_layer(layer_i)
-        self.cell.layout().move_layer(tmp_layer_idx, layer_i)
-        self.cell.layout().delete_layer(tmp_layer_idx)
+        reg.transform(trans)
 
         if trans_ports:
             self.sonnet_ports = list(
