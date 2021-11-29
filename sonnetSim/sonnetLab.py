@@ -11,7 +11,7 @@ import csv
 
 class SonnetPort:
     def __init__(self, point=None, port_type=None):
-        self.point : Union[Point, DPoint] = point
+        self.point: Union[Point, DPoint] = point
         self.port_type = port_type
 
     def __deepcopy__(self, memodict={}):

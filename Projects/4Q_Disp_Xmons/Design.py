@@ -1,4 +1,11 @@
-__version__ = "0.3.0.1"
+__version__ = "0.3.0.2"
+
+'''
+Changes in version
+
+0.3.0.2
+Resonators frequencies are now equal to 6.2, 6.35, 6.5, 6.65, 6.8 GHz from left to right respectively
+'''
 
 # Enter your Python code here
 from math import cos, sin, tan, atan2, pi, degrees
@@ -269,6 +276,7 @@ class Design5Q(ChipDesign):
         self.draw_pinning_holes()
         self.extend_photo_overetching()
         self.inverse_destination(self.region_ph)
+        self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
         self.split_polygons_in_layers(max_pts=180)
 
     def _transfer_regs2cell(self):
@@ -1132,10 +1140,22 @@ class Design5Q(ChipDesign):
             )
         self.region_ph = tmp_reg
 
+    # TODO: add layer or region arguments to the functions wich end with "..._in_layers()"
+    def resolve_holes(self):
+        for reg in (self.region_ph, self.region_bridges1, self.region_bridges2,
+                    self.region_el, self.region_el2, self.region_el_protection):
+            tmp_reg = Region()
+            for poly in reg:
+                tmp_reg.insert(poly.resolved_holes())
+            reg = tmp_reg
+
+        # TODO: the following code is not working (region_bridges's polygons remain the same)
+        # for poly in chain(self.region_bridges2):
+        #     poly.resolve_holes()
+
     def split_polygons_in_layers(self, max_pts=200):
         self.region_ph = split_polygons(self.region_ph, max_pts)
-        self.region_bridges2 = split_polygons(self.region_bridges2,
-                                              max_pts)
+        self.region_bridges2 = split_polygons(self.region_bridges2, max_pts)
         for poly in self.region_ph:
             if poly.num_points() > max_pts:
                 print("exists photo")
