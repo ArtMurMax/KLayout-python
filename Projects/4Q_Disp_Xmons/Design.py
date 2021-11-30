@@ -1147,7 +1147,8 @@ class Design5Q(ChipDesign):
             tmp_reg = Region()
             for poly in reg:
                 tmp_reg.insert(poly.resolved_holes())
-            reg = tmp_reg
+            reg.clear()
+            reg |= tmp_reg
 
         # TODO: the following code is not working (region_bridges's polygons remain the same)
         # for poly in chain(self.region_bridges2):
