@@ -16,7 +16,9 @@ from classLib.baseClasses import ComplexBase
 from classLib.chipDesign import ChipDesign
 from classLib.shapes import Circle, Rectangle
 from classLib.coplanars import CPW, CPWParameters, CPW2CPW, \
-    CPWArc, CPWRLPath, CPW2CPWArc, DPathCPW
+    CPWArc, CPWRLPath, CPW2CPWArc, DPathCPW, Bridge1
+
+from classLib.chipTemplates import CHIP_10x10_12pads
 
 import classLib.josJ
 reload(classLib.josJ)
@@ -42,76 +44,54 @@ SQUID_PARAMETERS = AsymSquidDCFluxParams(
 
 class MyDesign(ChipDesign):
     def draw(self):
-        self.draw_DPathCPW_test()
+        info_bridges1 = pya.LayerInfo(3, 0)  # bridge photo layer 1
+        self.region_bridges1 = Region()
+        self.layer_bridges1 = self.layout.layer(info_bridges1)
 
-    def draw_DPathCPW_test(self):
-        origin=DPoint(0, 0)
-        dx, dy = 5e3, 5e3
+        info_bridges2 = pya.LayerInfo(4, 0)  # bridge photo layer 2
+        self.region_bridges2 = Region()
+        self.layer_bridges2 = self.layout.layer(info_bridges2)
 
-        from itertools import product
-        from random import randrange, seed
-        seed(52)
-        for i_y, i_x in product(range(2), range(5)):
-            origin_loc = DPoint(i_x * dx, i_y * dy)
-            rec = Rectangle(origin_loc, dx, dy)
-            rec.place(self.region_ph)
-        for i_y, i_x in product(range(2), range(5)):
-            origin_loc = DPoint(i_x * dx, i_y * dy)
-            pts = [
-                origin_loc + DPoint(randrange(dx), randrange(dy)) for _ in
-                range(3)
-            ]
-            print(i_y, i_x)
-            print("origin loc: ", origin_loc)
-            print("points: ", [(p.x, p.y) for p in pts])
-            print()
-            cpw_path = DPathCPW(
-                points=pts,
-                cpw_parameters=[
-                    CPWParameters(width=200, gap=100),
-                    CPWParameters(smoothing=True),
-                    CPWParameters(width=300, gap=150)
-                ],
-                turn_radiuses=150,
-                trans_in=None
-            )
-            if i_x == i_y == 0:
-                print(cpw_path._turn_angles)
-                print(cpw_path._segment_lengths)
-            cpw_path.place(self.region_ph)
+        self.lv.add_missing_layers()
 
-    def draw_cpw2cpw_arc_test(self):
-        Rectangle(DPoint(-2e3, -2e3), 4e3, 4e3).place(self.region_ph)
-        cpw2cpwarc = CPW2CPWArc(
-            origin=DPoint(0, 0), r=1e3,
-            start_angle=-np.pi/2, end_angle=-np.pi,
-            cpw1_params=CPWParameters(width=100, gap=100),
-            cpw2_params=CPWParameters(width=200, gap=200),
-            trans_in=None  # Trans.R90
+        self.draw_chip()
+        self.draw_arc()
+        self.bridgify_arc()
+
+    def draw_chip(self):
+        self.chip = CHIP_10x10_12pads
+        self.chip_box: pya.DBox = self.chip.box
+
+        self.region_bridges2.insert(self.chip_box)
+        self.region_ph.insert(self.chip_box)
+
+    def draw_arc(self):
+        self.Z0 = CPWParameters(200e3, 100e3)
+        cpw_start = (self.chip_box.p1 + self.chip_box.p2)/2
+        self.arc = CPWArc(
+            z0=self.Z0, start=cpw_start,
+            R=1.2e6, delta_alpha=5/4*np.pi,
+            trans_in=DTrans.R0
         )
-        cpw2cpwarc.place(self.region_ph)
+        self.arc.place(self.region_ph)
 
-        CPWRLPath(
-            origin=DPoint(0, 0), shape="LRL",
-            cpw_parameters=[
-                CPWParameters(width=SQUID_PARAMETERS.flux_line_inner_width, gap=0),
-                CPWParameters(smoothing=True),
-                CPWParameters(width=SQUID_PARAMETERS.inter_leads_width, gap=0)
-            ],
-            turn_radiuses=SQUID_PARAMETERS.inter_leads_width,
-            segment_lengths=[
-                2e3,
-                3e3
-            ],
-            turn_angles=[np.pi / 2],
-            trans_in=None
-        ).place(self.region_el)
+    def bridgify_arc(self):
+        print(isinstance(self.arc, CPWArc))
+        print(type(self.arc))
+        Bridge1.bridgify_CPW(
+            self.arc,
+            bridges_step=100e3,
+            dest=self.region_bridges1,
+            dest2=self.region_bridges2,
+        )
 
-    def draw_asym_squid_test(self):
-        origin = DPoint(0, 0)
-        sq = AsymSquidDCFlux(origin, SQUID_PARAMETERS)
-        sq.place(self.region_el)
-        self.region_el.merge()
+
+    def _transfer_regs2cell(self):
+        self.cell.shapes(self.layer_ph).insert(self.region_ph)
+        self.cell.shapes(self.layer_el).insert(self.region_el)
+        self.cell.shapes(self.layer_bridges1).insert(self.region_bridges1)
+        self.cell.shapes(self.layer_bridges2).insert(self.region_bridges2)
+        self.lv.zoom_fit()
 
 
 ### MAIN FUNCTION ###

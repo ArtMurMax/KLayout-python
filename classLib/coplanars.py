@@ -1090,9 +1090,28 @@ class Bridge1(ElementBase):
                 else:
                     bridge.place(dest=dest, layer_i=bridge_layer2, region_name="bridges_2")
         elif isinstance(cpw, CPWArc):
-            # recursion base
-            # to be implemented
-            pass
+            # only 1 bridge is placed, in the middle of an arc
+
+            alpha_mid = cpw.alpha_start + cpw.delta_alpha/2 - np.pi/2
+
+            # unit vector from a center of the arc to its mid point
+            v_arc_mid = DVector(np.cos(alpha_mid), np.sin(alpha_mid))
+            arc_mid = cpw.center + cpw.R*v_arc_mid
+            # tangent vector to the center of a bridge
+            v_arc_mid_tangent = DCplxTrans(1, 90, False, 0,0)*v_arc_mid
+            alpha = np.arctan2(v_arc_mid_tangent.y, v_arc_mid_tangent.x)
+            bridge = Bridge1(
+                center=arc_mid,
+                trans_in=DCplxTrans(1, alpha / pi * 180, False, 0, 0)
+            )
+            bridge.place(dest=dest, layer_i=bridge_layer1,
+                         region_name="bridges_1")
+            if dest2 is not None:
+                bridge.place(dest=dest2, layer_i=bridge_layer2,
+                             region_name="bridges_2")
+            else:
+                bridge.place(dest=dest, layer_i=bridge_layer2,
+                             region_name="bridges_2")
         elif isinstance(cpw, CPWRLPath) or isinstance(cpw, Coil_type_1)\
                 or isinstance(cpw, DPathCPW):
             for name, primitive in cpw.primitives.items():
