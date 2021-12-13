@@ -116,7 +116,7 @@ class CHIP_10x10_12pads:
     pcb_Z = CPWParameters(pcb_width, pcb_gap)
 
     chip_cpw_width = 24e3
-    chip_cpw_gap = 13e3
+    chip_cpw_gap = 12e3
     chip_Z = CPWParameters(chip_cpw_width, chip_cpw_gap)
 
     @staticmethod
