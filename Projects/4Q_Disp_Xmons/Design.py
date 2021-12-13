@@ -5,6 +5,12 @@ Changes in version
 
 0.3.0.2
 Resonators frequencies are now equal to 6.2, 6.35, 6.5, 6.65, 6.8 GHz from left to right respectively
+
+0.3.0.3
+Bridges of resonators sections consisting of 180deg 
+arcs are placed onto the 180deg arcs instead of 
+linear segments connecting those 180deg arcs.
+Other resonator's sections are remained the same. 
 '''
 
 # Enter your Python code here
@@ -1076,22 +1082,27 @@ class Design5Q(ChipDesign):
         # for resonators
         for resonator in self.resonators:
             for name, res_primitive in resonator.primitives.items():
-                if "coil0" in name:
-                    # skip L_coupling coplanar.
-                    # bridgyfy all in "coil0" except for the first cpw that
-                    # is adjacent to readout line and has length equal to `L_coupling`
-                    for primitive in list(
-                            res_primitive.primitives.values())[1:]:
-                        Bridge1.bridgify_CPW(
-                            primitive, bridges_step,
-                            dest=self.region_bridges1,
-                            dest2=self.region_bridges2
-                        )
-
+                if "coil" in name:
+                    subprimitives = res_primitive.primitives
+                    for primitive_name, primitive in subprimitives.items():
+                        # place bridges only at arcs of coils
+                        # but not on linear segments
+                        if "arc" in primitive_name:
+                            Bridge1.bridgify_CPW(
+                                primitive, bridges_step,
+                                dest=self.region_bridges1,
+                                dest2=self.region_bridges2
+                            )
                     continue
                 elif "fork" in name:  # skip fork primitives
                     continue
-                else:  # bridgify everything else
+                else:
+                    # bridgify everything else except "arc1"
+                    # resonator.primitives["arc1"] is arc that connects
+                    # L_coupling with long vertical line for
+                    # `EMResonatorTL3QbitWormRLTailXmonFork`
+                    if name == "arc1":
+                        continue
                     Bridge1.bridgify_CPW(
                         res_primitive, bridges_step,
                         dest=self.region_bridges1,
