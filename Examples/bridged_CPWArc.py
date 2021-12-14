@@ -28,33 +28,6 @@ from classLib.shapes import DPathCL
 # exclude
 import numpy as np
 
-
-def draw_inductor_for_fl_line(design, fl_line_idx):
-    cpwrl_fl = self.cpw_fl_lines[fl_line_idx]
-    cpwrl_fl_inductor_start = cpwrl_fl.end + \
-                              DVector(0, -design.current_line_width / 2)
-    cpwrl_fl_inductor = CPW(
-        cpw_params=CPWParameters(
-            width=design.current_line_width, gap=0
-        ),
-        start=cpwrl_fl_inductor_start,
-        end=
-        cpwrl_fl_inductor_start + DVector(
-            2 * abs(design.flux_lines_x_shifts[fl_line_idx]), 0
-        )
-    )
-    cpwrl_fl_inductor.place(design.region_ph)
-    cpwrl_fl_inductor_empty_box = Rectangle(
-        origin=cpwrl_fl.end +
-               DVector(
-                   0,
-                   -design.current_line_width - 2 * design.z_md_fl.gap
-               ),
-        width=cpwrl_fl_inductor.dr.abs(),
-        height=2 * design.z_md_fl.gap,
-        inverse=True
-    )
-    cpwrl_fl_inductor_empty_box.place(design.region_ph)
 from classLib import ElementBase
 
 SQUID_PARAMETERS = AsymSquidDCFluxParams(
