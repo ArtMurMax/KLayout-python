@@ -235,7 +235,8 @@ class Design5Q(ChipDesign):
         # required extension of el_dc contacts into the el polygon
         self.dc_cont_el_ext = 0.0e3  # 1.8e3
         # required extension into the photo polygon
-        self.dc_cont_ph_ext = 3e3
+        self.dc_cont_ph_ext_x = 3e3
+        self.dc_cont_ph_ext_y = 10e3
         # minimum distance from el_dc contact polygon perimeter points to
         # dc + el polygons perimeter. (el-dc contact polygon lies within
         # el + dc polygons)
@@ -1005,9 +1006,9 @@ class Design5Q(ChipDesign):
 
             top_rect2 = CPW(
                 start=squid.ph_el_conn_pad.start +
-                      DPoint(0, squid.pad_top.r + self.dc_cont_ph_ext),
+                      DPoint(0, squid.pad_top.r + self.dc_cont_ph_ext_y),
                 end=end,
-                width=2 * (squid.pad_top.r + self.dc_cont_ph_ext),
+                width=2 * (squid.pad_top.r + self.dc_cont_ph_ext_x),
                 gap=0
             )
 
@@ -1054,8 +1055,8 @@ class Design5Q(ChipDesign):
                               -self.dc_cont_clearance
                           ),
                     end=right_bottom.start + DPoint(0,
-                                                    -self.dc_cont_ph_ext),
-                    width=right_bottom.width + 2 * self.dc_cont_ph_ext,
+                                                    -self.dc_cont_ph_ext_y),
+                    width=right_bottom.width + 2 * self.dc_cont_ph_ext_x,
                     gap=0
                 )
                 self.el_dc_contacts[-1][2] = bot_right_shape1
@@ -1094,8 +1095,8 @@ class Design5Q(ChipDesign):
                                  fl_line.end.y) + DPoint(0,
                                                                  -self.dc_cont_clearance),
                     end=left_bottom.start + DPoint(0,
-                                                   -self.dc_cont_ph_ext),
-                    width=left_bottom.width + 2 * self.dc_cont_ph_ext,
+                                                   -self.dc_cont_ph_ext_y),
+                    width=left_bottom.width + 2 * self.dc_cont_ph_ext_x,
                     gap=0
                 )
 
@@ -1159,9 +1160,9 @@ class Design5Q(ChipDesign):
             # rectangle that covers cut and photolitography
             top_rect2 = CPW(
                 start=squid.ph_el_conn_pad.start +
-                      DPoint(0, squid.pad_top.r + self.dc_cont_ph_ext),
+                      DPoint(0, squid.pad_top.r + self.dc_cont_ph_ext_y),
                 end=end,
-                width=2 * (squid.pad_top.r + self.dc_cont_ph_ext),
+                width=2 * (squid.pad_top.r + self.dc_cont_ph_ext_x),
                 gap=0
             )
 
@@ -1217,8 +1218,8 @@ class Design5Q(ChipDesign):
                               -self.dc_cont_clearance
                           ),
                     end=right_bottom.start + DPoint(0,
-                                                    -self.dc_cont_ph_ext),
-                    width=right_bottom.width + 2 * self.dc_cont_ph_ext,
+                                                    -self.dc_cont_ph_ext_y),
+                    width=right_bottom.width + 2 * self.dc_cont_ph_ext_x,
                     gap=0
                 )
                 self.el_dc_contacts[-1][2] = bot_right_shape1
@@ -1258,8 +1259,8 @@ class Design5Q(ChipDesign):
                     DPoint(left_bottom.end.x, bottom_polygon_bbox.top) + \
                     DPoint(0, -self.dc_cont_clearance),
                     end=left_bottom.start + DPoint(0,
-                                                   -self.dc_cont_ph_ext),
-                    width=left_bottom.width + 2 * self.dc_cont_ph_ext,
+                                                   -self.dc_cont_ph_ext_y),
+                    width=left_bottom.width + 2 * self.dc_cont_ph_ext_x,
                     gap=0
                 )
 
