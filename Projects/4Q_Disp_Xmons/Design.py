@@ -1,4 +1,4 @@
-__version__ = "0.3.0.5"
+__version__ = "0.3.0.6"
 
 '''
 Changes in version
@@ -25,8 +25,10 @@ from test structure resistance consisting of a small junction
 v.0.3.0.5
 1. Bandages added
 2. AsymSquidOneLeg's grounding pad for lower superconducting island is now attached higher to SQUID loop than in AsymSquidDCFlux.
-Photo layer was fabricated 14.12.2021
+Photo layer was fabricated 14.12.2021 (this design was augmented by Bolgar)
 
+New in v0.3.0.6
+Fixed bandages drawings for test JJs.
 '''
 
 # Enter your Python code here
@@ -70,7 +72,7 @@ SQUID_PARAMETERS = AsymSquidOneLegParams(
     contact_pad_width=10e3, contact_pad_ext_r=200,
     sq_len=15e3, sq_area=200e6,
     j1_dx=142.4, j2_dx=348.6,
-    j1_dy=142.4,  j2_dy=250,
+    j1_dy=142.4, j2_dy=250,
     bridge=180, b_ext=2e3,
     inter_leads_width=500,
     n=20,
@@ -186,7 +188,9 @@ class Design5Q(ChipDesign):
         # corresponding to resonanse freq is linspaced in interval [6,9) GHz
         self.L0 = 1150e3
         self.L1_list = [
-            1e3 * x for x in [70.73959436, 91.28326636, 137.6653485, 126.5793665, 71.58485723]
+            1e3 * x for x in
+            [70.73959436, 91.28326636, 137.6653485, 126.5793665,
+             71.58485723]
         ]
         self.r = 60e3
         self.N_coils = [3] * len(self.L1_list)
@@ -248,7 +252,7 @@ class Design5Q(ChipDesign):
         self.cont_lines_y_ref: float = None  # nm
 
         self.flLine_squidLeg_gap = 5e3
-        self.flux_lines_x_shifts: List[float] = [None]*len(self.L1_list)
+        self.flux_lines_x_shifts: List[float] = [None] * len(self.L1_list)
         self.current_line_width = 3.5e3
 
         self.md234_cross_bottom_dy = 55e3
@@ -533,8 +537,10 @@ class Design5Q(ChipDesign):
         -------
         None
         """
-        for current_res_idx, (resonator, fork_y_span, xmon_dy_Cg_coupling) in \
-                enumerate(zip(self.resonators, self.fork_y_spans, self.xmon_dys_Cg_coupling)):
+        for current_res_idx, (
+                resonator, fork_y_span, xmon_dy_Cg_coupling) in \
+                enumerate(zip(self.resonators, self.fork_y_spans,
+                              self.xmon_dys_Cg_coupling)):
             xmon_center = \
                 (
                         resonator.fork_x_cpw.start + resonator.fork_x_cpw.end
@@ -600,7 +606,8 @@ class Design5Q(ChipDesign):
             squid_center = (
                                    xmon_cross.cpw_bempt.start + xmon_cross.cpw_bempt.end
                            ) / 2
-            squid = AsymSquidOneLeg(squid_center, SQUID_PARAMETERS, 0, leg_side=-1)
+            squid = AsymSquidOneLeg(squid_center, SQUID_PARAMETERS, 0,
+                                    leg_side=-1)
             self.squids.append(squid)
             squid.place(self.region_el)
 
@@ -726,7 +733,8 @@ class Design5Q(ChipDesign):
         # calculate flux line end horizontal shift from center of the
         # squid loop
         self.flux_lines_x_shifts = [
-            -(squid.bot_inter_lead_dx/2 + self.z_md_fl.b/2) for squid in
+            -(squid.bot_inter_lead_dx / 2 + self.z_md_fl.b / 2) for squid
+            in
             self.squids]
 
         # place caplanar line 1 fl
@@ -750,9 +758,10 @@ class Design5Q(ChipDesign):
         self.cpw_fl_lines.append(self.cpwrl_fl1)
 
         def draw_inductor_for_fl_line(design, fl_line_idx):
-            cpwrl_fl= self.cpw_fl_lines[fl_line_idx]
+            cpwrl_fl = self.cpw_fl_lines[fl_line_idx]
             cpwrl_fl_inductor_start = cpwrl_fl.end + \
-                DVector(0, -design.current_line_width/2)
+                                      DVector(0,
+                                              -design.current_line_width / 2)
             cpwrl_fl_inductor = CPW(
                 cpw_params=CPWParameters(
                     width=design.current_line_width, gap=0
@@ -775,6 +784,7 @@ class Design5Q(ChipDesign):
                 inverse=True
             )
             cpwrl_fl_inductor_empty_box.place(design.region_ph)
+
         draw_inductor_for_fl_line(self, 0)
 
         # place caplanar line 2 fl
@@ -951,17 +961,19 @@ class Design5Q(ChipDesign):
             dc_rec.place(self.region_el2)
 
     def draw_el_dc_contacts(self):
-        test_samples_el2: List[Region] = []
-        test_samples_ph_cut: List[Region] = []
-        from itertools import chain
-        for squid, xmon, val in zip(self.squids, self.xmons,
-                                        chain(self.cpw_fl_lines, self.test_squids_pads)):
-            print(type(val))
-            if isinstance(val, DPathCPW):
-                photo_bottom_y = val.end.y
-            elif isinstance(val, TestStructurePads):
-                photo_bottom_y = val.bot_rec.origin.y + val.bot_rec.height
+        """
+        TODO: add documentation and rework this function. It has to
+            operate only with upper and lower polygons that are
+             attached to the Tmon loop and has nothing to do with whether
+             it is xmon and flux line or test pads squares.
+        Returns
+        -------
 
+        """
+        test_samples_ph_cut: List[Region] = []
+
+        for squid, xmon, fl_line in zip(self.squids, self.xmons,
+                                        self.cpw_fl_lines):
             test_ph_cut = Region()
             # dc contact pad has to be completely
             # inside union of both  e-beam and photo deposed
@@ -969,6 +981,7 @@ class Design5Q(ChipDesign):
             # `self.dc_cont_clearance` represents minimum distance
             # from dc contact pad`s perimeter to the perimeter of the
             # e-beam and photo-deposed metal perimeter.
+
             top_rect1 = CPW(
                 start=squid.pad_top.center,
                 end=squid.ph_el_conn_pad.end + DPoint(
@@ -978,7 +991,6 @@ class Design5Q(ChipDesign):
                       2 * self.dc_cont_clearance,
                 gap=0
             )
-
             if xmon == self.xmons[0]:
                 end = DPoint(
                     squid.origin.x, xmon.center.y - xmon.cpw_l.width / 2
@@ -1016,15 +1028,16 @@ class Design5Q(ChipDesign):
             self.region_el2.merge()
 
             self.el_dc_contacts.append(
-                [top_rect1, top_rect2] + [None]*4
+                [top_rect1, top_rect2] + [None] * 4
             )
 
-            if hasattr(squid, "bot_dc_flux_line_right") and (squid.bot_dc_flux_line_right is not None):
+            if hasattr(squid, "bot_dc_flux_line_right") and (
+                    squid.bot_dc_flux_line_right is not None):
                 right_bottom = list(
                     squid.bot_dc_flux_line_right.primitives.values()
                 )[0]
                 bot_right_shape1 = CPW(
-                    start=DPoint(right_bottom.start.x, photo_bottom_y) +
+                    start=DPoint(right_bottom.start.x, fl_line.end.y) +
                           DPoint(
                               0,
                               -self.dc_cont_clearance
@@ -1035,12 +1048,13 @@ class Design5Q(ChipDesign):
                 )
 
                 bot_right_shape2 = CPW(
-                    start=DPoint(right_bottom.start.x, photo_bottom_y) +
+                    start=DPoint(right_bottom.start.x, fl_line.end.y) +
                           DPoint(
                               0,
                               -self.dc_cont_clearance
                           ),
-                    end=right_bottom.start + DPoint(0, -self.dc_cont_ph_ext),
+                    end=right_bottom.start + DPoint(0,
+                                                    -self.dc_cont_ph_ext),
                     width=right_bottom.width + 2 * self.dc_cont_ph_ext,
                     gap=0
                 )
@@ -1049,7 +1063,7 @@ class Design5Q(ChipDesign):
 
                 # Rectangle for bottom right DC contact pad
                 right_bot = CPW(
-                    start=DPoint(right_bottom.start.x, photo_bottom_y) +
+                    start=DPoint(right_bottom.start.x, fl_line.end.y) +
                           DPoint(
                               0, self.cross_gnd_gap_x
                           ),
@@ -1061,20 +1075,26 @@ class Design5Q(ChipDesign):
                 )
                 right_bot.place(self.region_ph)
                 test_ph_cut |= right_bot.empty_region
-            if hasattr(squid, "bot_dc_flux_line_left") and (squid.bot_dc_flux_line_left is not None):
+            if hasattr(squid, "bot_dc_flux_line_left") and (
+                    squid.bot_dc_flux_line_left is not None):
                 left_bottom = list(
                     squid.bot_dc_flux_line_left.primitives.values()
                 )[0]
                 bot_left_shape1 = CPW(
-                    start=DPoint(left_bottom.end.x, photo_bottom_y) + DPoint(0, -self.dc_cont_clearance),
+                    start=DPoint(left_bottom.end.x,
+                                 fl_line.end.y) + DPoint(0,
+                                                                 -self.dc_cont_clearance),
                     end=left_bottom.start,
                     width=left_bottom.width - 2 * self.dc_cont_clearance,
                     gap=0
                 )
 
                 bot_left_shape2 = CPW(
-                    start=DPoint(left_bottom.end.x, photo_bottom_y) + DPoint(0, -self.dc_cont_clearance),
-                    end=left_bottom.start + DPoint(0, -self.dc_cont_ph_ext),
+                    start=DPoint(left_bottom.end.x,
+                                 fl_line.end.y) + DPoint(0,
+                                                                 -self.dc_cont_clearance),
+                    end=left_bottom.start + DPoint(0,
+                                                   -self.dc_cont_ph_ext),
                     width=left_bottom.width + 2 * self.dc_cont_ph_ext,
                     gap=0
                 )
@@ -1096,14 +1116,9 @@ class Design5Q(ChipDesign):
                 left_bot.place(self.region_ph)
                 test_ph_cut |= left_bot.empty_region
 
-
-
-            test_sample_reg_el2 = Region()
             for contact in self.el_dc_contacts[-1]:
                 if contact is not None:
                     contact.place(self.region_el2)
-                    contact.place(test_sample_reg_el2)
-            test_samples_el2.append(test_sample_reg_el2)
 
             # DC contacts has to have intersection with empty
             # layer in photo litography. This is needed in order
@@ -1113,16 +1128,160 @@ class Design5Q(ChipDesign):
             # Following rectangle pads are cutted from photo region
             # to ensure DC contacts are covering aforementioned level step.
 
-        for squid in self.test_squids:
-            trans = DCplxTrans(
-                1, 0, False,
-                -self.squids[0].origin + squid.origin
-            )
-            test_reg_el2 = test_samples_el2[0].dup().transformed(trans)
-            self.region_el2 |= test_reg_el2
+        test_samples_ph_cut: List[Region] = []
+        for squid, test_pads in zip(self.test_squids,
+                                    self.test_squids_pads):
 
-            cut_reg_ph = test_samples_ph_cut[0].dup().transformed(trans)
-            self.region_ph -= cut_reg_ph
+            test_ph_cut = Region()
+            self.el_dc_contacts.append([None] * 6)
+            # dc contact pad has to be completely
+            # inside union of both  e-beam and photo deposed
+            # metal regions.
+            # `self.dc_cont_clearance` represents minimum distance
+            # from dc contact pad`s perimeter to the perimeter of the
+            # e-beam and photo-deposed metal perimeter.
+
+            top_rect1 = CPW(
+                start=squid.pad_top.center,
+                end=squid.ph_el_conn_pad.end + DPoint(
+                    0, self.dc_cont_clearance
+                ),
+                width=squid.ph_el_conn_pad.width -
+                      2 * self.dc_cont_clearance,
+                gap=0
+            )
+
+            upper_polygon_reg = test_pads.top_rec.metal_region
+            upper_polygon_bbox = upper_polygon_reg.bbox()
+            end = DPoint(squid.origin.x, upper_polygon_bbox.bottom)
+            end += DPoint(0, self.dc_cont_clearance)
+
+            # rectangle that covers cut and photolitography
+            top_rect2 = CPW(
+                start=squid.ph_el_conn_pad.start +
+                      DPoint(0, squid.pad_top.r + self.dc_cont_ph_ext),
+                end=end,
+                width=2 * (squid.pad_top.r + self.dc_cont_ph_ext),
+                gap=0
+            )
+
+            # Rectangle to cut for top DC contact pad
+            rec_top = CPW(
+                start=squid.ph_el_conn_pad.start + DPoint(
+                    0, -self.dc_cont_cut_clearance
+                ),
+                end=squid.ph_el_conn_pad.end,
+                width=0,
+                gap=self.dc_cont_cut_width / 2
+            )
+            rec_top.place(self.region_ph)
+            test_ph_cut |= rec_top.empty_region
+
+            test_samples_ph_cut.append(test_ph_cut)
+
+            self.region_el2.merge()
+
+            self.el_dc_contacts[-1][0] = top_rect1
+            self.el_dc_contacts[-1][1] = top_rect2
+
+            bottom_polygon_reg = test_pads.bot_rec.metal_region
+            bottom_polygon_bbox = bottom_polygon_reg.bbox()
+
+            if hasattr(squid, "bot_dc_flux_line_right") and (
+                    squid.bot_dc_flux_line_right is not None):
+                right_bottom = list(
+                    squid.bot_dc_flux_line_right.primitives.values()
+                )[0]
+
+                # covers e-beam - photo metal height jump. Extends into
+                # e-beam polygons
+                bot_right_shape1 = CPW(
+                    start=DPoint(right_bottom.start.x,
+                                 bottom_polygon_bbox.top) +
+                          DPoint(
+                              0,
+                              -self.dc_cont_clearance
+                          ),
+                    end=right_bottom.start,
+                    width=right_bottom.width - 2 * self.dc_cont_clearance,
+                    gap=0
+                )
+
+                # covers photo metal height jump. Extends into
+                # photolytography polygons.
+                bot_right_shape2 = CPW(
+                    start=DPoint(right_bottom.start.x,
+                                 bottom_polygon_bbox.top) +
+                          DPoint(
+                              0,
+                              -self.dc_cont_clearance
+                          ),
+                    end=right_bottom.start + DPoint(0,
+                                                    -self.dc_cont_ph_ext),
+                    width=right_bottom.width + 2 * self.dc_cont_ph_ext,
+                    gap=0
+                )
+                self.el_dc_contacts[-1][2] = bot_right_shape1
+                self.el_dc_contacts[-1][3] = bot_right_shape2
+
+                # Rectangle for bottom right DC contact pad
+                right_bot = CPW(
+                    start=DPoint(right_bottom.start.x,
+                                 bottom_polygon_bbox.top) +
+                          DPoint(
+                              0, self.cross_gnd_gap_x
+                          ),
+                    end=right_bottom.start + DPoint(
+                        0, self.dc_cont_cut_clearance
+                    ),
+                    width=0,
+                    gap=self.dc_cont_cut_width / 2
+                )
+                right_bot.place(self.region_ph)
+                test_ph_cut |= right_bot.empty_region
+            if hasattr(squid, "bot_dc_flux_line_left") and (
+                    squid.bot_dc_flux_line_left is not None):
+                left_bottom = list(
+                    squid.bot_dc_flux_line_left.primitives.values()
+                )[0]
+                bot_left_shape1 = CPW(
+                    start=
+                    DPoint(left_bottom.end.x, bottom_polygon_bbox.top) + \
+                    DPoint(0, -self.dc_cont_clearance),
+                    end=left_bottom.start,
+                    width=left_bottom.width - 2 * self.dc_cont_clearance,
+                    gap=0
+                )
+
+                bot_left_shape2 = CPW(
+                    start=
+                    DPoint(left_bottom.end.x, bottom_polygon_bbox.top) + \
+                    DPoint(0, -self.dc_cont_clearance),
+                    end=left_bottom.start + DPoint(0,
+                                                   -self.dc_cont_ph_ext),
+                    width=left_bottom.width + 2 * self.dc_cont_ph_ext,
+                    gap=0
+                )
+
+                self.el_dc_contacts[-1][4] = bot_left_shape1
+                self.el_dc_contacts[-1][5] = bot_left_shape2
+
+                # Rectangle for bottom left DC contact pad
+                left_bot = CPW(
+                    start=left_bottom.end + DPoint(
+                        0, self.cross_gnd_gap_x / 6
+                    ),
+                    end=left_bottom.start + DPoint(
+                        0, self.dc_cont_cut_clearance
+                    ),
+                    width=0,
+                    gap=self.dc_cont_cut_width / 2
+                )
+                left_bot.place(self.region_ph)
+
+            for contact in self.el_dc_contacts[-1]:
+                if contact is not None:
+                    contact.place(self.region_el2)
 
     def draw_el_protection(self):
         protection_a = 300e3
@@ -1254,8 +1413,10 @@ class Design5Q(ChipDesign):
 
     # TODO: add layer or region arguments to the functions wich end with "..._in_layers()"
     def resolve_holes(self):
-        for reg in (self.region_ph, self.region_bridges1, self.region_bridges2,
-                    self.region_el, self.region_el2, self.region_el_protection):
+        for reg in (
+                self.region_ph, self.region_bridges1, self.region_bridges2,
+                self.region_el, self.region_el2,
+                self.region_el_protection):
             tmp_reg = Region()
             for poly in reg:
                 tmp_reg.insert(poly.resolved_holes())
@@ -1268,7 +1429,8 @@ class Design5Q(ChipDesign):
 
     def split_polygons_in_layers(self, max_pts=200):
         self.region_ph = split_polygons(self.region_ph, max_pts)
-        self.region_bridges2 = split_polygons(self.region_bridges2, max_pts)
+        self.region_bridges2 = split_polygons(self.region_bridges2,
+                                              max_pts)
         for poly in self.region_ph:
             if poly.num_points() > max_pts:
                 print("exists photo")
@@ -1288,7 +1450,7 @@ def simulate_resonators():
 
     for dl, (resonator_idx, estimated_freq) in product(
             dl_list,
-            list(zip(range(3,5), estimated_res_freqs_init)),
+            list(zip(range(3, 5), estimated_res_freqs_init)),
     ):
         fine_resonance_success = False
         freqs_span = freqs_span_corase
@@ -1307,7 +1469,8 @@ def simulate_resonators():
             ).bbox()
 
             # center of the readout CPW
-            crop_box.top += -design.Z_res.b / 2 + design.to_line_list[resonator_idx] + design.Z0.b / 2
+            crop_box.top += -design.Z_res.b / 2 + design.to_line_list[
+                resonator_idx] + design.Z0.b / 2
             box_extension = 100e3
             crop_box.bottom -= box_extension
             crop_box.top += box_extension
@@ -1315,12 +1478,16 @@ def simulate_resonators():
             crop_box.right += box_extension
             design.crop(crop_box, region=design.region_ph)
             design.sonnet_ports = [
-                DPoint(crop_box.left, crop_box.top - box_extension - design.Z0.b / 2),
-                DPoint(crop_box.right, crop_box.top - box_extension - design.Z0.b / 2)
+                DPoint(crop_box.left,
+                       crop_box.top - box_extension - design.Z0.b / 2),
+                DPoint(crop_box.right,
+                       crop_box.top - box_extension - design.Z0.b / 2)
             ]
             import numpy as np
-            arr1 = np.round(np.array(design.to_line_list) - design.Z0.b/2 - design.Z_res.b/2)
-            arr2 = np.array([box_extension, design.Z0.gap, design.Z0.width, design.Z_res.width, design.Z_res.gap])
+            arr1 = np.round(np.array(
+                design.to_line_list) - design.Z0.b / 2 - design.Z_res.b / 2)
+            arr2 = np.array([box_extension, design.Z0.gap, design.Z0.width,
+                             design.Z_res.width, design.Z_res.gap])
             arr = np.hstack((arr1, arr2))
             resolution_dy = np.gcd.reduce(arr.astype(int))
             resolution_dx = 4e3
@@ -1351,7 +1518,8 @@ def simulate_resonators():
             ml_terminal.clear()
             simBox = SimulationBox(
                 crop_box.width(), crop_box.height(),
-                crop_box.width() / resolution_dx, crop_box.height() / resolution_dy
+                crop_box.width() / resolution_dx,
+                crop_box.height() / resolution_dy
             )
             ml_terminal.set_boxProps(simBox)
             # print("sending cell and layer")
@@ -1364,7 +1532,8 @@ def simulate_resonators():
             ml_terminal.set_ports(ports)
 
             ml_terminal.send_polygons(design.cell, design.layer_ph)
-            ml_terminal.set_ABS_sweep(estimated_freq - freqs_span / 2, estimated_freq + freqs_span / 2)
+            ml_terminal.set_ABS_sweep(estimated_freq - freqs_span / 2,
+                                      estimated_freq + freqs_span / 2)
             print(f"simulating...{resonator_idx}")
             result_path = ml_terminal.start_simulation(wait=True)
             # if fine_resonance_success:
@@ -1376,15 +1545,19 @@ def simulate_resonators():
             s12 is monotonically increasing or decreasing over the chosen frequency band.
             That generally holds true for circuits with single resonator.
             """
-            with open(result_path.decode('ascii'), "r", newline='') as file:
+            with open(result_path.decode('ascii'), "r",
+                      newline='') as file:
                 # exctracting s-parameters in csv format
                 # though we do not have csv module
-                rows = [row.split(',') for row in list(file.readlines())[8:]]
+                rows = [row.split(',') for row in
+                        list(file.readlines())[8:]]
                 freqs = [float(row[0]) for row in rows]  # rows in GHz
                 df = freqs[1] - freqs[0]  # frequency error
-                s12_list = [float(row[3]) + 1j * float(row[4]) for row in rows]
+                s12_list = [float(row[3]) + 1j * float(row[4]) for row in
+                            rows]
                 s12_abs_list = [abs(s12) for s12 in s12_list]
-                min_freq_idx, min_s21_abs = min(enumerate(s12_abs_list), key=lambda x: x[1])
+                min_freq_idx, min_s21_abs = min(enumerate(s12_abs_list),
+                                                key=lambda x: x[1])
                 min_freq = freqs[min_freq_idx]
                 min_freq_idx = len(s12_abs_list) / 2  # Note: FOR DEBUG
 
@@ -1393,7 +1566,8 @@ def simulate_resonators():
                 # local minimum is located to the left of current interval
                 # => shift interval to the left and try again
                 derivative = (s12_list[1] - s12_list[0]) / df
-                second_derivative = (s12_list[2] - 2 * s12_list[1] + s12_list[0]) / df ** 2
+                second_derivative = (s12_list[2] - 2 * s12_list[1] +
+                                     s12_list[0]) / df ** 2
                 print('resonance located the left of the current interval')
                 # try adjacent interval to the left
                 estimated_freq -= freqs_span
@@ -1402,8 +1576,10 @@ def simulate_resonators():
                 # local minimum is located to the right of current interval
                 # => shift interval to the right and try again
                 derivative = (s12_list[-1] - s12_list[-2]) / df
-                second_derivative = (s12_list[-1] - 2 * s12_list[-2] + s12_list[-3]) / df ** 2
-                print('resonance located the right of the current interval')
+                second_derivative = (s12_list[-1] - 2 * s12_list[-2] +
+                                     s12_list[-3]) / df ** 2
+                print(
+                    'resonance located the right of the current interval')
                 # try adjacent interval to the right
                 estimated_freq += freqs_span
                 continue
@@ -1437,8 +1613,10 @@ def simulate_resonators():
             import csv
 
             # geometry parameters gathering
-            res_params = design.resonators[resonator_idx].get_geometry_params_dict(prefix="worm_")
-            Z0_params = design.Z0.get_geometry_params_dict(prefix="S21Line_")
+            res_params = design.resonators[
+                resonator_idx].get_geometry_params_dict(prefix="worm_")
+            Z0_params = design.Z0.get_geometry_params_dict(
+                prefix="S21Line_")
 
             from collections import OrderedDict
 
@@ -1447,7 +1625,8 @@ def simulate_resonators():
                     res_params.items(),
                     Z0_params.items(),
                     {
-                        "to_line, um": design.to_line_list[resonator_idx] / 1e3,
+                        "to_line, um": design.to_line_list[
+                                           resonator_idx] / 1e3,
                         "filename": None,
                         "resonator_idx": resonator_idx
                     }.items()
@@ -1467,10 +1646,12 @@ def simulate_resonators():
                 os.mkdir(results_dirpath)
             except FileExistsError:
                 # directory already exists
-                with open(output_metaFile_path, "r+", newline='') as csv_file:
+                with open(output_metaFile_path, "r+",
+                          newline='') as csv_file:
                     reader = csv.reader(csv_file)
                     existing_entries_n = len(list(reader))
-                    all_params["filename"] = "result_" + str(existing_entries_n) + ".csv"
+                    all_params["filename"] = "result_" + str(
+                        existing_entries_n) + ".csv"
 
                     writer = csv.writer(csv_file)
                     # append new values row to file
