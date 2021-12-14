@@ -629,7 +629,7 @@ AsymSquidOneLegParams = namedtuple(
 )
 
 class AsymSquidOneLeg(ComplexBase):
-    def __init__(self, origin, params, side=0, trans_in=None):
+    def __init__(self, origin, params, side=0, leg_side=0, trans_in=None):
         """
         Class to draw width symmetrical squid with
         outer positioning of the junctions.
@@ -729,6 +729,7 @@ class AsymSquidOneLeg(ComplexBase):
             self.params = AsymSquidDCFluxParams(*(self.params[:-1] + (
                 self.params.j1_dy,)))
         self.side = side
+        self.leg_side = leg_side
 
         ''' Attributes corresponding to primitives '''
         self.pad_top: Circle = None
@@ -748,7 +749,9 @@ class AsymSquidOneLeg(ComplexBase):
             self.init_half(origin, side=1)
         else:
             self.init_half(origin, side=self.side)
+        self.init_ph_el_conn_pads(leg_side=self.leg_side)
 
+    def init_ph_el_conn_pads(self, leg_side):
         ''' draw top contact pad '''
         origin = DPoint(0, 0)
         pars = self.params
@@ -768,57 +771,58 @@ class AsymSquidOneLeg(ComplexBase):
         )
         self.primitives["ph_el_conn_pad"] = self.ph_el_conn_pad
 
-        # ''' draw bottom DC flux line '''
-        # # print(self.bot_inter_lead_dx)
-        # self.bot_dc_flux_line_right = CPWRLPath(
-        #     origin=origin + DPoint(
-        #         pars.flux_line_dx / 2,
-        #         -(pars.sq_len / 2 + pars.flux_line_dy) -
-        #         pars.flux_line_outer_width / 2
-        #     ),
-        #     shape="LRL",
-        #     cpw_parameters=
-        #     [
-        #         CPWParameters(width=pars.flux_line_contact_width, gap=0),
-        #         CPWParameters(smoothing=True),
-        #         CPWParameters(width=pars.flux_line_outer_width, gap=0)
-        #     ],
-        #     turn_radiuses=max(pars.flux_line_outer_width,
-        #                       pars.flux_line_contact_width),
-        #     segment_lengths=[
-        #         pars.flux_line_dy + pars.flux_line_outer_width,
-        #         pars.flux_line_dx / 2 - self.bot_inter_lead_dx
-        #     ],
-        #     turn_angles=[np.pi / 2],
-        #     trans_in=Trans.R90
-        # )
-        # self.primitives["bot_dc_flux_line_right"] = \
-        #     self.bot_dc_flux_line_right
-
-        self.bot_dc_flux_line_left = CPWRLPath(
-            origin=origin + DPoint(
-                -pars.flux_line_dx / 2,
-                -(pars.sq_len / 2 + pars.flux_line_dy) -
-                pars.flux_line_outer_width / 2
-            ),
-            shape="LRL",
-            cpw_parameters=
-            [
-                CPWParameters(width=pars.flux_line_contact_width, gap=0),
-                CPWParameters(smoothing=True),
-                CPWParameters(width=pars.flux_line_outer_width, gap=0)
-            ],
-            turn_radiuses=max(pars.flux_line_outer_width,
-                              pars.flux_line_contact_width),
-            segment_lengths=[
-                pars.flux_line_dy + pars.flux_line_outer_width,
-                pars.flux_line_dx / 2 - self.bot_inter_lead_dx
-            ],
-            turn_angles=[-np.pi / 2],
-            trans_in=Trans.R90
-        )
-        self.primitives["bot_dc_flux_line_left"] = \
-            self.bot_dc_flux_line_left
+        ''' draw bottom DC flux line '''
+        if self.leg_side == 1 or self.leg_side == 0:
+            # print(self.bot_inter_lead_dx)
+            self.bot_dc_flux_line_right = CPWRLPath(
+                origin=origin + DPoint(
+                    pars.flux_line_dx / 2,
+                    -(pars.sq_len / 4 + pars.flux_line_dy) -
+                    pars.flux_line_outer_width / 2
+                ),
+                shape="LRL",
+                cpw_parameters=
+                [
+                    CPWParameters(width=pars.flux_line_contact_width, gap=0),
+                    CPWParameters(smoothing=True),
+                    CPWParameters(width=pars.flux_line_outer_width, gap=0)
+                ],
+                turn_radiuses=max(pars.flux_line_outer_width,
+                                  pars.flux_line_contact_width),
+                segment_lengths=[
+                    pars.flux_line_dy + pars.flux_line_outer_width,
+                    pars.flux_line_dx / 2 - self.bot_inter_lead_dx
+                ],
+                turn_angles=[np.pi / 2],
+                trans_in=Trans.R90
+            )
+            self.primitives["bot_dc_flux_line_right"] = \
+                self.bot_dc_flux_line_right
+        if self.leg_side == 0 or self.leg_side == -1:
+            self.bot_dc_flux_line_left = CPWRLPath(
+                origin=origin + DPoint(
+                    -pars.flux_line_dx / 2,
+                    -(pars.sq_len / 4 + pars.flux_line_dy) -
+                    pars.flux_line_outer_width / 2
+                ),
+                shape="LRL",
+                cpw_parameters=
+                [
+                    CPWParameters(width=pars.flux_line_contact_width, gap=0),
+                    CPWParameters(smoothing=True),
+                    CPWParameters(width=pars.flux_line_outer_width, gap=0)
+                ],
+                turn_radiuses=max(pars.flux_line_outer_width,
+                                  pars.flux_line_contact_width),
+                segment_lengths=[
+                    pars.flux_line_dy + pars.flux_line_outer_width,
+                    pars.flux_line_dx / 2 - self.bot_inter_lead_dx
+                ],
+                turn_angles=[-np.pi / 2],
+                trans_in=Trans.R90
+            )
+            self.primitives["bot_dc_flux_line_left"] = \
+                self.bot_dc_flux_line_left
 
     def init_half(self, origin, side=-1):
         # side = -1 is width left half, 1 is width right half
