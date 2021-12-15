@@ -1,4 +1,4 @@
-__version__ = "0.3.0.6"
+__version__ = "0.3.0.7"
 
 '''
 Changes in version
@@ -29,6 +29,10 @@ Photo layer was fabricated 14.12.2021 (this design was augmented by Bolgar)
 
 New in v0.3.0.6
 Fixed bandages drawings for test JJs.
+
+v.0.3.0.7
+Separated x and y dimensions of a bandage rectangle.
+Bandages enlarged in 3 times along y-axis.
 '''
 
 # Enter your Python code here
