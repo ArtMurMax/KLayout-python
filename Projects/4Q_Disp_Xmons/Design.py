@@ -193,11 +193,10 @@ class Design5Q(ChipDesign):
         self.L0 = 1150e3
         self.L1_list = [
             1e3 * x for x in
-            [70.73959436, 91.28326636, 137.6653485, 126.5793665,
-             71.58485723]
+            [0,0,0,0,0]
         ]
         self.r = 60e3
-        self.N_coils = [3] * len(self.L1_list)
+        self.N_coils = [2, 3, 3, 3, 3]
         self.L2_list = [self.r] * len(self.L1_list)
         self.L3_list = [0e3] * len(self.L1_list)  # to be constructed
         self.L4_list = [self.r] * len(self.L1_list)
@@ -315,22 +314,22 @@ class Design5Q(ChipDesign):
         self.draw_readout_waveguide()
         self.draw_xmons_and_resonators(res_idx)
 
-        self.draw_josephson_loops()
+        # self.draw_josephson_loops()
         #
-        self.draw_microwave_drvie_lines()
-        self.draw_flux_control_lines()
-
-        self.draw_test_structures()
-        self.draw_el_dc_contacts()
-        self.draw_el_protection()
-
-        self.draw_photo_el_marks()
-        self.draw_bridges()
-        self.draw_pinning_holes()
-        self.extend_photo_overetching()
-        self.inverse_destination(self.region_ph)
-        self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
-        self.split_polygons_in_layers(max_pts=180)
+        # self.draw_microwave_drvie_lines()
+        # self.draw_flux_control_lines()
+        #
+        # self.draw_test_structures()
+        # self.draw_el_dc_contacts()
+        # self.draw_el_protection()
+        #
+        # self.draw_photo_el_marks()
+        # self.draw_bridges()
+        # self.draw_pinning_holes()
+        # self.extend_photo_overetching()
+        # self.inverse_destination(self.region_ph)
+        # self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
+        # self.split_polygons_in_layers(max_pts=180)
 
     def _transfer_regs2cell(self):
         # this too methods assumes that all previous drawing
@@ -1445,18 +1444,18 @@ class Design5Q(ChipDesign):
 
 
 def simulate_resonators():
-    estimated_res_freqs_init = [6.20, 6.35, 6.50, 6.65, 6.80]  # GHz
-    freqs_span_corase = 1.0  # GHz
+    estimated_res_freqs_init = [7, 7.5, 8.0, 8.0, 8.0]  # GHz
+    freqs_span_corase = 2.0  # GHz
     corase_only = False
-    freqs_span_fine = 0.010
+    freqs_span_fine = 0.050
     # dl_list = [10e3, 0, -10e3]
     dl_list = [0]
     from itertools import product
 
-    for dl, (resonator_idx, estimated_freq) in product(
+    for dl, (resonator_idx, estimated_freq) in list(product(
             dl_list,
-            list(zip(range(3, 5), estimated_res_freqs_init)),
-    ):
+            list(zip(range(5), estimated_res_freqs_init)),
+    ))[2:]:
         fine_resonance_success = False
         freqs_span = freqs_span_corase
         while not fine_resonance_success:
@@ -1687,6 +1686,7 @@ def simulate_resonators():
 
 
 if __name__ == "__main__":
-    design = Design5Q("testScript")
-    design.draw()
-    design.show()
+    simulate_resonators()
+    # design = Design5Q("testScript")
+    # design.draw()
+    # design.show()
