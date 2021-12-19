@@ -1,16 +1,25 @@
-__version__ = "0.3.0.7"
+__version__ = "0.3.0.8"
 
 '''
-Changes in version
+Changes log
 
-0.3.0.2
-Resonators frequencies are now equal to 6.2, 6.35, 6.5, 6.65, 6.8 GHz from left to right respectively
+v.0.3.0.8
+1. Fixed dx and dy for JJs (to comply with previous designs).
+2. Added resonators frequency approximation based on length and effective
+dielectric permitivity.
 
-0.3.0.3
-Bridges of resonators sections consisting of 180deg 
-arcs are placed onto the 180deg arcs instead of 
-linear segments connecting those 180deg arcs.
-Other resonator's sections are remained the same. 
+v.0.3.0.7
+1. Separated x and y dimensions of a bandage rectangle.
+2. Bandages enlarged in 3 times along y-axis.
+
+v0.3.0.6
+Fixed bandages drawings for test JJs. 
+
+v.0.3.0.5
+1. Bandages added
+2. AsymSquidOneLeg's grounding pad for lower superconducting island 
+is now attached higher to SQUID loop than in AsymSquidDCFlux.
+Photo layer was fabricated 14.12.2021 (this design was augmented by Bolgar)
 
 v.0.3.0.4
 1. Flux control wire is detached from Tmon's loop in order to avoid 
@@ -22,17 +31,15 @@ electron-beam and photo litographies.
 S_small/S_big = 0.33. This made to better distinguish bad SQUID resistance
 from test structure resistance consisting of a small junction
 
-v.0.3.0.5
-1. Bandages added
-2. AsymSquidOneLeg's grounding pad for lower superconducting island is now attached higher to SQUID loop than in AsymSquidDCFlux.
-Photo layer was fabricated 14.12.2021 (this design was augmented by Bolgar)
+0.3.0.3
+Bridges of resonators sections consisting of 180deg 
+arcs are placed onto the 180deg arcs instead of 
+linear segments connecting those 180deg arcs.
+Other resonator's sections are remained the same.
 
-New in v0.3.0.6
-Fixed bandages drawings for test JJs.
-
-v.0.3.0.7
-Separated x and y dimensions of a bandage rectangle.
-Bandages enlarged in 3 times along y-axis.
+v.0.3.0.2
+Resonators frequencies are now equal to 6.2, 6.35, 6.5, 6.65, 6.8 GHz from 
+left to right respectively
 '''
 
 # Enter your Python code here
@@ -193,10 +200,10 @@ class Design5Q(ChipDesign):
         self.L0 = 1000e3
         self.L1_list = [
             1e3 * x for x in
-            [0, 130, 130, 130, 130]
+            [3.192, 40.352, 79.426, 81.814, 21.774]
         ]
         self.r = 60e3
-        self.N_coils = [2, 3, 3, 3, 3]
+        self.N_coils = [3, 3, 3, 3, 3]
         self.L2_list = [self.r] * len(self.L1_list)
         self.L3_list = [0e3] * len(self.L1_list)  # to be constructed
         self.L4_list = [self.r] * len(self.L1_list)
@@ -441,8 +448,8 @@ class Design5Q(ChipDesign):
             self.resonators.append(
                 EMResonatorTL3QbitWormRLTailXmonFork(
                     self.Z_res, DPoint(worm_x, worm_y), L_coupling,
-                    L0,
-                    L1, self.r, n_coils,
+                    L0=L0,
+                    L1=L1, r=self.r, N=n_coils,
                     tail_shape=res_tail_shape,
                     tail_turn_radiuses=tail_turn_radiuses,
                     tail_segment_lengths=tail_segment_lengths,
@@ -1448,17 +1455,15 @@ class Design5Q(ChipDesign):
 
 
 def simulate_resonators():
-    estimated_res_freqs_init = [7, 7.5, 8.0, 8.0, 8.0]  # GHz
-    freqs_span_corase = 2.0  # GHz
+    freqs_span_corase = 1.0  # GHz
     corase_only = False
     freqs_span_fine = 0.050
-    dl_list = [20e3, 0, -20e3]
-    # dl_list = [0]
+    dl_list = [23e3, 13e3, -3e3]
     from itertools import product
 
-    for dl, (resonator_idx, estimated_freq) in list(product(
+    for dl, resonator_idx in list(product(
             dl_list,
-            list(zip(range(5), estimated_res_freqs_init)),
+            range(5)
     )):
         fine_resonance_success = False
         freqs_span = freqs_span_corase
@@ -1542,6 +1547,10 @@ def simulate_resonators():
             ml_terminal.set_ports(ports)
 
             ml_terminal.send_polygons(design.cell, design.layer_ph)
+            estimated_freq = \
+                design.resonators[resonator_idx].get_approx_frequency(
+                    refractive_index=np.sqrt(6.26423)
+                )
             ml_terminal.set_ABS_sweep(estimated_freq - freqs_span / 2,
                                       estimated_freq + freqs_span / 2)
             print(f"simulating...{resonator_idx}")
@@ -1692,7 +1701,7 @@ def simulate_resonators():
 
 
 if __name__ == "__main__":
-    # simulate_resonators()
-    design = Design5Q("testScript")
-    design.draw()
-    design.show()
+    simulate_resonators()
+    # design = Design5Q("testScript")
+    # design.draw()
+    # design.show()

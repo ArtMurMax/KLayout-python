@@ -198,7 +198,7 @@ class CPWArc(ElementBase):
         self.alpha_end = self.angle_connections[1]
 
     def length(self):
-        return abs(self.delta_alpha)*self.R
+        return abs(self.delta_alpha*self.R)
 
 
 class CPW2CPW(ElementBase):
@@ -415,6 +415,9 @@ class CPW2CPWArc(ElementBase):
     def _refresh_named_angles(self):
         self.alpha_start = self.angle_connections[0]
         self.alpha_end = self.angle_connections[1]
+
+    def length(self):
+        return abs((self.end_angle - self.start_angle)*self.r)
 
 
 class Coil_type_1(ComplexBase):
@@ -652,11 +655,6 @@ class CPWRLPath(ComplexBase):
     def _refresh_named_angles(self):
         self.alpha_start = self.angle_connections[0]
         self.alpha_end = self.angle_connections[1]
-
-    def get_total_length(self):
-        return sum(self._segment_lengths) + \
-               sum([abs(R * alpha) for R, alpha in
-                    zip(self._turn_radiuses, self._turn_angles)])
 
 
 class DPathCPW(ComplexBase):

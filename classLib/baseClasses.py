@@ -293,12 +293,36 @@ class ComplexBase(ElementBase):
     def init_regions(self):
         pass
 
-    def length(self):
+    def length(self, exception=None):
+        """
+
+        Parameters
+        ----------
+        exception : str
+            primitives which names contains this string will be skipped
+
+        Returns
+        -------
+
+        """
         length = 0
-        for primitive in self.primitives.values():
+        for name, primitive in self.primitives.items():
             # getting only those who has length
             if hasattr(primitive, "length"):
-                length += primitive.length()
+                if (exception is not None) and (exception in name):
+                    continue
+
+                dl = 0
+                if isinstance(primitive, ComplexBase):
+                    dl = primitive.length(exception=exception)
+                elif isinstance(primitive, ElementBase):
+                    dl = primitive.length()
+                else:
+                    raise Exception("unknown primitive found while "
+                                    "searching for length. "
+                                    "Terminating.")
+
+                length += dl
             else:
                 continue
 

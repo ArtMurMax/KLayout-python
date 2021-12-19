@@ -802,7 +802,9 @@ class EMResonatorTL3QbitWormRLTail(ComplexBase):
         # draw the open-circuited "tail"
 
         self.cpw_end_open_RLPath = CPWRLPath(
-            self.cop_vertical.end, self.tail_shape, cpw_parameters=self.Z0,
+            origin=self.cop_vertical.end,
+            shape=self.tail_shape,
+            cpw_parameters=self.Z0,
             turn_radiuses=self.tail_turn_radiuses,
             segment_lengths=self.tail_segment_lengths,
             turn_angles=self.tail_turn_angles,
@@ -813,7 +815,7 @@ class EMResonatorTL3QbitWormRLTail(ComplexBase):
         self.cpw_end_open_gap = CPW(
             0, self.Z0.b / 2,
             self.cpw_end_open_RLPath.end,
-               self.cpw_end_open_RLPath.end - DPoint(0, self.Z0.b)
+            self.cpw_end_open_RLPath.end - DPoint(0, self.Z0.b)
         )
         self.primitives["cpw_end_open_gap"] = self.cpw_end_open_gap
 
@@ -917,6 +919,31 @@ class EMResonatorTL3QbitWormRLTailXmonFork(EMResonatorTL3QbitWormRLTail):
         p1 = self.fork_y_cpw2.end
         p2 = self.fork_y_cpw2.end + DPoint(0, -forkZ.gap)
         self.primitives["erased_fork_right_cpw_end"] = CPW(0, forkZ.b / 2, p1, p2)
+
+    def get_approx_frequency(self, refractive_index, n=0):
+        """
+
+        Parameters
+        ----------
+        refractive_index : float
+            absolute refractive index of CPW waveguide.
+        n : int
+            number of frequency mode to return
+
+        Returns
+        -------
+        freq : float
+            Estimated frequency
+        """
+        length = self.length(exception="fork")  # nm
+        light_speed = 299792458/refractive_index  # m/s
+        freq = light_speed/(4*length)  # GHz
+        res_freq = freq*(2*n + 1)
+
+        return res_freq
+
+
+
 
 
 
