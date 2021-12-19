@@ -70,7 +70,7 @@ import copy
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.8e3
+FABRICATION.OVERETCHING = 0.0e3
 SQUID_PARAMETERS = AsymSquidOneLegParams(
     pad_r=5e3, pads_distance=30e3,
     contact_pad_width=10e3, contact_pad_ext_r=200,
@@ -190,10 +190,10 @@ class Design5Q(ChipDesign):
             1e3 * x for x in [310, 320, 320, 310, 300]
         ]
         # corresponding to resonanse freq is linspaced in interval [6,9) GHz
-        self.L0 = 1150e3
+        self.L0 = 1000e3
         self.L1_list = [
             1e3 * x for x in
-            [0,0,0,0,0]
+            [0, 130, 130, 130, 130]
         ]
         self.r = 60e3
         self.N_coils = [2, 3, 3, 3, 3]
@@ -203,7 +203,7 @@ class Design5Q(ChipDesign):
         self.width_res = 20e3
         self.gap_res = 10e3
         self.Z_res = CPWParameters(self.width_res, self.gap_res)
-        self.to_line_list = [56e3] * len(self.L1_list)
+        self.to_line_list = [58e3] * len(self.L1_list)
         self.fork_metal_width = 10e3
         self.fork_gnd_gap = 15e3
         self.xmon_fork_gnd_gap = 14e3
@@ -1314,8 +1314,8 @@ class Design5Q(ChipDesign):
             self.marks[-1].place(self.region_ph)
 
     def draw_bridges(self):
-        bridges_step = 150e3
-        fl_bridges_step = 150e3
+        bridges_step = 130e3
+        fl_bridges_step = 130e3
 
         # for resonators
         for resonator in self.resonators:
@@ -1442,20 +1442,24 @@ class Design5Q(ChipDesign):
             if poly.num_points() > max_pts:
                 print("exists bridge2")
 
+    def get_resonator_length(self, res_idx):
+        resonator = self.resonators[res_idx]
+        res_length = resonator.L_coupling
+
 
 def simulate_resonators():
     estimated_res_freqs_init = [7, 7.5, 8.0, 8.0, 8.0]  # GHz
     freqs_span_corase = 2.0  # GHz
     corase_only = False
     freqs_span_fine = 0.050
-    # dl_list = [10e3, 0, -10e3]
-    dl_list = [0]
+    dl_list = [20e3, 0, -20e3]
+    # dl_list = [0]
     from itertools import product
 
     for dl, (resonator_idx, estimated_freq) in list(product(
             dl_list,
             list(zip(range(5), estimated_res_freqs_init)),
-    ))[2:]:
+    )):
         fine_resonance_success = False
         freqs_span = freqs_span_corase
         while not fine_resonance_success:
@@ -1494,6 +1498,8 @@ def simulate_resonators():
                              design.Z_res.width, design.Z_res.gap])
             arr = np.hstack((arr1, arr2))
             resolution_dy = np.gcd.reduce(arr.astype(int))
+            print(arr)
+            print(resolution_dy)
             resolution_dx = 4e3
 
             # transforming cropped box to the origin
@@ -1686,7 +1692,7 @@ def simulate_resonators():
 
 
 if __name__ == "__main__":
-    simulate_resonators()
-    # design = Design5Q("testScript")
-    # design.draw()
-    # design.show()
+    # simulate_resonators()
+    design = Design5Q("testScript")
+    design.draw()
+    design.show()

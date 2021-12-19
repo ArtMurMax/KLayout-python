@@ -919,3 +919,4 @@ class EMResonatorTL3QbitWormRLTailXmonFork(EMResonatorTL3QbitWormRLTail):
         self.primitives["erased_fork_right_cpw_end"] = CPW(0, forkZ.b / 2, p1, p2)
 
 
+

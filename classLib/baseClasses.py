@@ -292,3 +292,14 @@ class ComplexBase(ElementBase):
 
     def init_regions(self):
         pass
+
+    def length(self):
+        length = 0
+        for primitive in self.primitives.values():
+            # getting only those who has length
+            if hasattr(primitive, "length"):
+                length += primitive.length()
+            else:
+                continue
+
+        return length

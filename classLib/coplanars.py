@@ -103,6 +103,9 @@ class CPW(ElementBase):
         self.alpha_start = self.angle_connections[0]
         self.alpha_end = self.angle_connections[1]
 
+    def length(self):
+        return self.dr.abs()
+
 
 class CPWArc(ElementBase):
     def __init__(self, z0=CPWParameters(width=20e3, gap=10e3),
@@ -193,6 +196,9 @@ class CPWArc(ElementBase):
     def _refresh_named_angles(self):
         self.alpha_start = self.angle_connections[0]
         self.alpha_end = self.angle_connections[1]
+
+    def length(self):
+        return abs(self.delta_alpha)*self.R
 
 
 class CPW2CPW(ElementBase):
