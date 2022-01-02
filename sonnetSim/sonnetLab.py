@@ -122,9 +122,10 @@ class SonnetLab(MatlabClient):
         if wait is True:
             while (self.state == self.STATE.BUSY_SIMULATING):
                 self.get_simulation_status()  # updates self.state
-                time.sleep(1)  # sleep to release Macro GUI
+                time.sleep(1)  # sleep to release Macro GUI - (not working =)
 
         self.sim_res_file_path = self.read_line()
+        self.state = self.STATE.READY
         return self.sim_res_file_path
 
     def get_simulation_status(self):

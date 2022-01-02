@@ -27,7 +27,6 @@ while 1
     proj.defineNewResistorMetalType(metal_type_name,0);
     csv_name = pwd + "\" + SONNET_PROJ_DIRNAME + "\" + DATA_FILENAME;
     while 1
-        %disp("waiting for data")
         data = fread(sock, 1,"uint16");
         if data == CMD.CLOSE
             respond( sock, RESPONSE.OK )
@@ -67,17 +66,15 @@ while 1
                 proj.deletePolygonUsingIndex(1);
             end
         elseif data == CMD.SET_ABS
-            %disp("set abs")
             respond( sock, RESPONSE.OK )
             abs_params = receive_abs_parameters(sock);
+            proj
             proj.addAbsFrequencySweep(abs_params.start_freq,abs_params.stop_freq);
-            %disp("set abs success")
         elseif data == CMD.SET_LINSPACE_SWEEP
             respond( sock, RESPONSE.OK )
             pars = receive_abs_parameters_step(sock);
             proj.addFrequencySweep("LSWEEP", pars.start_freq, pars.stop_freq, pars.points_n)
         elseif data == CMD.SIMULATE
-            %disp("simulate")
             respond( sock, RESPONSE.OK )
             
             % output csv file
@@ -87,14 +84,12 @@ while 1
             % S-data
             % real-imaginary complex number representation
             proj.addFileOutput("CSV","D","Y",DATA_FILENAME,"IC","Y","S","RI","R",50);
-            proj.simulate();
-            %disp("finished simulating")
+            proj.simulate('-c');
             % sending confirmation of the simulation end
             respond( sock, RESPONSE.SIMULATION_FINISHED );
-            %disp("finish simulation response send")
+            
             % sending the name of the output file
             fwrite(sock, csv_name + newline);
-            %disp("filename with results sent");
         elseif data == CMD.VISUALIZE
             respond( sock, RESPONSE.OK )
             response_data = csvread(csv_name,8);

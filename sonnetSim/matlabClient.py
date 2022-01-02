@@ -8,7 +8,7 @@ from .flags import FLAG, RESPONSE
 
 class MatlabClient():
     MATLAB_PORT = 30000
-    TIMEOUT = 10
+    TIMEOUT = 10  # sec
 
     # internal state enumeration class
     class STATE:
@@ -38,8 +38,8 @@ class MatlabClient():
     def _send(self, byte_arr, confirmation_value=RESPONSE.OK):
         confirm_byte = None
         self.sock.sendall(byte_arr)
-
-        # waiting for 2 confirmation bytes received or timeout expired
+        # print(self.sock.gettimeout())
+        # waiting for 16-bit confirmation received or timeout expired
         try:
             while (True):
                 confirm_byte = self.sock.recv(2, socket.MSG_PEEK)
@@ -84,13 +84,14 @@ class MatlabClient():
         self._send(raw_data)
 
     def read_line(self):
-        self.sock.settimeout(None)  # entering nonblocking mode
+        self.sock.settimeout(None)  # entering blocking mode
         while (True):
             data = self.sock.recv(1024, socket.MSG_PEEK)
             idx = data.find(b'\n')
             if (idx != - 1):
-                self.sock.settimeout(MatlabClient.TIMEOUT)  # leaving nonblocking mode
                 data = self.sock.recv(idx + 1)[:-1]
+                self.sock.settimeout(MatlabClient.TIMEOUT)  # leaving nonblocking mode
+                # print(data)
                 break
             else:
                 continue
@@ -133,20 +134,16 @@ class MatlabClient():
         self.state = self.STATE.BUSY_SIMULATING
 
     def _get_simulation_status(self):
+        self.sock.settimeout(None)  # entering nonblocking mode
         if (self.state == self.STATE.BUSY_SIMULATING):
-            self.sock.settimeout(None)  # entering nonblocking mode
             try:
                 response = self.sock.recv(2, socket.MSG_PEEK)
-            except Exception as e:
-                print(e)
+            except BlockingIOError as e:
+                return self.state
 
             if (len(response) < 2):
-                # leaving nonblocking mode on return
-                self.sock.settimeout(MatlabClient.TIMEOUT)
+                self.sock.settimeout(MatlabClient.TIMEOUT)  # leaving nonblicking mode
                 return self.state  # equals to self.STATE.BUSY_SIMULATING
-
-            self.sock.settimeout(MatlabClient.TIMEOUT)  # leaving nonblocking mode
-
             response = self.sock.recv(2)  # transferring data from socket input QUEUE
             response = struct.unpack("!H", response)[0]
             if (response == RESPONSE.SIMULATION_FINISHED):
@@ -154,6 +151,10 @@ class MatlabClient():
             else:
                 self.state = self.STATE.ERROR
 
+            self.sock.settimeout(MatlabClient.TIMEOUT)  # leaving nonblicking mode
+            return self.state
+        else:
+            self.sock.settimeout(MatlabClient.TIMEOUT)
             return self.state
 
     def _visualize_sever(self):
