@@ -51,7 +51,7 @@ import numpy as np
 
 import pya
 from pya import Cell
-from pya import Point, Vector, DPoint, DVector, DSimplePolygon, \
+from pya import Point, Vector, DPoint, DVector, DEdge, DSimplePolygon, \
     SimplePolygon, DPolygon, Polygon, Region
 from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans, DPath
 
@@ -295,12 +295,12 @@ class Design5Q(ChipDesign):
         self.marks: List[MarkBolgar] = []
         ### ADDITIONAL VARIABLES SECTION END ###
 
-    def draw(self, res_idx=None, design_params=None):
+    def draw(self):
         """
 
         Parameters
         ----------
-        res_idx : int
+        res_f_Q_sim_idx : int
             resonator index to draw. If not None, design will contain only
             readout waveguide and resonator with corresponding index (from 0 to 4),
             as well as corresponding Xmon Cross.
@@ -323,24 +323,88 @@ class Design5Q(ChipDesign):
         '''
         self.create_resonator_objects()
         self.draw_readout_waveguide()
-        self.draw_xmons_and_resonators(res_idx)
+        self.draw_xmons_and_resonators()
 
-        # self.draw_josephson_loops()
-        #
-        # self.draw_microwave_drvie_lines()
-        # self.draw_flux_control_lines()
-        #
-        # self.draw_test_structures()
-        # self.draw_el_dc_contacts()
-        # self.draw_el_protection()
-        #
-        # self.draw_photo_el_marks()
-        # self.draw_bridges()
-        # self.draw_pinning_holes()
-        # self.extend_photo_overetching()
-        # self.inverse_destination(self.region_ph)
-        # self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
-        # self.split_polygons_in_layers(max_pts=180)
+        self.draw_josephson_loops()
+
+        self.draw_microwave_drvie_lines()
+        self.draw_flux_control_lines()
+
+        self.draw_test_structures()
+        self.draw_el_dc_contacts()
+        self.draw_el_protection()
+
+        self.draw_photo_el_marks()
+        self.draw_bridges()
+        self.draw_pinning_holes()
+        self.extend_photo_overetching()
+        self.inverse_destination(self.region_ph)
+        self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
+        self.split_polygons_in_layers(max_pts=180)
+
+    def draw_for_res_f_and_Q_sim(self, res_idx):
+        """
+        Function draw part of design that will be cropped and simulateed to obtain resonator`s frequency and Q-factor.
+        Resonators are enumerated starting from 0.
+        Parameters
+        ----------
+        res_f_Q_sim_idx : int
+            resonator index to draw. If not None, design will contain only
+            readout waveguide and resonator with corresponding index (from 0 to 4),
+            as well as corresponding Xmon Cross.
+        design_params : object
+            design parameters to customize
+
+        Returns
+        -------
+        None
+        """
+        self.draw_chip()
+        '''
+            Only creating object. This is due to the drawing of xmons and resonators require
+        draw xmons, then draw resonators and then draw additional xmons. This is
+        ugly and that how this was before migrating to `ChipDesign` based code structure
+            This is also the reason why `self.__init__` is flooded with design parameters that
+        are used across multiple drawing functions.
+
+        TODO: This drawings sequence can be decoupled in the future.
+        '''
+        self.create_resonator_objects()
+        self.draw_readout_waveguide()
+        self.draw_xmons_and_resonators(res_idx=res_idx)
+
+
+    def draw_for_Cqr_simulation(self, res_idx):
+        """
+        Function draw part of design that will be cropped and simulateed to obtain capacity value of capacitive
+        coupling between qubit and resonator.
+        Resonators are enumerated starting from 0.
+        Parameters
+        ----------
+        res_f_Q_sim_idx : int
+            resonator index to draw. If not None, design will contain only
+            readout waveguide and resonator with corresponding index (from 0 to 4),
+            as well as corresponding Xmon Cross.
+        design_params : object
+            design parameters to customize
+
+        Returns
+        -------
+        None
+        """
+        self.draw_chip()
+        '''
+            Only creating object. This is due to the drawing of xmons and resonators require
+        draw xmons, then draw resonators and then draw additional xmons. This is
+        ugly and that how this was before migrating to `ChipDesign` based code structure
+            This is also the reason why `self.__init__` is flooded with design parameters that
+        are used across multiple drawing functions.
+
+        TODO: This drawings sequence can be decoupled in the future.
+        '''
+        self.create_resonator_objects()
+        self.draw_xmons_and_resonators(res_idx=res_idx)
+
 
     def _transfer_regs2cell(self):
         # this too methods assumes that all previous drawing
@@ -1458,7 +1522,7 @@ class Design5Q(ChipDesign):
         res_length = resonator.L_coupling
 
 
-def simulate_resonators():
+def simulate_resonators_f_and_Q():
     freqs_span_corase = 1.0  # GHz
     corase_only = False
     freqs_span_fine = 0.050
@@ -1475,7 +1539,7 @@ def simulate_resonators():
 
         design = Design5Q("testScript")
         design.L1_list = [L1 + dl for L1 in design.L1_list]
-        design.draw(resonator_idx)
+        design.draw_for_res_f_and_Q_sim(resonator_idx)
         estimated_freq = \
             design.resonators[resonator_idx].get_approx_frequency(
                 refractive_index=np.sqrt(6.26423)
@@ -1533,13 +1597,16 @@ def simulate_resonators():
             DTrans(dr.x, dr.y),
             trans_ports=True
         )
-        design.lv.zoom_fit()
+
+        # transfer design`s regions shapes to the corresponding layers in layout
         design.show()
+        # show layout in UI window
+        design.lv.zoom_fit()
 
         import os
         project_dir = os.path.dirname(__file__)
         design.layout.write(
-            os.path.join(project_dir, f"{resonator_idx}_{dl}_um.gds")
+            os.path.join(project_dir, f"res_f_Q_{resonator_idx}_{dl}_um.gds")
         )
 
         ### RESONANCE FINDING SECTION START ###
@@ -1716,8 +1783,168 @@ def simulate_resonators():
             ### RESULT SAVING SECTION END ###
 
 
+def simulate_Cqr():
+    resolution_dx = 1e3
+    resolution_dy = 1e3
+    dl_list = [45e3, 30e3, 15e3, 0e3, -15e3]
+    # dl_list = [0e3]
+    from itertools import product
+
+    for dl, res_idx in list(
+            product(
+                dl_list, range(5)
+        )
+    ):
+        ### DRAWING SECTION START ###
+        design = Design5Q("testScript")
+        design.fork_y_spans = [fork_y_span + dl for fork_y_span in design.fork_y_spans]
+        design.draw_for_Cqr_simulation(res_idx=res_idx)
+
+        worm = design.resonators[res_idx]
+        xmonCross = design.xmons[res_idx]
+        worm_start = list(worm.primitives.values())[0].start
+
+        # draw open end at the resonators start
+        p1 = worm_start - DVector(design.Z_res.b / 2, 0)
+        rec = Rectangle(p1, design.Z_res.b, design.Z_res.b / 2, inverse=True)
+        rec.place(design.region_ph)
+
+        if worm_start.x < xmonCross.center.x:
+            dr = (worm_start - xmonCross.cpw_r.end)
+        else:
+            dr = (worm_start - xmonCross.cpw_l.end)
+        dr.x = abs(dr.x)
+        dr.y = abs(dr.y)
+
+        box_side_x = 8 * xmonCross.sideX_length
+        box_side_y = 8 * xmonCross.sideY_length
+        dv = DVector(box_side_x / 2, box_side_y / 2)
+
+        crop_box = pya.Box().from_dbox(pya.Box(
+            xmonCross.center + dv,
+            xmonCross.center + (-1) * dv
+        ))
+        design.crop(crop_box)
+        dr = DPoint(0, 0) - crop_box.p1
+
+        # finding the furthest edge of cropped resonator`s central line polygon
+        # sonnet port will be attached to this edge
+        reg1 = worm.metal_region & Region(crop_box)
+        reg1.merge()
+        max_distance = 0
+        port_pt = None
+        for poly in reg1.each():
+            for edge in poly.each_edge():
+                edge_center = (edge.p1 + edge.p2) / 2
+                dp = edge_center - xmonCross.cpw_b.end
+                d = max(abs(dp.x),abs(dp.y))
+                if d > max_distance:
+                    max_distance = d
+                    port_pt = edge_center
+        design.sonnet_ports.append(port_pt)
+        design.sonnet_ports.append(xmonCross.cpw_b.end)
+
+        design.transform_region(design.region_ph, DTrans(dr.x, dr.y), trans_ports=True)
+
+        design.show()
+        design.lv.zoom_fit()
+        ### DRAWING SECTION END ###
+
+        ### SIMULATION SECTION START ###
+        ml_terminal = SonnetLab()
+        # print("starting connection...")
+        from sonnetSim.cMD import CMD
+
+        ml_terminal._send(CMD.SAY_HELLO)
+        ml_terminal.clear()
+        simBox = SimulationBox(
+            crop_box.width(),
+            crop_box.height(),
+            crop_box.width() / resolution_dx,
+            crop_box.height() / resolution_dy
+        )
+
+        ml_terminal.set_boxProps(simBox)
+        # print("sending cell and layer")
+        from sonnetSim.pORT_TYPES import PORT_TYPES
+
+        ports = [
+            SonnetPort(design.sonnet_ports[0], PORT_TYPES.AUTOGROUNDED),
+            SonnetPort(design.sonnet_ports[1], PORT_TYPES.AUTOGROUNDED)
+        ]
+        # for sp in ports:
+        #     print(sp.point)
+        ml_terminal.set_ports(ports)
+
+        ml_terminal.send_polygons(design.cell, design.layer_ph)
+        ml_terminal.set_linspace_sweep(0.01, 0.01, 1)
+        print("simulating...")
+        result_path = ml_terminal.start_simulation(wait=True)
+        ml_terminal.release()
+
+        ### SIMULATION SECTION END ###
+
+        import shutil
+        import os
+        import csv
+
+        project_dir = os.path.dirname(__file__)
+
+        ### CALCULATE C_QR CAPACITANCE SECTION START ###
+        C12 = None
+        with open(result_path.decode("ascii"), "r") as csv_file:
+            data_rows = list(csv.reader(csv_file))
+            ports_imps_row = data_rows[6]
+            R = float(ports_imps_row[0].split(' ')[1])
+            data_row = data_rows[8]
+            freq0 = float(data_row[0])
+
+            s = [[0, 0], [0, 0]]  # s-matrix
+            # print(data_row)
+            for i in range(0, 2):
+                for j in range(0, 2):
+                    s[i][j] = complex(float(data_row[1 + 2 * (i * 2 + j)]), float(data_row[1 + 2 * (i * 2 + j) + 1]))
+            import math
+
+            y11 = 1 / R * (1 - s[0][0]) / (1 + s[0][0])
+            C1 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y11).imag)
+            # formula taken from https://en.wikipedia.org/wiki/Admittance_parameters#Two_port
+            delta = (1 + s[0][0]) * (1 + s[1][1]) - s[0][1] * s[1][0]
+            y21 = -2 * s[1][0] / delta * 1 / R
+            C12 = 1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y21).imag)
+
+        print(design.fork_y_spans[res_idx] / 1e3, design.xmon_dys_Cg_coupling[res_idx] / 1e3, C12, C1)
+        ### CALCULATE C_QR CAPACITANCE SECTION START ###
+
+        ### SAVING REUSLTS SECTION START ###
+        design.layout.write(
+            os.path.join(project_dir, f"Cqr_{res_idx}_{dl}_um.gds")
+        )
+        output_filepath = os.path.join(project_dir, "Xmon_resonator_Cqr_results.csv")
+        if os.path.exists(output_filepath):
+            # append data to file
+            with open(output_filepath, "a", newline='') as csv_file:
+                writer = csv.writer(csv_file)
+                writer.writerow(
+                    [res_idx, design.fork_y_spans[res_idx] / 1e3, C12, C1]
+                )
+        else:
+            # create file, add header, append data
+            with open(output_filepath, "w", newline='') as csv_file:
+                writer = csv.writer(csv_file)
+                # create header of the file
+                writer.writerow(
+                    ["res_idx", "fork_y_span, um", "C12, fF", "C1, fF"])
+                writer.writerow(
+                    [res_idx, design.fork_y_spans[res_idx] / 1e3, C12, C1]
+                )
+
+        ### SAVING REUSLTS SECTION END ###
+
+
 if __name__ == "__main__":
-    simulate_resonators()
+    # simulate_resonators_f_and_Q()
+    simulate_Cqr()
     # design = Design5Q("testScript")
     # design.draw()
     # design.show()
