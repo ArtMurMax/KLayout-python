@@ -77,7 +77,7 @@ class SonnetLab(MatlabClient):
                 for port in self.ports:
                     r_middle = (edge.p1 + edge.p2) * 0.5
                     R = port.point.distance(r_middle)
-                    # if i < 4:
+                    # if polygon.num_points_hull()==812 and port == self.ports[1]:
                     #     print(r_middle, "\t", port.point, "\t", R)
                     if R < 10:  # distance from connection point to the middle of the edge <10 nm => add port there
                         port_edges_indexes.append(i + 1)  # matlab polygon edge indexing starts from 1
@@ -122,9 +122,10 @@ class SonnetLab(MatlabClient):
         if wait is True:
             while (self.state == self.STATE.BUSY_SIMULATING):
                 self.get_simulation_status()  # updates self.state
-                time.sleep(1)  # sleep to release Macro GUI
+                time.sleep(1)  # sleep to release Macro GUI - (not working =)
 
         self.sim_res_file_path = self.read_line()
+        self.state = self.STATE.READY
         return self.sim_res_file_path
 
     def get_simulation_status(self):
