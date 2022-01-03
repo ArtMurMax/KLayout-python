@@ -321,18 +321,18 @@ class Design5Q(ChipDesign):
         self.draw_readout_waveguide()
         self.draw_xmons_and_resonators(res_idx)
 
-        # self.draw_josephson_loops()
+        self.draw_josephson_loops()
         #
-        # self.draw_microwave_drvie_lines()
-        # self.draw_flux_control_lines()
+        self.draw_microwave_drvie_lines()
+        self.draw_flux_control_lines()
         #
-        # self.draw_test_structures()
+        self.draw_test_structures()
         # self.draw_el_dc_contacts()
         # self.draw_el_protection()
         #
-        # self.draw_photo_el_marks()
-        # self.draw_bridges()
-        # self.draw_pinning_holes()
+        self.draw_photo_el_marks()
+        self.draw_bridges()
+        self.draw_pinning_holes()
         # self.extend_photo_overetching()
         # self.inverse_destination(self.region_ph)
         # self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
@@ -1359,7 +1359,9 @@ class Design5Q(ChipDesign):
             if "cpwrl_md" in key:
                 Bridge1.bridgify_CPW(
                     val, bridges_step,
-                    dest=self.region_bridges1, dest2=self.region_bridges2
+                    dest=self.region_bridges1, dest2=self.region_bridges2,
+                    avoid_points=[squid.origin for squid in self.squids],
+                    avoid_distance=200e3
                 )
             elif "cpwrl_fl" in key:
                 Bridge1.bridgify_CPW(
@@ -1370,7 +1372,7 @@ class Design5Q(ChipDesign):
                 )
 
         for cpw_fl in self.cpw_fl_lines:
-            bridge_center1 = cpw_fl.end + DVector(0, -40e3)
+            bridge_center1 = cpw_fl.end + DVector(0, -200e3)
             br = Bridge1(center=bridge_center1, trans_in=Trans.R90)
             br.place(dest=self.region_bridges1, region_name="bridges_1")
             br.place(dest=self.region_bridges2, region_name="bridges_2")
@@ -1398,7 +1400,8 @@ class Design5Q(ChipDesign):
         tmp_ph = self.region_ph.dup()
         other_regs = tmp_ph.select_not_interacting(selection_region)
         reg_to_fill = self.region_ph.select_interacting(selection_region)
-        filled_reg = fill_holes(reg_to_fill)
+        filled_reg = fill_holes(reg_to_fill, d=40e3, width=15e3,
+                                height=15e3)
 
         self.region_ph = filled_reg + other_regs
 
@@ -1701,7 +1704,7 @@ def simulate_resonators():
 
 
 if __name__ == "__main__":
-    simulate_resonators()
-    # design = Design5Q("testScript")
-    # design.draw()
-    # design.show()
+    # simulate_resonators()
+    design = Design5Q("testScript")
+    design.draw()
+    design.show()
