@@ -93,7 +93,8 @@ def fill_holes(obj, dx=40e3, dy=40e3, width=32e3, height=32e3, d=150e3):
         reg = obj
         result_reg = Region()
         for poly in reg:
-            result_reg.insert(fill_holes(poly))
+            result_reg.insert(fill_holes(poly, dx=dx, dy=dy, width=width,
+                                         height=height, d=d))
         return result_reg
 
 
