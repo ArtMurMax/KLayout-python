@@ -221,7 +221,7 @@ class Design5Q(ChipDesign):
         # resonator-fork parameters
         # for coarse C_qr evaluation
         self.fork_y_spans = [
-            x * 1e3 for x in [8.73781, 78.3046, 26.2982, 84.8277, 35.3751]
+            x * 1e3 for x in [57.743, 103.626,  62.506, 104.540, 66.143]
         ]
 
         # xmon parameters
@@ -1786,7 +1786,7 @@ def simulate_resonators_f_and_Q():
 def simulate_Cqr():
     resolution_dx = 1e3
     resolution_dy = 1e3
-    dl_list = [45e3, 30e3, 15e3, 0e3, -15e3]
+    dl_list = [10e3, 0, -10e3]
     # dl_list = [0e3]
     from itertools import product
 
