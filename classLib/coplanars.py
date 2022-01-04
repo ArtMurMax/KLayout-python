@@ -228,13 +228,11 @@ class CPW2CPW(ElementBase):
         e_poly2 = DSimplePolygon([DPoint(0, self.Z0.b / 2), DPoint(self.dr.abs(), self.Z1.b / 2),
                                   DPoint(self.dr.abs(), self.Z1.width / 2), DPoint(0, self.Z0.width / 2)])
 
-        m_poly.transform(alpha_trans)
-        e_poly1.transform(alpha_trans)
-        e_poly2.transform(alpha_trans)
-
         self.metal_region.insert(SimplePolygon.from_dpoly(m_poly))
         self.empty_region.insert(SimplePolygon.from_dpoly(e_poly1))
         self.empty_region.insert(SimplePolygon.from_dpoly(e_poly2))
+
+        self.make_trans(alpha_trans)
 
     def _refresh_named_connections(self):
         self.start = self.connections[0]
