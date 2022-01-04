@@ -386,15 +386,15 @@ class Design5Q(ChipDesign):
 
         self.draw_test_structures()
         self.draw_el_dc_contacts()
-        # self.draw_el_protection()
+        self.draw_el_protection()
 
-        # self.draw_photo_el_marks()
-        # self.draw_bridges()
-        # self.draw_pinning_holes()
-        # self.extend_photo_overetching()
-        # self.inverse_destination(self.region_ph)
-        # self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
-        # self.split_polygons_in_layers(max_pts=180)
+        self.draw_photo_el_marks()
+        self.draw_bridges()
+        self.draw_pinning_holes()
+        self.extend_photo_overetching()
+        self.inverse_destination(self.region_ph)
+        self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
+        self.split_polygons_in_layers(max_pts=180)
 
     def draw_for_res_f_and_Q_sim(self, res_idx):
         """
