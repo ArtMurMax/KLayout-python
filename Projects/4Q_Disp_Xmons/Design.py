@@ -270,7 +270,7 @@ class Design5Q(ChipDesign):
         # resonator-fork parameters
         # for coarse C_qr evaluation
         self.fork_y_spans = [
-            x * 1e3 for x in [57.78, 102.938, 61.742, 104.256, 65.913]
+            x * 1e3 for x in [35.044, 87.202, 42.834, 90.72, 46.767]
         ]
 
         # xmon parameters
