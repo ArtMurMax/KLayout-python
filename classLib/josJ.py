@@ -1412,4 +1412,4 @@ class LineNJJ(ElementBase):
         return polygon
 
     def init_regions(self):
-        self.metal_region.insert(SimplePolygon().from_dpoly(self.poly1))
+        self.metal_region.insert(SimplePolygon(self.poly1))

@@ -178,7 +178,7 @@ class Bridge1(ElementBase):
         pts_list = l_pts_list + r_pts_list  # concatenating proper ordered lists
 
         empty_polygon = DSimplePolygon(pts_list)
-        self.empty_regions["bridges_2"].insert(SimplePolygon.from_dpoly(empty_polygon))
+        self.empty_regions["bridges_2"].insert(SimplePolygon(empty_polygon))
 
     def _refresh_named_connections(self):
         self.center = self.connections[0]

@@ -98,12 +98,12 @@ class QBit_Flux_1( ElementBase ):
         self.metal_region.insert( pya.Box().from_dbox(self.B5) )
         self.metal_region.insert( pya.Box().from_dbox(self.B6) )
         self.metal_region.insert( pya.Box().from_dbox(self.B7) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_1) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_2) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_3) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_4) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_5) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_6) )
+        self.metal_region.insert( SimplePolygon(self.poly_1) )
+        self.metal_region.insert( SimplePolygon(self.poly_2) )
+        self.metal_region.insert( SimplePolygon(self.poly_3) )
+        self.metal_region.insert( SimplePolygon(self.poly_4) )
+        self.metal_region.insert( SimplePolygon(self.poly_5) )
+        self.metal_region.insert( SimplePolygon(self.poly_6) )
 
 
 class QBit_Flux_2( ElementBase ):
@@ -199,12 +199,12 @@ class QBit_Flux_2( ElementBase ):
         self.metal_region.insert( pya.Box().from_dbox(self.B5) )
         self.metal_region.insert( pya.Box().from_dbox(self.B6) )
         self.metal_region.insert( pya.Box().from_dbox(self.B7) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_1) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_2) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_3) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_4) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_5) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_6) )
+        self.metal_region.insert( SimplePolygon(self.poly_1) )
+        self.metal_region.insert( SimplePolygon(self.poly_2) )
+        self.metal_region.insert( SimplePolygon(self.poly_3) )
+        self.metal_region.insert( SimplePolygon(self.poly_4) )
+        self.metal_region.insert( SimplePolygon(self.poly_5) )
+        self.metal_region.insert( SimplePolygon(self.poly_6) )
 
 
 class QBit_Flux_3( ElementBase ):
@@ -295,12 +295,12 @@ class QBit_Flux_3( ElementBase ):
         self.metal_region.insert( pya.Box().from_dbox(self.B4) )
         self.metal_region.insert( pya.Box().from_dbox(self.B5) )
         self.metal_region.insert( pya.Box().from_dbox(self.B6) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_1) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_2) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_3) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_4) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_5) )
-        self.metal_region.insert( SimplePolygon().from_dpoly(self.poly_6) )
+        self.metal_region.insert( SimplePolygon(self.poly_1) )
+        self.metal_region.insert( SimplePolygon(self.poly_2) )
+        self.metal_region.insert( SimplePolygon(self.poly_3) )
+        self.metal_region.insert( SimplePolygon(self.poly_4) )
+        self.metal_region.insert( SimplePolygon(self.poly_5) )
+        self.metal_region.insert( SimplePolygon(self.poly_6) )
 
 
 class QBit_Flux_Сshunted( ElementBase ):
@@ -398,12 +398,12 @@ class QBit_Flux_Сshunted( ElementBase ):
         self.metal_regions["el"].insert( pya.Box().from_dbox(self.B4) )
         self.metal_regions["photo"].insert( pya.Box().from_dbox(self.SQ2) )
 
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_1) )
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_2) )
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_3) )
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_4) )
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_5) )
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_6) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_1) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_2) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_3) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_4) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_5) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_6) )
 
     # overwritig parent method "place" to be able to draw on 2 different layers simultaneously
     def place( self, cell, layer_photo, layer_el ):
@@ -478,9 +478,9 @@ class QBit_Flux_Сshunted_3JJ( ElementBase ):
         _poly_tmp = self._make_polygon( self._length_right + self.jos2_b - self.f2, self.w, self.d2, self.f2, self.jos2_b )
         _poly_tmp.transform( DCplxTrans( 1.0, 90, False, self.p5 + DPoint(0,self.jos2_b + self.f2) ) )
         _reg_tmp4 = Region()
-        _reg_tmp4 .insert( SimplePolygon().from_dpoly(self.poly_4) )
+        _reg_tmp4 .insert( SimplePolygon(self.poly_4) )
         _reg_tmp = Region()
-        _reg_tmp.insert( SimplePolygon().from_dpoly(_poly_tmp) )
+        _reg_tmp.insert( SimplePolygon(_poly_tmp) )
         self._reg_tmp_to_metal = (_reg_tmp + _reg_tmp4).merged()
 
 
@@ -517,11 +517,11 @@ class QBit_Flux_Сshunted_3JJ( ElementBase ):
         self.metal_regions["el"].insert( pya.Box().from_dbox(self.B4) )
         self.metal_regions["photo"].insert( pya.Box().from_dbox(self.SQ2) )
 
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_1) )
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_2) )
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_3) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_1) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_2) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_3) )
         self.metal_regions["el"] = self.metal_regions["el"] +  self._reg_tmp_to_metal
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_5) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_5) )
 
     # overwritig parent method "place" to be able to draw on 2 different layers simultaneously
     def place( self, cell, layer_photo, layer_el ):

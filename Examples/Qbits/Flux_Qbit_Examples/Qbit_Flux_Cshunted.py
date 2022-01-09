@@ -228,12 +228,12 @@ class QBit_Flux_Сshuted( Element_Base ):
         self.metal_regions["el"].insert( pya.Box().from_dbox(self.B4) )
         self.metal_regions["photo"].insert( pya.Box().from_dbox(self.SQ2) )
         
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_1) )
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_2) )
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_3) )
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_4) )
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_5) )
-        self.metal_regions["el"].insert( SimplePolygon().from_dpoly(self.poly_6) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_1) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_2) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_3) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_4) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_5) )
+        self.metal_regions["el"].insert( SimplePolygon(self.poly_6) )
     
     # overwritig parent method "place" to be able to draw on 2 different layers simultaneously
     def place( self, cell, layer_photo, layer_el ):

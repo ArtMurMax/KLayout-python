@@ -161,9 +161,9 @@ class BridgedCPWArc(ElementBase):
         empty_arc2 = self._get_solid_arc(self.center, self.R + (self.width + self.gap) / 2,
                                          self.gap, self.alpha_start - pi / 2, self.alpha_end - pi / 2, n_inner, n_outer)
 
-        self.metal_regions["photo"].insert(SimplePolygon().from_dpoly(metal_arc))
-        self.empty_regions["photo"].insert(SimplePolygon().from_dpoly(empty_arc1))
-        self.empty_regions["photo"].insert(SimplePolygon().from_dpoly(empty_arc2))
+        self.metal_regions["photo"].insert(SimplePolygon(metal_arc))
+        self.empty_regions["photo"].insert(SimplePolygon(empty_arc1))
+        self.empty_regions["photo"].insert(SimplePolygon(empty_arc2))
 
         bridge_pos = self.center + DPoint(sin(self.delta_alpha / 2), -cos(self.delta_alpha / 2)) * self.R
 

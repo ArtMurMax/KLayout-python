@@ -75,7 +75,7 @@ class CPW(ElementBase):
                                      DPoint(self.dr.abs(), self.width / 2),
                                      DPoint(0, self.width / 2)])
         self.connection_edges = [3, 1]
-        self.metal_region.insert(pya.SimplePolygon().from_dpoly(metal_poly))
+        self.metal_region.insert(pya.SimplePolygon(metal_poly))
         if (self.gap != 0):
             self.empty_region.insert(
                 pya.Box(
@@ -184,9 +184,9 @@ class CPWArc(ElementBase):
 
         empty_arc2 = self._get_solid_arc(self.center, self.R + (self.width + self.gap) / 2,
                                          self.gap, self.alpha_start - pi / 2, self.alpha_end - pi / 2, n_inner, n_outer)
-        self.metal_region.insert(SimplePolygon().from_dpoly(metal_arc))
-        self.empty_region.insert(SimplePolygon().from_dpoly(empty_arc1))
-        self.empty_region.insert(SimplePolygon().from_dpoly(empty_arc2))
+        self.metal_region.insert(SimplePolygon(metal_arc))
+        self.empty_region.insert(SimplePolygon(empty_arc1))
+        self.empty_region.insert(SimplePolygon(empty_arc2))
 
     def _refresh_named_connections(self):
         self.start = self.connections[0]
@@ -317,9 +317,9 @@ class CPW2CPWArc(ElementBase):
             center=self.center, r=self.r,
             segment="inner_gap"
         )
-        self.metal_region.insert(SimplePolygon().from_dpoly(metal_arc))
-        self.empty_region.insert(SimplePolygon().from_dpoly(empty_arc1))
-        self.empty_region.insert(SimplePolygon().from_dpoly(empty_arc2))
+        self.metal_region.insert(SimplePolygon(metal_arc))
+        self.empty_region.insert(SimplePolygon(empty_arc1))
+        self.empty_region.insert(SimplePolygon(empty_arc2))
 
         self.connections = [self.start.dup(), self.center.dup(),
                             self.end.dup()]

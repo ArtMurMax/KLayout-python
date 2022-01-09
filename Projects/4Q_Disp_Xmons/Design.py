@@ -21,6 +21,12 @@ simulated
 Such weird value is due to we agreed that 3.5 um will be in the very 
 design file. Not at the sample itself.
 8. Bridges of flux lines are now atleast 200 um away from flux line end.
+9. Bandage (dc contacts between squids and photolitography) code is 
+improved.
+10. `TestContactPadsSquare` now has distance between squiare pads equal to 
+`self.xmon[0].side_Y_gnd_gap`. Identical squids drawn on both pairs of 
+plains for `XmonCross` and `TestContactPadSquare`. So start keeping the 
+ground gap identical considered wise.
 
 v.0.3.0.7
 1. Separated x and y dimensions of a bandage rectangle.
@@ -77,7 +83,7 @@ reload(classLib)
 from classLib.baseClasses import ElementBase, ComplexBase
 from classLib.coplanars import CPWParameters, CPW, DPathCPW, \
     CPWRLPath, Bridge1
-from classLib.shapes import XmonCross, Rectangle
+from classLib.shapes import XmonCross, Rectangle, CutMark
 from classLib.resonators import EMResonatorTL3QbitWormRLTailXmonFork
 from classLib.josJ import AsymSquidOneLegParams, AsymSquidOneLegRigid
 from classLib.chipTemplates import CHIP_10x10_12pads, FABRICATION
@@ -100,23 +106,24 @@ SQUID_PARAMETERS = AsymSquidOneLegParams(
     pad_r=5e3, pads_distance=60e3,
     contact_pad_width=10e3, contact_pad_ext_r=200,
     sq_len=5e3, sq_area=200e6,
-    j1_dx=138, j2_dx=250,
-    j1_dy=138, j2_dy=328,
+    j1_dx=125.107, j2_dx=398.086,
+    j1_dy=125.107, j2_dy=250,
     bridge=180, b_ext=2e3,
     inter_leads_width=500,
     n=20,
-    flux_line_dx=100e3, flux_line_dy=15e3, flux_line_outer_width=2e3,
+    flux_line_dx=100e3, flux_line_dy=25e3, flux_line_outer_width=2e3,
     flux_line_inner_width=370,
-    flux_line_contact_width=10e3
+    flux_line_contact_width=20e3
 )
 
 
-class TestStructurePads(ComplexBase):
-    def __init__(self, center, trans_in=None):
+class TestStructurePadsSquare(ComplexBase):
+    def __init__(self, center, trans_in=None, square_a=200e3,
+                 gnd_gap=20e3, squares_gap=20e3):
         self.center = center
-        self.rectangle_a = 200e3
-        self.gnd_gap = 20e3
-        self.rectangles_gap = 20e3
+        self.rectangle_a =square_a
+        self.gnd_gap = gnd_gap
+        self.rectangles_gap = squares_gap
 
         self.empty_rectangle: Rectangle = None
         self.top_rec: Rectangle = None
@@ -298,23 +305,12 @@ class Design5Q(ChipDesign):
 
         # el-dc concacts attributes
         # required clearance of dc contacts from squid perimeter
-        self.dc_cont_el_clearance = 1e3  # 1.8e3
+        self.dc_cont_el_clearance = 2e3  # 1.8e3
         # required clearance of dc contacts from photo layer polygon
         # perimeter
         self.dc_cont_ph_clearance = 2e3
         # required extension into photo region over the hole cutted
-        self.dc_cont_ph_ext = 6e3
-
-        # minimum distance from el_dc contact polygon perimeter points to
-        # dc + el polygons perimeter. (el-dc contact polygon lies within
-        # el + dc polygons)
-        self.dc_cont_clearance = 1e3  # [nm] = [m*1e-9]
-        # el-photo layer cut box width
-        self.dc_cont_cut_width = \
-            SQUID_PARAMETERS.flux_line_contact_width - 2e3
-        # cut box clearance from initial el and ph regions
-        self.dc_cont_cut_clearance = 1e3
-        self.dc_cont_reg: List[List[ElementBase, ...]] = []
+        self.dc_cont_ph_ext = 10e3
 
         # microwave and flux drive lines parameters
         self.ctr_lines_turn_radius = 100e3
@@ -393,6 +389,7 @@ class Design5Q(ChipDesign):
         self.draw_pinning_holes()
         self.extend_photo_overetching()
         self.inverse_destination(self.region_ph)
+        self.draw_cut_marks()
         self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
         self.split_polygons_in_layers(max_pts=180)
 
@@ -479,6 +476,11 @@ class Design5Q(ChipDesign):
         self.region_ph.insert(self.chip_box)
         for contact_pad in self.contact_pads:
             contact_pad.place(self.region_ph)
+
+    def draw_cut_marks(self):
+        chip_box_poly = DPolygon(self.chip_box)
+        for point in chip_box_poly.each_point_hull():
+            CutMark(origin=point).place(self.region_ph)
 
     def create_resonator_objects(self):
         ### RESONATORS TAILS CALCULATIONS SECTION START ###
@@ -1017,7 +1019,13 @@ class Design5Q(ChipDesign):
         for struct_center in struct_centers:
             ## JJ test structures ##
             # test structure with big critical current
-            test_struct1 = TestStructurePads(struct_center)
+
+            test_struct1 = TestStructurePadsSquare(
+                struct_center,
+                # gnd gap in test structure is now equal to
+                # the same of first xmon cross, where polygon is placed
+                squares_gap=self.xmons[0].sideY_face_gnd_gap
+            )
             self.test_squids_pads.append(test_struct1)
             test_struct1.place(self.region_ph)
             text_reg = pya.TextGenerator.default_generator().text(
@@ -1028,14 +1036,59 @@ class Design5Q(ChipDesign):
             text_reg.transform(
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
+
+            # draw test squid
+            squid_center = DPoint(test_struct1.center.x,
+                                  test_struct1.bot_rec.p2.y
+                                  )
+            squid_center += DPoint(
+                0,
+                SQUID_PARAMETERS.sq_len/2 +
+                SQUID_PARAMETERS.flux_line_inner_width/2 +
+                self.squid_ph_clearance
+            )
             test_jj = AsymSquidOneLegRigid(
-                test_struct1.center, SQUID_PARAMETERS, side=1, leg_side=1
+                squid_center, SQUID_PARAMETERS, side=1,
+                leg_side=1
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
+            # draw conctact for bandages with 5um clearance
+            clearance = 5e3
+            cb_left = CPW(
+                width=test_struct1.rectangles_gap - clearance,
+                gap=0,
+                start=DPoint(
+                    test_struct1.top_rec.p1.x,
+                    test_struct1.bot_rec.p2.y
+                    + test_struct1.rectangles_gap/2
+                ),
+                end=DPoint(
+                    test_jj.origin.x,
+                    test_struct1.bot_rec.p2.y +
+                    test_struct1.rectangles_gap / 2
+                )
+            )
+            cb_left.place(self.region_el)
+            clearance = 5e3
+            cb_right = CPW(
+                width=test_struct1.rectangles_gap - clearance,
+                gap=0,
+                start=DPoint(
+                    test_struct1.top_rec.p2.x,
+                    test_struct1.bot_rec.p2.y
+                    + test_struct1.rectangles_gap / 2
+                ),
+                end=DPoint(
+                    test_jj.origin.x + SQUID_PARAMETERS.flux_line_dx / 2,
+                    test_struct1.bot_rec.p2.y +
+                    test_struct1.rectangles_gap / 2
+                )
+            )
+            cb_right.place(self.region_el)
 
             # test structure with low critical current
-            test_struct2 = TestStructurePads(
+            test_struct2 = TestStructurePadsSquare(
                 struct_center + DPoint(0.3e6, 0))
             self.test_squids_pads.append(test_struct2)
             test_struct2.place(self.region_ph)
@@ -1047,14 +1100,25 @@ class Design5Q(ChipDesign):
             text_reg.transform(
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
+
+            squid_center = DPoint(test_struct2.center.x,
+                                  test_struct2.bot_rec.p2.y
+                                  )
+            squid_center += DPoint(
+                0,
+                SQUID_PARAMETERS.sq_len / 2 +
+                SQUID_PARAMETERS.flux_line_inner_width / 2 +
+                self.squid_ph_clearance
+            )
             test_jj = AsymSquidOneLegRigid(
-                test_struct2.center, SQUID_PARAMETERS, side=-1, leg_side=-1
+                squid_center, SQUID_PARAMETERS, side=-1,
+                leg_side=-1
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
 
             # test structure for bridge DC contact
-            test_struct3 = TestStructurePads(
+            test_struct3 = TestStructurePadsSquare(
                 struct_center + DPoint(0.6e6, 0))
             test_struct3.place(self.region_ph)
             text_reg = pya.TextGenerator.default_generator().text(
@@ -1084,7 +1148,7 @@ class Design5Q(ChipDesign):
             DPoint(9.0e6, 3.8e6)
         ]
         for struct_center in test_dc_el2_centers:
-            test_struct1 = TestStructurePads(struct_center)
+            test_struct1 = TestStructurePadsSquare(struct_center)
             test_struct1.place(self.region_ph)
             text_reg = pya.TextGenerator.default_generator().text(
                 "Bandage", 0.001, 40, False, 0, 0)
@@ -1112,7 +1176,19 @@ class Design5Q(ChipDesign):
 
         """
         from itertools import chain
-        for squid in chain(self.squids, self.test_squids):
+        for squid, contact in chain(
+                zip(self.squids, self.xmons),
+                zip(self.test_squids,self.test_squids_pads)
+        ):
+
+            # for optimization of boolean operations in the vicinitiy of
+            # a squid
+            photo_vicinity = self.region_ph & Region(
+                DBox(
+                    squid.origin + DPoint(100e3, 100e3),
+                    squid.origin - DPoint(100e3, 100e3)
+                )
+            )
             # dc contact pad has to be completely
             # inside union of both  e-beam and photo deposed
             # metal regions.
@@ -1120,57 +1196,49 @@ class Design5Q(ChipDesign):
             # from dc contact pad`s perimeter to the perimeter of the
             # e-beam and photo-deposed metal perimeter.
 
-            # region where all the dc contacts will be blaced in
-            # photo/el layers
-            # and all cutting is made
-            vicinity_reg = Region(
-                DBox(
-                    squid.origin + DPoint(100e3, 100e3),
-                    squid.origin - DPoint(100e3, 100e3)
+            # collect all bottom contacts
+
+            # philling `cut_regs` array that consists of metal regions
+            # to be cutted from photo region
+            cut_regs = [squid.top_ph_el_conn_pad.metal_region,
+                        squid.pad_top.metal_region]
+            for bot_contact in [squid.bot_dc_flux_line_right,
+                                squid.bot_dc_flux_line_left]:
+                # some bottom parts of squid can be missing (for test pads)
+                if bot_contact is None:
+                    continue
+                bot_cut_regs = [
+                    primitive.metal_region for primitive in
+                    list(bot_contact.primitives.values())[:2]
+                ]
+                bot_cut_regs = bot_cut_regs[0] + bot_cut_regs[1]
+                cut_regs.append(bot_cut_regs)
+
+            # creating bandages
+            for cut_reg in cut_regs:
+                # find only those polygons in photo-layer that overlap with
+                # bandage an return as a `Region()`
+                contact_reg = cut_reg.pull_overlapping(photo_vicinity)
+                # cut from photo region
+                self.region_ph -= cut_reg
+
+                # draw shrinked bandage on top of el region
+                el_bandage = extended_region(
+                    cut_reg,
+                    -self.dc_cont_el_clearance
                 )
-            )
-            vicinity_ph = self.region_ph & vicinity_reg
-            vicinity_el = self.region_el & vicinity_reg
-
-            # top bandage
-            reg_cut = squid.pad_top.metal_region + \
-                      squid.top_ph_el_conn_pad.metal_region
-
-            # bottom bandage
-            if squid.bot_dc_flux_line_left is not None:
-                # bottom-left start polygon
-                bot_bandage_reg = Region()
-                for primitive in list(
-                    squid.bot_dc_flux_line_left.primitives.values()
-                )[:2]:
-                    reg_cut += primitive.metal_region
-            if squid.bot_dc_flux_line_right is not None:
-                # bottom-right start polygon
-                for primitive in list(
-                        squid.bot_dc_flux_line_right.primitives.values()
-                )[:2]:
-                    reg_cut += primitive.metal_region
-
-            cut_region = reg_cut
-            self.region_ph -= cut_region
-
-            el_bandage = extended_region(
-                reg_cut,
-                -self.dc_cont_el_clearance
-            )
-            self.dc_bandage_reg += el_bandage
-
-            ph_bandage = extended_region(reg_cut, self.dc_cont_ph_ext)
-            ph_bandage = ph_bandage & vicinity_ph
-            ph_bandage = extended_region(
-                ph_bandage,
-                -self.dc_cont_ph_clearance
-            )
-            self.dc_bandage_reg += ph_bandage
-
-            self.dc_bandage_reg.merge()
-
-
+                self.dc_bandage_reg += el_bandage
+                self.dc_bandage_reg.merge()
+                # draw extended bandage on top of el region
+                ph_bandage = extended_region(
+                    cut_reg, self.dc_cont_ph_ext)
+                ph_bandage = ph_bandage & contact_reg
+                ph_bandage = extended_region(
+                    ph_bandage,
+                    -self.dc_cont_ph_clearance
+                )
+                self.dc_bandage_reg += ph_bandage
+                self.dc_bandage_reg.merge()
 
     def draw_el_protection(self):
         protection_a = 300e3

@@ -35,24 +35,29 @@ class Rectangle(ElementBase):
         """
         self.width = width
         self.height = height
+        self.p1 = origin
         super().__init__(origin, trans_in, inverse)
+        self.p1 = self.connections[0]
+        self.p2 = self.connections[1]
 
     def init_regions(self):
         origin = DPoint(0, 0)
         p1 = origin + DPoint(self.width, 0)
-        p2 = p1 + DPoint(0, self.height)
-        p3 = p2 + DPoint(-self.width, 0)
-        pts_arr = [origin, p1, p2, p3]
+        self.p2 = p1 + DPoint(0, self.height)
+        p3 = self.p2 + DPoint(-self.width, 0)
+        pts_arr = [origin, p1, self.p2, p3]
         if self.inverse:
             self.empty_region.insert(
-                SimplePolygon().from_dpoly(DSimplePolygon(pts_arr)))
+                SimplePolygon(DSimplePolygon(pts_arr)))
         else:
             self.metal_region.insert(
-                SimplePolygon().from_dpoly(DSimplePolygon(pts_arr)))
-        self.connections = [origin]
+                SimplePolygon(DSimplePolygon(pts_arr))
+            )
+        self.connections = [origin, self.p2]
 
     def _refresh_named_connections(self):
-        self.lb_corner = self.connections[0]
+        self.p1 = self.connections[0]
+        self.p2 = self.connections[1]
 
 
 class Cross(ElementBase):
@@ -270,7 +275,7 @@ class Circle(ElementBase):
             self.r * cos(2 * pi * i / self.n_pts + self._offset_angle),
             self.r * sin(2 * pi * i / self.n_pts + self._offset_angle)) for
             i in range(0, self.n_pts)]
-        circle_polygon = SimplePolygon().from_dpoly(
+        circle_polygon = SimplePolygon(
             DSimplePolygon(dpts_arr))
         if self.inverse:
             self.empty_region.insert(circle_polygon)
@@ -387,10 +392,10 @@ class Circle_arc(ElementBase):
 
         if (self.solid == True):
             self.metal_region.insert(
-                SimplePolygon().from_dpoly(DSimplePolygon(dpts_arr)))
+                SimplePolygon(DSimplePolygon(dpts_arr)))
         else:
             self.empty_region.insert(
-                SimplePolygon().from_dpoly(DSimplePolygon(dpts_arr)))
+                SimplePolygon(DSimplePolygon(dpts_arr)))
         self.connections.extend(
             [self._center, self._center + DVector(0, -self.r)])
         self.angle_connections.extend([0, 0])
@@ -433,7 +438,7 @@ class Ring(ElementBase):
                         range(0, self.n_pts)]
         ring_dpoly = DPolygon(dpts_arr_Rout)
         ring_dpoly.insert_hole(dpts_arr_Rin)
-        ring_poly = Polygon().from_dpoly(ring_dpoly)
+        ring_poly = Polygon(ring_dpoly)
 
         if self.inverse:
             self.empty_region.insert(ring_poly)
@@ -467,10 +472,10 @@ class IsoTrapezoid(ElementBase):
         pts_arr = [origin, p1, p2, p3]
         if self.inverse:
             self.empty_region.insert(
-                SimplePolygon().from_dpoly(DSimplePolygon(pts_arr)))
+                SimplePolygon(DSimplePolygon(pts_arr)))
         else:
             self.metal_region.insert(
-                SimplePolygon().from_dpoly(DSimplePolygon(pts_arr)))
+                SimplePolygon(DSimplePolygon(pts_arr)))
 
 
 class Cross2(ElementBase):
@@ -499,3 +504,68 @@ class Cross2(ElementBase):
             self.empty_region.insert(cross)
         else:
             self.metal_region.insert(cross)
+
+
+class CutMark(ElementBase):
+    def __init__(self, origin, trans_in=None,
+                 inverse=False):
+        super().__init__(origin, trans_in, inverse)
+
+    def init_regions(self):
+        pts_raw = [-199499.00, -299939.00,
+                   -199499.00, -201544.00,
+                   -301346.00, -201544.00,
+                   -301346.00, 202661.00,
+                   -194835.00, 202661.00,
+                   -194835.00, 249057.00,
+                   -3110.00, 249057.00,
+                   -3110.00, 243800.00,
+                   -3006.00, 243800.00,
+                   -3006.00, 9362.00,
+                   -1507.00, 9362.00,
+                   -1507.00, 389.00,
+                   -10506.00, 389.00,
+                   -10506.00, 1862.00,
+                   -250230.00, 1862.00,
+                   -250230.00, -3138.00,
+                   -10506.00, -3138.00,
+                   -10506.00, -1639.00,
+                   -1507.00, -1639.00,
+                   -1507.00, -10638.00,
+                   -3006.00, -10638.00,
+                   -3006.00, -249398.00,
+                   1994.00, -249398.00,
+                   1994.00, -10638.00,
+                   495.00, -10638.00,
+                   495.00, -1639.00,
+                   9494.00, -1639.00,
+                   9494.00, -3138.00,
+                   250101.00, -3138.00,
+                   250101.00, 1862.00,
+                   9494.00, 1862.00,
+                   9494.00, 363.00,
+                   521.00, 363.00,
+                   521.00, 9362.00,
+                   1994.00, 9362.00,
+                   1994.00, 249057.00,
+                   -194835.00, 249057.00,
+                   -194835.00, 299939.00,
+                   202792.00, 299939.00,
+                   202792.00, 196681.00,
+                   301345.00, 196681.00,
+                   301345.00, 140894.00,
+                   149560.00, 140894.00,
+                   149560.00, 140729.00,
+                   301345.00, 140729.00,
+                   301345.00, -203457.00,
+                   202313.00, -203457.00,
+                   202313.00, -299939.00]
+        pts = [
+            DPoint(pts_raw[2 * i], pts_raw[2 * i + 1]) for i in
+            range(int(len(pts_raw) // 2))
+        ]
+        poly = Polygon(DPolygon(pts))
+        if self.inverse:
+            self.empty_region.insert(poly)
+        else:
+            self.metal_region.insert(poly)
