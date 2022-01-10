@@ -987,6 +987,10 @@ class AsymSquidOneLegRigid(ComplexBase):
             `side == -1` - only left junction created
             `side == 1` - only right junction created
             `side == 0` - both junctions created (default)
+        leg_side : int
+            0 - draw both legs
+            1 - right leg only
+            -1 - left leg only
         trans_in : Union[DCplxTrans, ICplxTrans]
             initial transformation in object's reference frame
 

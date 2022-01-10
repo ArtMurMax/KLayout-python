@@ -32,6 +32,7 @@ ground gap identical considered wise.
 directions:  40 and 70 along X for small junction
             80 and 90 along Y for big junction
 12. E-beam lytograpy is now overlapping photo litography at places of cut perimeter in photo region.
+13. Contact pads for external communication are no longer filled with holes.
 
 
 v.0.3.0.7
@@ -396,6 +397,9 @@ class Design5Q(ChipDesign):
         self.draw_photo_el_marks()
         self.draw_bridges()
         self.draw_pinning_holes()
+        # v.0.3.0.8 p.12 - ensure that contact pads consist no wholes
+        for contact_pad in self.contact_pads:
+            contact_pad.place(self.region_ph)
         self.extend_photo_overetching()
         self.inverse_destination(self.region_ph)
         self.draw_cut_marks()
@@ -1022,13 +1026,89 @@ class Design5Q(ChipDesign):
         draw_inductor_for_fl_line(self, 4)
 
     def draw_test_structures(self):
+        # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
+        def augment_with_bandage_test_contacts(test_struct: TestStructurePadsSquare,
+                                               test_jj: AsymSquidOneLegRigid = None):
+            if test_jj.leg_side == 1:
+                # DRAW FOR RIGHT LEG
+                clearance = 5e3
+                cb_left = CPW(
+                    width=test_struct.rectangles_gap - clearance,
+                    gap=0,
+                    start=DPoint(
+                        test_struct.top_rec.p1.x,
+                        test_struct.bot_rec.p2.y
+                        + test_struct.rectangles_gap / 2
+                    ),
+                    end=DPoint(
+                        test_jj.origin.x - test_jj.top_ph_el_conn_pad.width / 2,
+                        test_struct.bot_rec.p2.y +
+                        test_struct.rectangles_gap / 2
+                    )
+                )
+                cb_left.place(self.region_el)
+
+                # DRAW RIGHT ONE
+                clearance = 5e3
+                cb_right = CPW(
+                    width=test_struct1.rectangles_gap - clearance,
+                    gap=0,
+                    start=DPoint(
+                        test_struct.top_rec.p2.x,
+                        test_struct.bot_rec.p2.y
+                        + test_struct.rectangles_gap / 2
+                    ),
+                    end=DPoint(
+                        list(test_jj.bot_dc_flux_line_right.primitives.values())[1].end.x,
+                        test_struct.bot_rec.p2.y +
+                        test_struct.rectangles_gap / 2
+                    )
+                )
+                cb_right.place(self.region_el)
+            if test_jj.leg_side == -1:
+                # DRAW FOR RIGHT LEG
+                clearance = 5e3
+                cb_left = CPW(
+                    width=test_struct.rectangles_gap - clearance,
+                    gap=0,
+                    start=DPoint(
+                        test_struct.top_rec.p1.x,
+                        test_struct.bot_rec.p2.y
+                        + test_struct.rectangles_gap / 2
+                    ),
+                    end=DPoint(
+                        list(test_jj.bot_dc_flux_line_left.primitives.values())[1].end.x,
+                        test_struct.bot_rec.p2.y +
+                        test_struct.rectangles_gap / 2
+                    )
+                )
+                cb_left.place(self.region_el)
+
+                # DRAW RIGHT ONE
+                clearance = 5e3
+                cb_right = CPW(
+                    width=test_struct.rectangles_gap - clearance,
+                    gap=0,
+                    start=DPoint(
+                        test_struct.top_rec.p2.x,
+                        test_struct.bot_rec.p2.y
+                        + test_struct.rectangles_gap / 2
+                    ),
+                    end=DPoint(
+                        test_jj.origin.x + test_jj.top_ph_el_conn_pad.width / 2,
+                        test_struct.bot_rec.p2.y +
+                        test_struct.rectangles_gap / 2
+                    )
+                )
+                cb_right.place(self.region_el)
+
         struct_centers = [DPoint(1e6, 4e6), DPoint(8.7e6, 5.7e6),
                           DPoint(6.5e6, 2.7e6)]
         self.test_squids_pads = []
         for struct_center in struct_centers:
             ## JJ test structures ##
-            # test structure with big critical current
 
+            # test structure with big critical current (#1)
             test_struct1 = TestStructurePadsSquare(
                 struct_center,
                 # gnd gap in test structure is now equal to
@@ -1046,7 +1126,7 @@ class Design5Q(ChipDesign):
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
 
-            # draw test squid
+            # DRAW TEST SQUID
             squid_center = DPoint(test_struct1.center.x,
                                   test_struct1.bot_rec.p2.y
                                   )
@@ -1062,39 +1142,7 @@ class Design5Q(ChipDesign):
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
-            # draw conctact for bandages with 5um clearance
-            clearance = 5e3
-            cb_left = CPW(
-                width=test_struct1.rectangles_gap - clearance,
-                gap=0,
-                start=DPoint(
-                    test_struct1.top_rec.p1.x,
-                    test_struct1.bot_rec.p2.y
-                    + test_struct1.rectangles_gap/2
-                ),
-                end=DPoint(
-                    test_jj.origin.x,
-                    test_struct1.bot_rec.p2.y +
-                    test_struct1.rectangles_gap / 2
-                )
-            )
-            cb_left.place(self.region_el)
-            clearance = 5e3
-            cb_right = CPW(
-                width=test_struct1.rectangles_gap - clearance,
-                gap=0,
-                start=DPoint(
-                    test_struct1.top_rec.p2.x,
-                    test_struct1.bot_rec.p2.y
-                    + test_struct1.rectangles_gap / 2
-                ),
-                end=DPoint(
-                    test_jj.origin.x + SQUID_PARAMETERS.flux_line_dx / 2,
-                    test_struct1.bot_rec.p2.y +
-                    test_struct1.rectangles_gap / 2
-                )
-            )
-            cb_right.place(self.region_el)
+            augment_with_bandage_test_contacts(test_struct1, test_jj)
 
             # test structure with low critical current
             test_struct2 = TestStructurePadsSquare(
@@ -1125,6 +1173,8 @@ class Design5Q(ChipDesign):
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
+            augment_with_bandage_test_contacts(test_struct2, test_jj)
+
 
             # test structure for bridge DC contact
             test_struct3 = TestStructurePadsSquare(
