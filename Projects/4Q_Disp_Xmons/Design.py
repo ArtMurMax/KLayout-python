@@ -10,23 +10,29 @@ dielectric permitivity.
 3. SQUID construction is more rigid. Introducing `AsymSquidOneLegRigid` 
 class geometry.
 4. Resonators frequencies
-desired: 7.2 7.28 7.36 7.44 7.52
-simulated: 7.202, 7.278, 7.362, 7.4437, 7.518
+desired: 7.2 7.28 7.36 7.44 7.52 GHz
+simulated: 7.202, 7.278, 7.362, 7.4437, 7.518 GHz
 Q-factors: 8820 8860 9270 9520 9340
 5. Capacity between resonator central line and crosses:
-desired: 4.51 9.53 5.06 9.97 5.60
+desired: 4.51 9.53 5.06 9.97 5.60 fF
 simulated
 6. SQUID is widened 3 times along X axis while its area was preserved.
 7. Flux line segment was thinned down to (3.5 - FABRICATION.OVERETCHING) um.
 Such weird value is due to we agreed that 3.5 um will be in the very 
 design file. Not at the sample itself.
-8. Bridges of flux lines are now atleast 200 um away from flux line end.
+8. Bridges of flux lines are now atleast 200 um away from flux line end. 
+`self.cont_lines_y_ref` was changed for that purpose
 9. Bandage (dc contacts between squids and photolitography) code is 
 improved.
 10. `TestContactPadsSquare` now has distance between squiare pads equal to 
 `self.xmon[0].side_Y_gnd_gap`. Identical squids drawn on both pairs of 
 plains for `XmonCross` and `TestContactPadSquare`. So start keeping the 
 ground gap identical considered wise.
+11. JJ rectangles are formed by assuming additional fabrication extension along X and Y
+directions:  40 and 70 along X for small junction
+            80 and 90 along Y for big junction
+12. E-beam lytograpy is now overlapping photo litography at places of cut perimeter in photo region.
+
 
 v.0.3.0.7
 1. Separated x and y dimensions of a bandage rectangle.
@@ -106,8 +112,8 @@ SQUID_PARAMETERS = AsymSquidOneLegParams(
     pad_r=5e3, pads_distance=60e3,
     contact_pad_width=10e3, contact_pad_ext_r=200,
     sq_len=5e3, sq_area=200e6,
-    j1_dx=125.107, j2_dx=398.086,
-    j1_dy=125.107, j2_dy=250,
+    j1_dx=114.551, j2_dx=398.086,
+    j1_dy=114.551, j2_dy=250,
     bridge=180, b_ext=2e3,
     inter_leads_width=500,
     n=20,
@@ -304,6 +310,9 @@ class Design5Q(ChipDesign):
         self.squid_ph_clearance = 1.5e3
 
         # el-dc concacts attributes
+        # e-beam polygon has to cover hole in photoregion and also
+        # overlap photo region by the following amount
+        self.el_overlaps_dc_by = 2e3
         # required clearance of dc contacts from squid perimeter
         self.dc_cont_el_clearance = 2e3  # 1.8e3
         # required clearance of dc contacts from photo layer polygon
@@ -765,7 +774,7 @@ class Design5Q(ChipDesign):
         squid.place(self.region_el)
 
     def draw_microwave_drvie_lines(self):
-        self.cont_lines_y_ref = self.xmons[0].cpw_bempt.end.y - 200e3
+        self.cont_lines_y_ref = self.xmons[0].cpw_bempt.end.y - 300e3
 
         tmp_reg = self.region_ph
 
@@ -1223,6 +1232,10 @@ class Design5Q(ChipDesign):
                 self.region_ph -= cut_reg
 
                 # draw shrinked bandage on top of el region
+                el_extension = extended_region(cut_reg, self.el_overlaps_dc_by)
+                self.region_el += el_extension
+                self.region_el.merge()
+                
                 el_bandage = extended_region(
                     cut_reg,
                     -self.dc_cont_el_clearance
@@ -1317,8 +1330,9 @@ class Design5Q(ChipDesign):
                     avoid_distance=400e3
                 )
 
-        for cpw_fl in self.cpw_fl_lines:
-            bridge_center1 = cpw_fl.end + DVector(0, -200e3)
+        for i, cpw_fl in enumerate(self.cpw_fl_lines):
+            dy = 220e3
+            bridge_center1 = cpw_fl.end + DVector(0, -dy)
             br = Bridge1(center=bridge_center1, trans_in=Trans.R90)
             br.place(dest=self.region_bridges1, region_name="bridges_1")
             br.place(dest=self.region_bridges2, region_name="bridges_2")
