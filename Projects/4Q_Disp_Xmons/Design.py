@@ -314,7 +314,7 @@ class Design5Q(ChipDesign):
         # el-dc concacts attributes
         # e-beam polygon has to cover hole in photoregion and also
         # overlap photo region by the following amount
-        self.el_overlaps_dc_by = 2e3
+        self.el_overlaps_ph_by = 2e3
         # required clearance of dc contacts from squid perimeter
         self.dc_cont_el_clearance = 2e3  # 1.8e3
         # required clearance of dc contacts from photo layer polygon
@@ -678,7 +678,9 @@ class Design5Q(ChipDesign):
         Parameters
         ----------
         res_idx : int
-            draw only particular resonator (used in resonator simulations).
+            draw only particular resonator (if passed)
+            used in resonator simulations.
+
 
         Returns
         -------
@@ -752,6 +754,7 @@ class Design5Q(ChipDesign):
         squid.place(self.region_el)
 
         # place intermediate squids
+
         for xmon_cross in self.xmons[1:-1]:
             squid_center = xmon_cross.cpw_bempt.end
             squid_center += DPoint(
@@ -768,7 +771,7 @@ class Design5Q(ChipDesign):
         # place right squid
         xmon5 = self.xmons[4]
         center5 = DPoint(
-            xmon5.cpw_l.end.x + xmon0_xmon5_loop_shift,
+            xmon5.cpw_r.end.x - xmon0_xmon5_loop_shift,
             xmon5.center.y - xmon0.sideX_width / 2 - xmon0.sideX_gnd_gap +
             SQUID_PARAMETERS.sq_len / 2 +
             SQUID_PARAMETERS.flux_line_inner_width / 2 +
@@ -1238,7 +1241,7 @@ class Design5Q(ChipDesign):
         from itertools import chain
         for squid, contact in chain(
                 zip(self.squids, self.xmons),
-                zip(self.test_squids,self.test_squids_pads)
+                zip(self.test_squids, self.test_squids_pads)
         ):
 
             # for optimization of boolean operations in the vicinitiy of
@@ -1283,12 +1286,12 @@ class Design5Q(ChipDesign):
                 self.region_ph -= cut_reg
 
                 # draw shrinked bandage on top of el region
-                el_extension = extended_region(cut_reg, self.el_overlaps_dc_by)
+                el_extension = extended_region(cut_reg, self.el_overlaps_ph_by) & contact_reg
                 self.region_el += el_extension
-                self.region_el.merge()
+                # self.region_el.merge()
 
                 # correction of extension into the SQUID loop
-                hwidth = squid.top_ph_el_conn_pad.width/2 + self.el_overlaps_dc_by
+                hwidth = squid.top_ph_el_conn_pad.width/2 + self.dc_cont_el_clearance
                 fix_box = DBox(
                     squid.origin + DPoint(-hwidth, 0),
                     squid.origin + DPoint(hwidth, squid.params.sq_len/2 - squid.params.inter_leads_width/2)
@@ -1301,7 +1304,8 @@ class Design5Q(ChipDesign):
                 )
                 self.dc_bandage_reg += el_bandage
                 self.dc_bandage_reg.merge()
-                # draw extended bandage on top of el region
+
+                # draw extended bandage in photo region
                 ph_bandage = extended_region(
                     cut_reg, self.dc_cont_ph_ext)
                 ph_bandage = ph_bandage & contact_reg
