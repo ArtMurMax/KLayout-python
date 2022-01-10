@@ -33,6 +33,7 @@ directions:  40 and 70 along X for small junction
             80 and 90 along Y for big junction
 12. E-beam lytograpy is now overlapping photo litography at places of cut perimeter in photo region.
 13. Contact pads for external communication are no longer filled with holes.
+14. Overetching is changed to be 0.6 um
 
 
 v.0.3.0.7
@@ -108,7 +109,7 @@ import copy
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.0e3
+FABRICATION.OVERETCHING = 0.6e3
 SQUID_PARAMETERS = AsymSquidOneLegParams(
     pad_r=5e3, pads_distance=60e3,
     contact_pad_width=10e3, contact_pad_ext_r=200,
@@ -1285,7 +1286,15 @@ class Design5Q(ChipDesign):
                 el_extension = extended_region(cut_reg, self.el_overlaps_dc_by)
                 self.region_el += el_extension
                 self.region_el.merge()
-                
+
+                # correction of extension into the SQUID loop
+                hwidth = squid.top_ph_el_conn_pad.width/2 + self.el_overlaps_dc_by
+                fix_box = DBox(
+                    squid.origin + DPoint(-hwidth, 0),
+                    squid.origin + DPoint(hwidth, squid.params.sq_len/2 - squid.params.inter_leads_width/2)
+                )
+                self.region_el -= Region(fix_box)
+
                 el_bandage = extended_region(
                     cut_reg,
                     -self.dc_cont_el_clearance
