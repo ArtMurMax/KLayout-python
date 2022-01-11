@@ -234,3 +234,133 @@ class CHIP_10x10_12pads:
         for key, val in geometry_params.items():
             modified_dict[prefix + key + postfix] = val
         return modified_dict
+
+class CHIP_10x5_8pads:
+    """
+    10x5 mm chip
+    PCB design located here:
+    https://drive.google.com/file/d/1NHH-Gv3CaUzs8aymoRMFOllytAR4qpkV/view?usp=sharing
+    """
+    dx = 10e6
+    dy = 5e6
+
+    pcb_width = 260e3  # 0.26 mm
+    pcb_gap = 190e3  # (0.64 - 0.26) / 2 = 0.19 mm
+    pcb_feedline_d = 2500e3  # 2.5 mm
+    pcb_Z = CPWParameters(pcb_width, pcb_gap)
+
+    chip_cpw_width = 24e3
+    chip_cpw_gap = 12e3
+    chip_Z = CPWParameters(chip_cpw_width, chip_cpw_gap)
+
+    @staticmethod
+    def get_contact_pads(chip_Z_list: List[Union[CPWParameters, CPW, CPWArc]]=None):
+        """
+        Constructs objects that represent contact pads. Each pad
+        consists of cpw that matches PCB cpw dimension, then trapeziod
+        transition region that ends with dimensions corresponding to
+        on-chip cpw.
+
+        Parameters
+        ----------
+        chip_Z_list : List[Union[CPWParams, CPW, CPWArc]]
+            list of 12 structures containing dimensions of the coplanar
+            waveguides on chip-side of every contact pad.
+            Order starts from top-left (index 0) in counter_clockwise direction:
+            top contact pad at the left side of the chip has index 0.
+
+        Returns
+        -------
+        list[ContactPad]
+            List of contact pad objects indexed starting from top of the left corner
+            in counter-clockwise direction.
+        """
+        if chip_Z_list is None:
+            chip_Z_list = [
+                CPWParameters(
+                    CHIP_10x5_8pads.chip_cpw_width,
+                    CHIP_10x5_8pads.chip_cpw_gap
+                )
+                for i in range(8)
+            ]
+        elif len(chip_Z_list) != 8:
+            raise ValueError("`cpw_params_list` length is not equal to number of pads (8).")
+        else:
+            chip_Z_list = [
+                CPWParameters(
+                    chip_z.width,
+                    chip_z.gap
+                )
+                for chip_z in chip_Z_list
+            ]
+
+        dx = CHIP_10x5_8pads.dx
+        dy = CHIP_10x5_8pads.dy
+        pcb_feedline_d = CHIP_10x5_8pads.pcb_feedline_d
+        pcb_Z = CHIP_10x5_8pads.pcb_Z
+        back_metal_gap = 100e3
+
+        k = 0
+        contact_pads_left = [
+            ContactPad(
+                DPoint(0, dy - pcb_feedline_d * (i + 1)),
+                pcb_cpw_params=pcb_Z,
+                chip_cpw_params=chip_Z_list[k + i],
+                back_metal_width=50e3,
+                back_metal_gap=back_metal_gap
+            ) for i in range(3) if i == 0
+        ]
+        k += 1
+
+        contact_pads_bottom = [
+            ContactPad(
+                DPoint(pcb_feedline_d * (i + 1), 0), pcb_Z, chip_Z_list[k + i], back_metal_width=50e3,
+                back_metal_gap=back_metal_gap,
+                trans_in=Trans.R90
+            ) for i in range(3)
+        ]
+        k += 3
+
+        contact_pads_right = [
+            ContactPad(
+                DPoint(dx, pcb_feedline_d*(i+1)), pcb_Z, chip_Z_list[k + i], back_metal_width=50e3,
+                back_metal_gap=back_metal_gap,
+                trans_in=Trans.R180
+            ) for i in range(3) if i == 0
+        ]
+        k += 1
+
+        contact_pads_top = [
+            ContactPad(
+                DPoint(dx - pcb_feedline_d * (i + 1), dy), pcb_Z, chip_Z_list[k + i], back_metal_width=50e3,
+                back_metal_gap=back_metal_gap,
+                trans_in=Trans.R270
+            ) for i in range(3)
+        ]
+
+        # contact pads are ordered starting with top-left corner in counter-clockwise direction
+        contact_pads = itertools.chain(
+            contact_pads_left, contact_pads_bottom,
+            contact_pads_right, contact_pads_top
+        )
+
+        return list(contact_pads)
+
+    origin = DPoint(0, 0)
+    box = pya.DBox(origin, origin + DPoint(dx, dy))
+
+    @staticmethod
+    def get_geometry_params_dict(prefix="", postfix=""):
+        from collections import OrderedDict
+        geometry_params = OrderedDict(
+            [
+                ("dx, um", CHIP_10x10_12pads.dx / 1e3),
+                ("dy, um", CHIP_10x10_12pads.dy / 1e3),
+                ("nX", CHIP_10x10_12pads.nX),
+                ("nY", CHIP_10x10_12pads.nY)
+            ]
+        )
+        modified_dict = OrderedDict()
+        for key, val in geometry_params.items():
+            modified_dict[prefix + key + postfix] = val
+        return modified_dict
