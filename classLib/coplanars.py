@@ -622,7 +622,7 @@ class CPWRLPath(ComplexBase):
                         f"{self.__class__.__name__} warning: segment №"
                         f"{idx_l} length is less than zero\n\n"
                         f"{self._segment_lengths[idx_l]}, {coeff}"
-                        f"{self._turn_radiuses[idx_r - 1]}"
+                        f", previos turn radius{self._turn_radiuses[idx_r - 1]}"
                     )
 
                 cpw = CPW(self._cpw_parameters[i].width,

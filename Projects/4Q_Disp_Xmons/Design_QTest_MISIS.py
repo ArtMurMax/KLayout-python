@@ -13,7 +13,12 @@ readout and resonator coplanar geometries,
 Xmon crosses shape, qubit-resonator coupling capacitances,
 SQUID loops and test structure geomtries.
 
+
 Changes log
+v.0.3.0.8.T1
+1. Added 1 aditional resonator with identical SQUID, resonator frequency is 7.52 + 0.08 = 7.68 GHz
+2. Added 2 resonators with Xmon Crosses but without SQUID's. Frequencies 7.76 and 7.84 GHz correspondingly.
+3. Coplanar bridges are NOT used for this test version.
 '''
 
 # Enter your Python code here
@@ -32,6 +37,7 @@ from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans, DPath
 
 from importlib import reload
 import classLib
+
 reload(classLib)
 
 from classLib.baseClasses import ElementBase, ComplexBase
@@ -47,6 +53,7 @@ from classLib.contactPads import ContactPad
 from classLib.helpers import fill_holes, split_polygons, extended_region
 
 import sonnetSim
+
 reload(sonnetSim)
 from sonnetSim import SonnetLab, SonnetPort, SimulationBox
 
@@ -75,7 +82,7 @@ class TestStructurePadsSquare(ComplexBase):
     def __init__(self, center, trans_in=None, square_a=200e3,
                  gnd_gap=20e3, squares_gap=20e3):
         self.center = center
-        self.rectangle_a =square_a
+        self.rectangle_a = square_a
         self.gnd_gap = gnd_gap
         self.rectangles_gap = squares_gap
 
@@ -157,7 +164,7 @@ class Design5QTest(ChipDesign):
         self.z_md_fl: CPWParameters = CPWParameters(11e3, 5.7e3)
         self.ro_Z: CPWParameters = self.chip.chip_Z
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
-            [self.ro_Z] + [self.z_md_fl]*3 + [self.ro_Z] + [self.z_md_fl]*3
+            [self.ro_Z] + [self.z_md_fl] * 3 + [self.ro_Z] + [self.z_md_fl] * 3
         )
 
         # readout line parameters
@@ -178,10 +185,10 @@ class Design5QTest(ChipDesign):
         self.L0 = 1000e3
         self.L1_list = [
             1e3 * x for x in
-            [64.9406, 22.0042, 79.661, 75.5318, 28.4103, 64.9406]
+            [64.9406, 22.0042, 79.661, 75.5318, 28.4103]
         ]
         self.r = 60e3
-        self.N_coils = [2, 3, 3, 3, 3, 2]
+        self.N_coils = [2, 3, 3, 3, 3]
         self.L2_list = [self.r] * len(self.L1_list)
         self.L3_list = [0e3] * len(self.L1_list)  # to be constructed
         self.L4_list = [self.r] * len(self.L1_list)
@@ -195,8 +202,21 @@ class Design5QTest(ChipDesign):
         # resonator-fork parameters
         # for coarse C_qr evaluation
         self.fork_y_spans = [
-            x * 1e3 for x in [35.044, 87.202, 42.834, 90.72, 46.767, 35.044]
+            x * 1e3 for x in [35.044, 87.202, 42.834, 90.72, 46.767]
         ]
+
+        # 4 additional resonators based on resonator with idx 2, but
+        # only frequency is changed (7.58, 7.66, 7.84) GHz correspondingly
+        self.add_res_based_idx = 2
+        self.L_coupling_list += [self.L_coupling_list[self.add_res_based_idx]] * 3
+        self.L1_list_additional = [1e3 * x for x in [68.974, 63.172, 57.488]]  # approximate values from .nb
+        self.L1_list += self.L1_list_additional
+        self.N_coils += [self.N_coils[self.add_res_based_idx]] * 3
+        self.L2_list += [self.L2_list[self.add_res_based_idx]] * 3
+        self.L3_list += [self.L3_list[self.add_res_based_idx]] * 3
+        self.L4_list += [self.L4_list[self.add_res_based_idx]] * 3
+        self.to_line_list += [self.to_line_list[self.add_res_based_idx]] * 3
+        self.fork_y_spans += [self.fork_y_spans[self.add_res_based_idx]] * 3
 
         # xmon parameters
         self.xmon_x_distance: float = 545e3  # from simulation of g_12
@@ -234,8 +254,8 @@ class Design5QTest(ChipDesign):
         self.dc_cont_ph_ext = 10e3
 
         # microwave and flux drive lines parameters
-        self.ctr_lines_turn_radius = 100e3
-        self.cont_lines_y_ref: float = None  # nm
+        self.ctr_lines_turn_radius = 40e3
+        self.cont_lines_y_ref: float = 300e3  # nm
 
         # distance between microwave-drive central coplanar line
         # to the face of Xmon's cross metal. Assuming that microwave
@@ -304,24 +324,25 @@ class Design5QTest(ChipDesign):
 
         self.draw_josephson_loops()
 
-        self.draw_microwave_drvie_lines()
-        # self.draw_flux_control_lines()
+        # self.draw_microwave_drvie_lines()
+        self.draw_flux_control_lines()
 
         self.draw_test_structures()
         self.draw_el_dc_contacts()
         self.draw_el_protection()
-        #
+
         self.draw_photo_el_marks()
         # self.draw_bridges()
-        # self.draw_pinning_holes()
-        # # v.0.3.0.8 p.12 - ensure that contact pads consist no wholes
-        # for contact_pad in self.contact_pads:
-        #     contact_pad.place(self.region_ph)
-        # self.extend_photo_overetching()
-        # self.inverse_destination(self.region_ph)
-        # self.draw_cut_marks()
-        # self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
-        # self.split_polygons_in_layers(max_pts=180)
+        self.draw_pinning_holes()
+        # v.0.3.0.8 p.12 - ensure that contact pads consist no wholes
+        for contact_pad in self.contact_pads:
+            contact_pad.place(self.region_ph)
+            self.region_ph.merge()
+        self.extend_photo_overetching()
+        self.inverse_destination(self.region_ph)
+        self.draw_cut_marks()
+        self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
+        self.split_polygons_in_layers(max_pts=180)
 
     def draw_for_res_f_and_Q_sim(self, res_idx):
         """
@@ -430,10 +451,14 @@ class Design5QTest(ChipDesign):
 
         res_tail_shape = "LRLRL"
         tail_turn_radiuses = self.r
+
         # list corrected for resonator-qubit coupling geomtry, so all transmons centers are placed
         # along single horizontal line
         self.L0_list = [self.L0 - xmon_dy_Cg_coupling for
                         xmon_dy_Cg_coupling in self.xmon_dys_Cg_coupling]
+        for i in range(5, 8):
+            self.L0_list += [self.L0_list[self.add_res_based_idx]] * 3
+
         self.L2_list[0] += 6 * self.Z_res.b
         self.L2_list[1] += 0
         self.L2_list[3] += 3 * self.Z_res.b
@@ -445,11 +470,14 @@ class Design5QTest(ChipDesign):
         self.L3_list[2] = x3
         self.L3_list[3] = x4
         self.L3_list[4] = x5
-        self.L3_list[5] = x1
+        for i in range(5, 8):
+            self.L3_list[i] = self.L3_list[self.add_res_based_idx]
 
         self.L4_list[1] += 6 * self.Z_res.b
         self.L4_list[2] += 6 * self.Z_res.b
         self.L4_list[3] += 3 * self.Z_res.b
+        for i in range(5, 8):
+            self.L4_list[i] = self.L4_list[self.add_res_based_idx]
 
         tail_segment_lengths_list = [[L2, L3, L4]
                                      for L2, L3, L4 in
@@ -463,6 +491,8 @@ class Design5QTest(ChipDesign):
             [-pi / 2, pi / 2],
             [pi / 2, -pi / 2]
         ]
+        tail_turn_angles_list += [tail_turn_angles_list[self.add_res_based_idx]] * 3
+
         tail_trans_in_list = [
             Trans.R270,
             Trans.R270,
@@ -471,6 +501,7 @@ class Design5QTest(ChipDesign):
             Trans.R270,
             Trans.R270
         ]
+        tail_trans_in_list += [tail_trans_in_list[self.add_res_based_idx]] * 3
         ### RESONATORS TAILS CALCULATIONS SECTION END ###
 
         pars = list(
@@ -482,7 +513,7 @@ class Design5QTest(ChipDesign):
                 self.L0_list, self.N_coils
             )
         )
-        worm_x_list = [x*1e6 for x in [1, 2.8, 4.0, 6.0, 6.7, 7.5]]
+        worm_x_list = [x * 1e6 for x in [1, 2.7, 3.5, 4.35, 7.6, 6.5, 5.5, 8.5]]
         for res_idx, params in enumerate(pars):
             # parameters exctraction
             L1 = params[0]
@@ -499,12 +530,12 @@ class Design5QTest(ChipDesign):
             # under condition that Xmon-Xmon distance equals
             # `xmon_x_distance`
             worm_x = worm_x_list[res_idx]
-            worm_y = self.chip.dy/2 + to_line*(-1)**(res_idx)
+            worm_y = self.chip.dy / 2 + to_line * (-1) ** (res_idx)
 
-            if res_idx%2 == 0:
-                trans=DTrans.M0
+            if res_idx % 2 == 0:
+                trans = DTrans.M0
             else:
-                trans=DTrans.R0
+                trans = DTrans.R0
             self.resonators.append(
                 EMResonatorTL3QbitWormRLTailXmonFork(
                     self.Z_res, DPoint(worm_x, worm_y), L_coupling,
@@ -568,22 +599,22 @@ class Design5QTest(ChipDesign):
                 resonator, fork_y_span, xmon_dy_Cg_coupling) in \
                 enumerate(zip(self.resonators, self.fork_y_spans,
                               self.xmon_dys_Cg_coupling)):
-            if current_res_idx%2==0:
-                m =-1
+            if current_res_idx % 2 == 0:
+                m = -1
             else:
                 m = 1
             xmon_center = \
                 (
                         resonator.fork_x_cpw.start + resonator.fork_x_cpw.end
                 ) / 2 + \
-                m*DVector(
+                m * DVector(
                     0,
                     -xmon_dy_Cg_coupling - resonator.fork_metal_width / 2
                 )
             # changes start #
             xmon_center += DPoint(
                 0,
-                -m*(
+                -m * (
                         self.cross_len_y + self.cross_width_x / 2 +
                         self.cross_gnd_gap_y
                 )
@@ -622,14 +653,14 @@ class Design5QTest(ChipDesign):
 
     def draw_josephson_loops(self):
         # place left squid
-        for res_idx, xmon_cross in enumerate(self.xmons):
-            if res_idx%2==0:
+        for res_idx, xmon_cross in enumerate(self.xmons[:-2]):
+            if res_idx % 2 == 0:
                 squid_center = xmon_cross.cpw_tempt.end
                 squid_center += DPoint(
                     0,
-                    -(SQUID_PARAMETERS.sq_len/2 +
-                    SQUID_PARAMETERS.flux_line_inner_width/2 +
-                    self.squid_ph_clearance)
+                    -(SQUID_PARAMETERS.sq_len / 2 +
+                      SQUID_PARAMETERS.flux_line_inner_width / 2 +
+                      self.squid_ph_clearance)
                 )
                 trans = DTrans.M0
             else:
@@ -642,7 +673,7 @@ class Design5QTest(ChipDesign):
                 )
                 trans = DTrans.R0
             squid = AsymSquidOneLegRigid(squid_center, SQUID_PARAMETERS, 0,
-                                    leg_side=-1, trans_in=trans)
+                                         leg_side=-1, trans_in=trans)
             self.squids.append(squid)
             squid.place(self.region_el)
 
@@ -734,16 +765,13 @@ class Design5QTest(ChipDesign):
 
         # place caplanar line 1 fl
         _p1 = self.contact_pads[1].end
-        _p2 = self.contact_pads[1].end + DPoint(1e6, 0)
+        _p2 = self.contact_pads[1].end + DPoint(0, 0.5e6)
         _p3 = DPoint(
-            self.squids[0].origin.x + self.flux_lines_x_shifts[0],
-            self.cont_lines_y_ref
+            self.squids[1].origin.x + self.flux_lines_x_shifts[1],
+            self.squids[1].origin.y - self.cont_lines_y_ref
         )
 
-        _p4 = DPoint(
-            _p3.x,
-            self.xmons[0].center.y - self.xmons[0].cpw_l.b / 2
-        )
+        _p4 = DPoint(_p3.x, self.xmons[1].cpw_bempt.end.y)
         self.cpwrl_fl1 = DPathCPW(
             points=[_p1, _p2, _p3, _p4],
             cpw_parameters=self.z_md_fl,
@@ -782,87 +810,43 @@ class Design5QTest(ChipDesign):
 
         draw_inductor_for_fl_line(self, 0)
 
-        # place caplanar line 2 fl
+        # place caplanar line 1 fl
         _p1 = self.contact_pads[2].end
-        _p2 = self.contact_pads[2].end + DPoint(1e6, 0)
-        _p3 = DPoint(
-            self.squids[1].origin.x + self.flux_lines_x_shifts[1],
-            self.cont_lines_y_ref
-        )
-        _p4 = DPoint(
-            _p3.x,
-            self.xmons[1].cpw_bempt.end.y
-        )
-        self.cpwrl_fl2 = DPathCPW(
-            points=[_p1, _p2, _p3, _p4],
-            cpw_parameters=self.z_md_fl,
-            turn_radiuses=self.ctr_lines_turn_radius,
-        )
-        self.cpwrl_fl2.place(tmp_reg)
-        self.cpw_fl_lines.append(self.cpwrl_fl2)
-        draw_inductor_for_fl_line(self, 1)
-
-        # place caplanar line 3 fl
-        _p1 = self.contact_pads[4].end
-        _p2 = self.contact_pads[4].end + DPoint(0, 1e6)
-        _p3 = _p2 + DPoint(-1e6, 1e6)
-        _p4 = DPoint(
-            self.squids[2].origin.x + self.flux_lines_x_shifts[2],
-            self.cont_lines_y_ref
-        )
-        _p5 = DPoint(
-            _p4.x,
-            self.xmons[2].cpw_bempt.end.y
-        )
-        self.cpwrl_fl3 = DPathCPW(
-            points=[_p1, _p2, _p3, _p4, _p5],
-            cpw_parameters=self.z_md_fl,
-            turn_radiuses=self.ctr_lines_turn_radius,
-        )
-        self.cpwrl_fl3.place(tmp_reg)
-        self.cpw_fl_lines.append(self.cpwrl_fl3)
-        draw_inductor_for_fl_line(self, 2)
-
-        # place caplanar line 4 fl
-        _p1 = self.contact_pads[6].end
-        _p2 = self.contact_pads[6].end + DPoint(-1.5e6, 0)
+        _p2 = self.contact_pads[2].end + DPoint(0, 0.5e6)
         _p3 = DPoint(
             self.squids[3].origin.x + self.flux_lines_x_shifts[3],
-            self.cont_lines_y_ref
+            self.squids[3].origin.y - self.cont_lines_y_ref
         )
-        _p4 = DPoint(
-            _p3.x,
-            self.xmons[3].cpw_bempt.end.y
-        )
-        self.cpwrl_fl4 = DPathCPW(
+
+        _p4 = DPoint(_p3.x, self.xmons[3].cpw_bempt.end.y)
+        self.cpwrl_fl1 = DPathCPW(
             points=[_p1, _p2, _p3, _p4],
             cpw_parameters=self.z_md_fl,
             turn_radiuses=self.ctr_lines_turn_radius,
         )
-        self.cpwrl_fl4.place(tmp_reg)
-        self.cpw_fl_lines.append(self.cpwrl_fl4)
-        draw_inductor_for_fl_line(self, 3)
+        self.cpwrl_fl1.place(tmp_reg)
+        self.cpw_fl_lines.append(self.cpwrl_fl1)
 
-        # place caplanar line 5 fl
-        _p1 = self.contact_pads[8].end
-        _p2 = self.contact_pads[8].end + DPoint(-0.3e6, 0)
-        _p4 = DPoint(
-            self.squids[4].origin.x + self.flux_lines_x_shifts[4],
-            self.cont_lines_y_ref
+        draw_inductor_for_fl_line(self, 1)
+
+        # place caplanar line 1 fl
+        _p1 = self.contact_pads[3].end
+        _p2 = self.contact_pads[3].end + DPoint(0, 0.5e6)
+        _p3 = DPoint(
+            self.squids[5].origin.x + self.flux_lines_x_shifts[1],
+            self.squids[5].origin.y - self.cont_lines_y_ref
         )
-        _p3 = _p4 + DVector(2e6, 0)
-        _p5 = DPoint(
-            _p4.x,
-            self.xmons[4].center.y - self.xmons[4].cpw_l.b / 2
-        )
-        self.cpwrl_fl5 = DPathCPW(
-            points=[_p1, _p2, _p3, _p4, _p5],
+
+        _p4 = DPoint(_p3.x, self.xmons[5].cpw_bempt.end.y)
+        self.cpwrl_fl1 = DPathCPW(
+            points=[_p1, _p2, _p3, _p4],
             cpw_parameters=self.z_md_fl,
             turn_radiuses=self.ctr_lines_turn_radius,
         )
-        self.cpwrl_fl5.place(tmp_reg)
-        self.cpw_fl_lines.append(self.cpwrl_fl5)
-        draw_inductor_for_fl_line(self, 4)
+        self.cpwrl_fl1.place(tmp_reg)
+        self.cpw_fl_lines.append(self.cpwrl_fl1)
+
+        draw_inductor_for_fl_line(self, 2)
 
     def draw_test_structures(self):
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
@@ -941,8 +925,8 @@ class Design5QTest(ChipDesign):
                 )
                 cb_right.place(self.region_el)
 
-        struct_centers = [DPoint(1e6, 1e6), DPoint(8.0e6, 3.8e6),
-                          DPoint(4e6, 1.8e6)]
+        struct_centers = [DPoint(1.5e6, 1.5e6), DPoint(5.2e6, 1.5e6),
+                          DPoint(2e6, 3e6)]
         self.test_squids_pads = []
         for struct_center in struct_centers:
             ## JJ test structures ##
@@ -971,8 +955,8 @@ class Design5QTest(ChipDesign):
                                   )
             squid_center += DPoint(
                 0,
-                SQUID_PARAMETERS.sq_len/2 +
-                SQUID_PARAMETERS.flux_line_inner_width/2 +
+                SQUID_PARAMETERS.sq_len / 2 +
+                SQUID_PARAMETERS.flux_line_inner_width / 2 +
                 self.squid_ph_clearance
             )
             test_jj = AsymSquidOneLegRigid(
@@ -1014,7 +998,6 @@ class Design5QTest(ChipDesign):
             test_jj.place(self.region_el)
             augment_with_bandage_test_contacts(test_struct2, test_jj)
 
-
             # test structure for bridge DC contact
             test_struct3 = TestStructurePadsSquare(
                 struct_center + DPoint(0.6e6, 0))
@@ -1041,9 +1024,9 @@ class Design5QTest(ChipDesign):
 
         # bandages test structures
         test_dc_el2_centers = [
-            DPoint(1.0e6, 1.5e6),
-            DPoint(5.0e6, 1.8e6),
-            DPoint(8.3e6, 3.2e6)
+            DPoint(1.1e6, 1.8e6),
+            DPoint(5.5e6, 2.0e6),
+            DPoint(2.6e6, 3.5e6)
         ]
         for struct_center in test_dc_el2_centers:
             test_struct1 = TestStructurePadsSquare(struct_center)
@@ -1126,10 +1109,10 @@ class Design5QTest(ChipDesign):
                 # self.region_el.merge()
 
                 # correction of extension into the SQUID loop
-                hwidth = squid.top_ph_el_conn_pad.width/2 + self.dc_cont_el_clearance
+                hwidth = squid.top_ph_el_conn_pad.width / 2 + self.dc_cont_el_clearance
                 fix_box = DBox(
                     squid.origin + DPoint(-hwidth, 0),
-                    squid.origin + DPoint(hwidth, squid.params.sq_len/2 - squid.params.inter_leads_width/2)
+                    squid.origin + DPoint(hwidth, squid.params.sq_len / 2 - squid.params.inter_leads_width / 2)
                 )
                 self.region_el -= Region(fix_box)
 
@@ -1169,7 +1152,7 @@ class Design5QTest(ChipDesign):
         marks_centers = [
             DPoint(0.5e6, 0.5e6), DPoint(0.5e6, 4.5e6),
             DPoint(9.5e6, 0.5e6), DPoint(9.5e6, 4.5e6),
-            DPoint(3.3e6, 4e6), DPoint(4.9e6, 1.2e6)
+            DPoint(7.7e6, 1.7e6), DPoint(4.6e6, 3.2e6)
         ]
         for mark_center in marks_centers:
             self.marks.append(
@@ -1241,7 +1224,8 @@ class Design5QTest(ChipDesign):
             range(2, 2 * (len(self.resonators) + 1) + 1, 2))
         bridgified_primitives_idxs += list(range(
             2 * (len(self.resonators) + 1) + 1,
-            len(self.cpwrl_ro_line.primitives.values()))
+            len(self.cpwrl_ro_line.primitives.values())
+            )
         )
         for idx, primitive in enumerate(
                 self.cpwrl_ro_line.primitives.values()):
@@ -1369,9 +1353,9 @@ def simulate_resonators_f_and_Q():
         resolution_dx = 2e3
 
         # cut part of the ground plane due to rectangular mesh in Sonnet
-        crop_box.bottom = crop_box.bottom - int(crop_box.height()%resolution_dy)
+        crop_box.bottom = crop_box.bottom - int(crop_box.height() % resolution_dy)
         print(crop_box.top, " ", crop_box.bottom)
-        print(crop_box.height()/resolution_dy)
+        print(crop_box.height() / resolution_dy)
         ### MESH CALCULATION SECTION END ###
 
         design.crop(crop_box, region=design.region_ph)
@@ -1586,7 +1570,7 @@ def simulate_Cqr():
     for dl, res_idx in list(
             product(
                 dl_list, range(5)
-        )
+            )
     ):
         ### DRAWING SECTION START ###
         design = Design5QTest("testScript")
@@ -1630,7 +1614,7 @@ def simulate_Cqr():
             for edge in poly.each_edge():
                 edge_center = (edge.p1 + edge.p2) / 2
                 dp = edge_center - xmonCross.cpw_b.end
-                d = max(abs(dp.x),abs(dp.y))
+                d = max(abs(dp.x), abs(dp.y))
                 if d > max_distance:
                     max_distance = d
                     port_pt = edge_center
