@@ -77,7 +77,7 @@ class SonnetLab(MatlabClient):
                 for port in self.ports:
                     r_middle = (edge.p1 + edge.p2) * 0.5
                     R = port.point.distance(r_middle)
-                    # if polygon.num_points_hull()==812 and port == self.ports[1]:
+                    # if( polygon.num_points_hull() == 4):
                     #     print(r_middle, "\t", port.point, "\t", R)
                     if R < 10:  # distance from connection point to the middle of the edge <10 nm => add port there
                         port_edges_indexes.append(i + 1)  # matlab polygon edge indexing starts from 1

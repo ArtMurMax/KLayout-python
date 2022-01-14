@@ -16,8 +16,8 @@ SQUID loops and test structure geomtries.
 
 Changes log
 v.0.3.0.8.T1
-1. Added 1 aditional resonator with identical SQUID, resonator frequency is 7.52 + 0.08 = 7.68 GHz
-2. Added 2 resonators with Xmon Crosses but without SQUID's. Frequencies 7.76 and 7.84 GHz correspondingly.
+1. Added 1 aditional resonator with identical SQUID, resonator frequency is 7.52 + 0.08 = 7.60 GHz
+2. Added 2 resonators with Xmon Crosses but without SQUID's. Frequencies 7.68 and 7.76 GHz correspondingly.
 3. Coplanar bridges are NOT used for this test version.
 '''
 
@@ -209,7 +209,7 @@ class Design5QTest(ChipDesign):
         # only frequency is changed (7.58, 7.66, 7.84) GHz correspondingly
         self.add_res_based_idx = 2
         self.L_coupling_list += [self.L_coupling_list[self.add_res_based_idx]] * 3
-        self.L1_list_additional = [1e3 * x for x in [68.974, 63.172, 57.488]]  # approximate values from .nb
+        self.L1_list_additional = [1e3 * x for x in [71.921, 66.058, 60.315]]  # approximate values from .nb
         self.L1_list += self.L1_list_additional
         self.N_coils += [self.N_coils[self.add_res_based_idx]] * 3
         self.L2_list += [self.L2_list[self.add_res_based_idx]] * 3
@@ -1309,7 +1309,7 @@ def simulate_resonators_f_and_Q():
 
     for dl, resonator_idx in list(product(
             dl_list,
-            range(5)
+            range(8)
     )):
         fine_resonance_success = False
         freqs_span = freqs_span_corase
@@ -1331,9 +1331,14 @@ def simulate_resonators_f_and_Q():
                 design.xmons[resonator_idx].empty_region
         ).bbox()
 
-        # center of the readout CPW
-        crop_box.top += -design.Z_res.b / 2 + design.to_line_list[
-            resonator_idx] + design.Z0.b / 2
+        # further from resonator edge of the readout CPW
+        if resonator_idx%2==0:
+            crop_box.bottom += design.Z_res.b / 2 - design.to_line_list[
+                resonator_idx] - design.Z0.b / 2
+        else:
+            crop_box.top += -design.Z_res.b / 2 + design.to_line_list[
+                resonator_idx] + design.Z0.b / 2
+
         box_extension = 100e3
         crop_box.bottom -= box_extension
         crop_box.top += box_extension
@@ -1353,20 +1358,30 @@ def simulate_resonators_f_and_Q():
         resolution_dx = 2e3
 
         # cut part of the ground plane due to rectangular mesh in Sonnet
-        crop_box.bottom = crop_box.bottom - int(crop_box.height() % resolution_dy)
+        if resonator_idx%2==0:
+            crop_box.top = crop_box.top + int(crop_box.height() % resolution_dy)
+        else:
+            crop_box.bottom = crop_box.bottom - int(crop_box.height() % resolution_dy)
         print(crop_box.top, " ", crop_box.bottom)
         print(crop_box.height() / resolution_dy)
         ### MESH CALCULATION SECTION END ###
 
         design.crop(crop_box, region=design.region_ph)
 
-        design.sonnet_ports = [
-            DPoint(crop_box.left,
-                   crop_box.top - box_extension - design.Z0.b / 2),
-            DPoint(crop_box.right,
-                   crop_box.top - box_extension - design.Z0.b / 2)
-        ]
-
+        if resonator_idx%2==0:
+            design.sonnet_ports = [
+                DPoint(crop_box.left,
+                       crop_box.bottom + box_extension + design.Z0.b / 2),
+                DPoint(crop_box.right,
+                       crop_box.bottom + box_extension + design.Z0.b / 2)
+            ]
+        else:
+            design.sonnet_ports = [
+                DPoint(crop_box.left,
+                       crop_box.top - box_extension - design.Z0.b / 2),
+                DPoint(crop_box.right,
+                       crop_box.top - box_extension - design.Z0.b / 2)
+            ]
         # transforming cropped box to the origin
         dr = DPoint(0, 0) - crop_box.p1
         design.transform_region(
@@ -1374,7 +1389,7 @@ def simulate_resonators_f_and_Q():
             DTrans(dr.x, dr.y),
             trans_ports=True
         )
-
+        [print((port.x, port.y)) for port in design.sonnet_ports]
         # transfer design`s regions shapes to the corresponding layers in layout
         design.show()
         # show layout in UI window
@@ -1720,8 +1735,8 @@ def simulate_Cqr():
 
 
 if __name__ == "__main__":
-    design = Design5QTest("testScript")
-    design.draw()
-    design.show()
-    # simulate_resonators_f_and_Q()
+    # design = Design5QTest("testScript")
+    # design.draw()
+    # design.show()
+    simulate_resonators_f_and_Q()
     # simulate_Cqr()
