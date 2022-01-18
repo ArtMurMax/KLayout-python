@@ -455,14 +455,14 @@ class Design5QTest(ChipDesign):
         # along single horizontal line
         self.L0_list = [self.L0 - xmon_dy_Cg_coupling for
                         xmon_dy_Cg_coupling in self.xmon_dys_Cg_coupling]
-        for i in range(5, 8):
-            self.L0_list[i] = self.L0_list[self.add_res_based_idx]
 
         self.L2_list[0] += 6 * self.Z_res.b
         self.L2_list[1] += 0
         self.L2_list[3] += 3 * self.Z_res.b
         self.L2_list[4] += 6 * self.Z_res.b
         self.L2_list[5] += 6 * self.Z_res.b
+        for i in range(5, 8):
+            self.L2_list[i] = self.L2_list[self.add_res_based_idx]
 
         self.L3_list[0] = x1
         self.L3_list[1] = x2
