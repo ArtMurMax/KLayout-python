@@ -1319,7 +1319,7 @@ def simulate_resonators_f_and_Q():
             design.resonators[resonator_idx].get_approx_frequency(
                 refractive_index=np.sqrt(6.26423)
             )
-        print("start drawing")
+        # print("start drawing")
         print(estimated_freq)
 
         crop_box = (
@@ -1387,7 +1387,7 @@ def simulate_resonators_f_and_Q():
             DTrans(dr.x, dr.y),
             trans_ports=True
         )
-        [print((port.x, port.y)) for port in design.sonnet_ports]
+        # [print((port.x, port.y)) for port in design.sonnet_ports]
         # transfer design`s regions shapes to the corresponding layers in layout
         design.show()
         # show layout in UI window
@@ -1668,7 +1668,7 @@ def simulate_Cqr():
 
         ml_terminal.send_polygons(design.cell, design.layer_ph)
         ml_terminal.set_linspace_sweep(0.01, 0.01, 1)
-        print("simulating...")
+        # print("simulating...")
         result_path = ml_terminal.start_simulation(wait=True)
         ml_terminal.release()
 
