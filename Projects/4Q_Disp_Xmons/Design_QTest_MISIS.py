@@ -62,7 +62,7 @@ import copy
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.0e3
+FABRICATION.OVERETCHING = 0.6e3
 SQUID_PARAMETERS = AsymSquidOneLegParams(
     pad_r=5e3, pads_distance=60e3,
     contact_pad_width=10e3, contact_pad_ext_r=200,
@@ -179,12 +179,12 @@ class Design5QTest(ChipDesign):
         self.resonators_dx: float = 900e3
         # resonator parameters
         self.L_coupling_list: list[float] = [
-            1e3 * x for x in [310, 320, 320, 310, 300, 310]
+            1e3 * x for x in [310, 320, 320, 310, 300]
         ]
         # corresponding to resonanse freq is linspaced in interval [6,9) GHz
         self.L0 = 1000e3
         self.L1_list = [
-            1e3 * x for x in [58.4246, 20.374, 76.41, 74.3824, 26.0267, 22.7979, 51.3575, 46.1034]
+            1e3 * x for x in [58.4246, 20.374, 76.41, 74.3824, 26.0267]
         ]
         self.r = 60e3
         self.N_coils = [2, 3, 3, 3, 3]
@@ -207,6 +207,9 @@ class Design5QTest(ChipDesign):
         # 4 additional resonators based on resonator with idx 2, but
         # only frequency is changed (7.58, 7.66, 7.84) GHz correspondingly
         self.add_res_based_idx = 2
+        self.L1_list += [x*1e3 for x in [22.7979, 51.3575, 46.1034]]
+        self.L_coupling_list += [self.L_coupling_list[
+                                     self.add_res_based_idx]] * 3
         self.N_coils += [self.N_coils[self.add_res_based_idx]] * 3
         self.L2_list += [self.L2_list[self.add_res_based_idx]] * 3
         self.L3_list += [self.L3_list[self.add_res_based_idx]] * 3
@@ -453,7 +456,7 @@ class Design5QTest(ChipDesign):
         self.L0_list = [self.L0 - xmon_dy_Cg_coupling for
                         xmon_dy_Cg_coupling in self.xmon_dys_Cg_coupling]
         for i in range(5, 8):
-            self.L0_list += [self.L0_list[self.add_res_based_idx]] * 3
+            self.L0_list[i] = self.L0_list[self.add_res_based_idx]
 
         self.L2_list[0] += 6 * self.Z_res.b
         self.L2_list[1] += 0
@@ -487,7 +490,8 @@ class Design5QTest(ChipDesign):
             [-pi / 2, pi / 2],
             [pi / 2, -pi / 2]
         ]
-        tail_turn_angles_list += [tail_turn_angles_list[self.add_res_based_idx]] * 3
+        tail_turn_angles_list += [tail_turn_angles_list[
+                                      self.add_res_based_idx]] * 2
 
         tail_trans_in_list = [
             Trans.R270,
@@ -497,7 +501,8 @@ class Design5QTest(ChipDesign):
             Trans.R270,
             Trans.R270
         ]
-        tail_trans_in_list += [tail_trans_in_list[self.add_res_based_idx]] * 3
+        tail_trans_in_list += [tail_trans_in_list[
+                                   self.add_res_based_idx]] * 2
         ### RESONATORS TAILS CALCULATIONS SECTION END ###
 
         pars = list(
@@ -509,6 +514,7 @@ class Design5QTest(ChipDesign):
                 self.L0_list, self.N_coils
             )
         )
+
         worm_x_list = [x * 1e6 for x in [1, 2.7, 3.5, 4.35, 7.6, 6.5, 5.5, 8.5]]
         for res_idx, params in enumerate(pars):
             # parameters exctraction
@@ -1731,8 +1737,8 @@ def simulate_Cqr():
 
 
 if __name__ == "__main__":
-    # design = Design5QTest("testScript")
-    # design.draw()
-    # design.show()
-    simulate_resonators_f_and_Q()
+    design = Design5QTest("testScript")
+    design.draw()
+    design.show()
+    # simulate_resonators_f_and_Q()
     # simulate_Cqr()
