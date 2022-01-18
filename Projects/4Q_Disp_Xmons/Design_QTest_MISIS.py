@@ -207,8 +207,6 @@ class Design5QTest(ChipDesign):
         # 4 additional resonators based on resonator with idx 2, but
         # only frequency is changed (7.58, 7.66, 7.84) GHz correspondingly
         self.add_res_based_idx = 2
-        self.L1_list_additional = [1e3 * x for x in [71.921, 66.058, 60.315]]  # approximate values from .nb
-        self.L1_list += self.L1_list_additional
         self.N_coils += [self.N_coils[self.add_res_based_idx]] * 3
         self.L2_list += [self.L2_list[self.add_res_based_idx]] * 3
         self.L3_list += [self.L3_list[self.add_res_based_idx]] * 3
