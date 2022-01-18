@@ -14,7 +14,7 @@ Xmon crosses shape, qubit-resonator coupling capacitances,
 SQUID loops and test structure geomtries.
 
 
-Changes log
+Changes log 
 v.0.3.0.8.T1
 1. Added 1 aditional resonator with identical SQUID, resonator frequency is 7.52 + 0.08 = 7.60 GHz
 2. Added 2 resonators with Xmon Crosses but without SQUID's. Frequencies 7.68 and 7.76 GHz correspondingly.
@@ -184,8 +184,7 @@ class Design5QTest(ChipDesign):
         # corresponding to resonanse freq is linspaced in interval [6,9) GHz
         self.L0 = 1000e3
         self.L1_list = [
-            1e3 * x for x in
-            [64.9406, 22.0042, 79.661, 75.5318, 28.4103]
+            1e3 * x for x in [58.4246, 20.374, 76.41, 74.3824, 26.0267, 22.7979, 51.3575, 46.1034]
         ]
         self.r = 60e3
         self.N_coils = [2, 3, 3, 3, 3]
@@ -208,7 +207,6 @@ class Design5QTest(ChipDesign):
         # 4 additional resonators based on resonator with idx 2, but
         # only frequency is changed (7.58, 7.66, 7.84) GHz correspondingly
         self.add_res_based_idx = 2
-        self.L_coupling_list += [self.L_coupling_list[self.add_res_based_idx]] * 3
         self.L1_list_additional = [1e3 * x for x in [71.921, 66.058, 60.315]]  # approximate values from .nb
         self.L1_list += self.L1_list_additional
         self.N_coils += [self.N_coils[self.add_res_based_idx]] * 3
@@ -1303,7 +1301,7 @@ def simulate_resonators_f_and_Q():
     freqs_span_corase = 1.0  # GHz
     corase_only = False
     freqs_span_fine = 0.050
-    dl_list = [15e3, 0e3, -15e3]
+    dl_list = [0e3, 15e3, -15e3]
     # dl_list = [0e3]
     from itertools import product
 

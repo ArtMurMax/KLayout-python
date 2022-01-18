@@ -1446,10 +1446,10 @@ class Design5Q(ChipDesign):
 
 
 def simulate_resonators_f_and_Q():
-    freqs_span_corase = 1.0  # GHz
+    freqs_span_corase = 0.5  # GHz
     corase_only = False
     freqs_span_fine = 0.050
-    dl_list = [15e3, 0e3, -15e3]
+    dl_list = [0, 15e3, -15e3]
     # dl_list = [0e3]
     from itertools import product
 
