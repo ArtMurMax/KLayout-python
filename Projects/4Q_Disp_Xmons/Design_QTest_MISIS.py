@@ -62,7 +62,7 @@ import copy
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.6e3
+FABRICATION.OVERETCHING = 0.0e3
 SQUID_PARAMETERS = AsymSquidOneLegParams(
     pad_r=5e3, pads_distance=60e3,
     contact_pad_width=10e3, contact_pad_ext_r=200,
@@ -184,7 +184,8 @@ class Design5QTest(ChipDesign):
         # corresponding to resonanse freq is linspaced in interval [6,9) GHz
         self.L0 = 1000e3
         self.L1_list = [
-            1e3 * x for x in [58.4246, 20.374, 76.41, 74.3824, 26.0267]
+            1e3 * x for x in [58.4471, 20.3557, 76.3942, 74.6009, 25.8126]
+
         ]
         self.r = 60e3
         self.N_coils = [2, 3, 3, 3, 3]
@@ -207,7 +208,7 @@ class Design5QTest(ChipDesign):
         # 4 additional resonators based on resonator with idx 2, but
         # only frequency is changed (7.58, 7.66, 7.84) GHz correspondingly
         self.add_res_based_idx = 2
-        self.L1_list += [x*1e3 for x in [22.7979, 51.3575, 46.1034]]
+        self.L1_list += [x*1e3 for x in [58.8006, 51.2927, 45.8894]]
         self.L_coupling_list += [self.L_coupling_list[
                                      self.add_res_based_idx]] * 3
         self.N_coils += [self.N_coils[self.add_res_based_idx]] * 3
@@ -1364,8 +1365,8 @@ def simulate_resonators_f_and_Q():
             crop_box.top = crop_box.top + int(crop_box.height() % resolution_dy)
         else:
             crop_box.bottom = crop_box.bottom - int(crop_box.height() % resolution_dy)
-        print(crop_box.top, " ", crop_box.bottom)
-        print(crop_box.height() / resolution_dy)
+        print("y cells:",  crop_box.height() / resolution_dy, resolution_dy)
+        print("x cells and dx: ", crop_box.width()/ resolution_dx, resolution_dx)
         ### MESH CALCULATION SECTION END ###
 
         design.crop(crop_box, region=design.region_ph)
@@ -1636,7 +1637,10 @@ def simulate_Cqr():
                     max_distance = d
                     port_pt = edge_center
         design.sonnet_ports.append(port_pt)
-        design.sonnet_ports.append(xmonCross.cpw_b.end)
+        if res_idx%2==0:
+            design.sonnet_ports.append(xmonCross.cpw_t.end)
+        else:
+            design.sonnet_ports.append(xmonCross.cpw_b.end)
 
         design.transform_region(design.region_ph, DTrans(dr.x, dr.y), trans_ports=True)
 
@@ -1737,8 +1741,8 @@ def simulate_Cqr():
 
 
 if __name__ == "__main__":
-    design = Design5QTest("testScript")
-    design.draw()
-    design.show()
+    # design = Design5QTest("testScript")
+    # design.draw()
+    # design.show()
     # simulate_resonators_f_and_Q()
-    # simulate_Cqr()
+    simulate_Cqr()
