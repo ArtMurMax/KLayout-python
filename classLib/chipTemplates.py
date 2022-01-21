@@ -243,18 +243,20 @@ class CHIP_10x5_8pads:
     """
     dx = 10e6
     dy = 5e6
-
+    pad_length = 300e3
     pcb_width = 260e3  # 0.26 mm
     pcb_gap = 190e3  # (0.64 - 0.26) / 2 = 0.19 mm
     pcb_feedline_d = 2500e3  # 2.5 mm
     pcb_Z = CPWParameters(pcb_width, pcb_gap)
+    back_metal_gap = 100e3
+    back_metal_width = 50e3
 
     chip_cpw_width = 24e3
     chip_cpw_gap = 12e3
     chip_Z = CPWParameters(chip_cpw_width, chip_cpw_gap)
 
     @staticmethod
-    def get_contact_pads(chip_Z_list: List[Union[CPWParameters, CPW, CPWArc]]=None):
+    def get_contact_pads(chip_Z_list: List[Union[CPWParameters, CPW, CPWArc]]=None, cpw_trans_list=[]):
         """
         Constructs objects that represent contact pads. Each pad
         consists of cpw that matches PCB cpw dimension, then trapeziod
@@ -264,10 +266,12 @@ class CHIP_10x5_8pads:
         Parameters
         ----------
         chip_Z_list : List[Union[CPWParams, CPW, CPWArc]]
-            list of 12 structures containing dimensions of the coplanar
+            list of 8 structures containing dimensions of the coplanar
             waveguides on chip-side of every contact pad.
             Order starts from top-left (index 0) in counter_clockwise direction:
             top contact pad at the left side of the chip has index 0.
+        cpw_trans : List[DCplxTrans]
+            List of transformations for every contact pad relative to the object coordinate system.
 
         Returns
         -------
@@ -275,6 +279,11 @@ class CHIP_10x5_8pads:
             List of contact pad objects indexed starting from top of the left corner
             in counter-clockwise direction.
         """
+        if len(cpw_trans_list) == 8:
+            pass
+        else:
+            cpw_trans_list = [DTrans.R0 for x in range(8)]
+
         if chip_Z_list is None:
             chip_Z_list = [
                 CPWParameters(
@@ -298,7 +307,6 @@ class CHIP_10x5_8pads:
         dy = CHIP_10x5_8pads.dy
         pcb_feedline_d = CHIP_10x5_8pads.pcb_feedline_d
         pcb_Z = CHIP_10x5_8pads.pcb_Z
-        back_metal_gap = 100e3
 
         k = 0
         contact_pads_left = [
@@ -306,8 +314,10 @@ class CHIP_10x5_8pads:
                 DPoint(0, dy - pcb_feedline_d * (i + 1)),
                 pcb_cpw_params=pcb_Z,
                 chip_cpw_params=chip_Z_list[k + i],
-                back_metal_width=50e3,
-                back_metal_gap=back_metal_gap
+                pad_length=CHIP_10x5_8pads.pad_length,
+                back_metal_width=CHIP_10x5_8pads.back_metal_width,
+                back_metal_gap=CHIP_10x5_8pads.back_metal_gap,
+                trans_in=cpw_trans_list[k+i]
             ) for i in range(3) if i == 0
         ]
         k += 1
@@ -315,8 +325,8 @@ class CHIP_10x5_8pads:
         contact_pads_bottom = [
             ContactPad(
                 DPoint(pcb_feedline_d * (i + 1), 0), pcb_Z, chip_Z_list[k + i], back_metal_width=50e3,
-                back_metal_gap=back_metal_gap,
-                trans_in=Trans.R90
+                back_metal_gap=CHIP_10x5_8pads.back_metal_gap,
+                trans_in=cpw_trans_list[k+i]*Trans.R90
             ) for i in range(3)
         ]
         k += 3
@@ -324,8 +334,8 @@ class CHIP_10x5_8pads:
         contact_pads_right = [
             ContactPad(
                 DPoint(dx, pcb_feedline_d*(i+1)), pcb_Z, chip_Z_list[k + i], back_metal_width=50e3,
-                back_metal_gap=back_metal_gap,
-                trans_in=Trans.R180
+                back_metal_gap=CHIP_10x5_8pads.back_metal_gap,
+                trans_in=cpw_trans_list[k+i]*Trans.R180
             ) for i in range(3) if i == 0
         ]
         k += 1
@@ -333,8 +343,8 @@ class CHIP_10x5_8pads:
         contact_pads_top = [
             ContactPad(
                 DPoint(dx - pcb_feedline_d * (i + 1), dy), pcb_Z, chip_Z_list[k + i], back_metal_width=50e3,
-                back_metal_gap=back_metal_gap,
-                trans_in=Trans.R270
+                back_metal_gap=CHIP_10x5_8pads.back_metal_gap,
+                trans_in=cpw_trans_list[k+i]*Trans.R270
             ) for i in range(3)
         ]
 

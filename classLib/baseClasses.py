@@ -238,7 +238,7 @@ class ComplexBase(ElementBase):
     def _init_regions_trans(self):
         pass
 
-    def make_trans(self, dCplxTrans_temp):
+    def make_trans(self, dCplxTrans_temp: DCplxTrans):
         for primitive in self.primitives.values():
             primitive.make_trans(dCplxTrans_temp)
         for region in itertools.chain(self.metal_regions.values(), self.empty_regions.values()):

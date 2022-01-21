@@ -15,6 +15,15 @@ SQUID loops and test structure geomtries.
 
 
 Changes log 
+v.0.3.0.8.T2
+1. Removed contact pads from top side of the chip.
+2. Horizontal readout line and connected structures y coordinate is increased. 
+This is due to absence of contact pads from top.
+3. Botttom contact pads modified such that only 90deg turns are now present
+along the flux control lines. Bottom contact pads centers 
+remained at the same X coordinate. 
+
+
 v.0.3.0.8.T1
 1. Added 1 aditional resonator with identical SQUID, resonator frequency is 7.52 + 0.08 = 7.60 GHz
 2. Added 2 resonators with Xmon Crosses but without SQUID's. Frequencies 7.68 and 7.76 GHz correspondingly.
@@ -62,7 +71,7 @@ import copy
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.0e3
+FABRICATION.OVERETCHING = 0.5e3
 SQUID_PARAMETERS = AsymSquidOneLegParams(
     pad_r=5e3, pads_distance=60e3,
     contact_pad_width=10e3, contact_pad_ext_r=200,
@@ -163,15 +172,26 @@ class Design5QTest(ChipDesign):
         # Z = 50.09 E_eff = 6.235 (E = 11.45)
         self.z_md_fl: CPWParameters = CPWParameters(11e3, 5.7e3)
         self.ro_Z: CPWParameters = self.chip.chip_Z
+        contact_pads_trans_list = [Trans.R0] + [Trans.R270] + 2 * [Trans.R90] + 4 * [Trans.R0]
+        for i, trans in enumerate(contact_pads_trans_list):
+            contact_pads_trans_list[i] = DCplxTrans(DTrans(contact_pads_trans_list[i]))
+            if trans == DTrans.R270:
+                contact_pads_trans_list[i] = DCplxTrans(DVector(-self.chip.pad_length, self.chip.pcb_Z.b/2 + self.chip.back_metal_width))*contact_pads_trans_list[i]
+            elif trans == DTrans.R90:
+                contact_pads_trans_list[i] = DCplxTrans(DVector(-self.chip.pad_length, -self.chip.pcb_Z.b/2 -self.chip.back_metal_width))*contact_pads_trans_list[i]
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
-            [self.ro_Z] + [self.z_md_fl] * 3 + [self.ro_Z] + [self.z_md_fl] * 3
+            [self.ro_Z] + [self.z_md_fl] * 3 + [self.ro_Z] + [self.z_md_fl] * 3,
+            cpw_trans_list=contact_pads_trans_list
         )
 
         # readout line parameters
         self.ro_line_dy: float = 1600e3
+        # shifting readout line to the top due to absence of top pads
+        self.ro_line_dy_shift = self.chip.pcb_Z.b / 4
         self.cpwrl_ro_line: CPWRLPath = None
+        # base coplanar waveguide parameters that correspond
+        # to chip-end contact pads.
         self.Z0: CPWParameters = CHIP_10x5_8pads.chip_Z
-
         # resonators objects list
         self.resonators: List[EMResonatorTL3QbitWormRLTailXmonFork] = []
         # distance between nearest resonators central conductors centers
@@ -335,9 +355,10 @@ class Design5QTest(ChipDesign):
         # self.draw_bridges()
         self.draw_pinning_holes()
         # v.0.3.0.8 p.12 - ensure that contact pads consist no wholes
-        for contact_pad in self.contact_pads:
-            contact_pad.place(self.region_ph)
-            self.region_ph.merge()
+        for i, contact_pad in enumerate(self.contact_pads):
+            if i <= 4:
+                contact_pad.place(self.region_ph)
+        self.region_ph.merge()
         self.extend_photo_overetching()
         self.inverse_destination(self.region_ph)
         self.draw_cut_marks()
@@ -425,8 +446,9 @@ class Design5QTest(ChipDesign):
         self.region_bridges2.insert(self.chip_box)
 
         self.region_ph.insert(self.chip_box)
-        for contact_pad in self.contact_pads:
-            contact_pad.place(self.region_ph)
+        for i, contact_pad in enumerate(self.contact_pads):
+            if i <= 4:
+                contact_pad.place(self.region_ph)
 
     def draw_cut_marks(self):
         chip_box_poly = DPolygon(self.chip_box)
@@ -533,7 +555,7 @@ class Design5QTest(ChipDesign):
             # under condition that Xmon-Xmon distance equals
             # `xmon_x_distance`
             worm_x = worm_x_list[res_idx]
-            worm_y = self.chip.dy / 2 + to_line * (-1) ** (res_idx)
+            worm_y = self.chip.dy / 2 + to_line * (-1) ** (res_idx) + self.ro_line_dy_shift
 
             if res_idx % 2 == 0:
                 trans = DTrans.M0
@@ -573,12 +595,19 @@ class Design5QTest(ChipDesign):
         None
         '''
         # place readout waveguide
-        ro_line_dy = self.ro_line_dy
+        turn_angle = 30/180*np.pi
 
-        self.cpwrl_ro_line = CPW(
-            start=self.contact_pads[0].end,
-            end=self.contact_pads[4].end,
-            cpw_params=self.ro_Z
+        dx_clearance = self.ro_line_dy_shift/np.tan(turn_angle)/4
+        _p0 = self.contact_pads[0].end + DVector(dx_clearance, 0)
+        _p1 = _p0 + DVector(self.ro_line_dy_shift/np.tan(turn_angle), self.ro_line_dy_shift)
+        _p3 = self.contact_pads[4].end + DVector(-dx_clearance, 0)
+        _p2 = _p3 + DVector(-self.ro_line_dy_shift/np.tan(turn_angle), self.ro_line_dy_shift)
+
+        self.cpwrl_ro_line = DPathCPW(
+            points=[self.contact_pads[0].end, _p0,
+                    _p1, _p2, _p3, self.contact_pads[4].end],
+            cpw_parameters=self.Z0,
+            turn_radiuses=self.ro_line_dy_shift/np.tan(turn_angle)/2
         )
         self.cpwrl_ro_line.place(self.region_ph)
 
@@ -768,15 +797,10 @@ class Design5QTest(ChipDesign):
 
         # place caplanar line 1 fl
         _p1 = self.contact_pads[1].end
-        _p2 = self.contact_pads[1].end + DPoint(0, 0.5e6)
-        _p3 = DPoint(
-            self.squids[1].origin.x + self.flux_lines_x_shifts[1],
-            self.squids[1].origin.y - self.cont_lines_y_ref
-        )
-
-        _p4 = DPoint(_p3.x, self.xmons[1].cpw_bempt.end.y)
+        _p2 = DPoint(self.xmons[1].center.x + self.flux_lines_x_shifts[1], _p1.y)
+        _p3 = DPoint(_p2.x, self.xmons[1].cpw_bempt.end.y)
         self.cpwrl_fl1 = DPathCPW(
-            points=[_p1, _p2, _p3, _p4],
+            points=[_p1, _p2, _p3],
             cpw_parameters=self.z_md_fl,
             turn_radiuses=self.ctr_lines_turn_radius,
         )
@@ -813,41 +837,32 @@ class Design5QTest(ChipDesign):
 
         draw_inductor_for_fl_line(self, 0)
 
-        # place caplanar line 1 fl
+        # place caplanar line 2 fl
         _p1 = self.contact_pads[2].end
-        _p2 = self.contact_pads[2].end + DPoint(0, 0.5e6)
-        _p3 = DPoint(
-            self.squids[3].origin.x + self.flux_lines_x_shifts[3],
-            self.squids[3].origin.y - self.cont_lines_y_ref
-        )
-
-        _p4 = DPoint(_p3.x, self.xmons[3].cpw_bempt.end.y)
-        self.cpwrl_fl1 = DPathCPW(
-            points=[_p1, _p2, _p3, _p4],
+        _p2 = DPoint(self.xmons[3].center.x + self.flux_lines_x_shifts[3], _p1.y)
+        _p3 = DPoint(_p2.x, self.xmons[3].cpw_bempt.end.y)
+        self.cpwrl_fl2 = DPathCPW(
+            points=[_p1, _p2, _p3],
             cpw_parameters=self.z_md_fl,
             turn_radiuses=self.ctr_lines_turn_radius,
         )
-        self.cpwrl_fl1.place(tmp_reg)
-        self.cpw_fl_lines.append(self.cpwrl_fl1)
-
+        self.cpwrl_fl2.place(tmp_reg)
+        self.cpw_fl_lines.append(self.cpwrl_fl2)
         draw_inductor_for_fl_line(self, 1)
 
-        # place caplanar line 1 fl
+        # place caplanar line 2 fl
         _p1 = self.contact_pads[3].end
-        _p2 = self.contact_pads[3].end + DPoint(0, 0.5e6)
-        _p3 = DPoint(
-            self.squids[5].origin.x + self.flux_lines_x_shifts[1],
-            self.squids[5].origin.y - self.cont_lines_y_ref
-        )
-
-        _p4 = DPoint(_p3.x, self.xmons[5].cpw_bempt.end.y)
-        self.cpwrl_fl1 = DPathCPW(
-            points=[_p1, _p2, _p3, _p4],
+        _p2 = DPoint(self.xmons[5].center.x + self.flux_lines_x_shifts[5], _p1.y)
+        _p3 = DPoint(_p2.x, self.xmons[5].cpw_bempt.end.y)
+        self.cpwrl_fl3 = DPathCPW(
+            points=[_p1, _p2, _p3],
             cpw_parameters=self.z_md_fl,
             turn_radiuses=self.ctr_lines_turn_radius,
         )
-        self.cpwrl_fl1.place(tmp_reg)
-        self.cpw_fl_lines.append(self.cpwrl_fl1)
+        self.cpwrl_fl3.place(tmp_reg)
+        self.cpw_fl_lines.append(self.cpwrl_fl3)
+        draw_inductor_for_fl_line(self, 2)
+        self.cpw_fl_lines.append(self.cpwrl_fl3)
 
         draw_inductor_for_fl_line(self, 2)
 
@@ -929,7 +944,7 @@ class Design5QTest(ChipDesign):
                 cb_right.place(self.region_el)
 
         struct_centers = [DPoint(1.5e6, 1.5e6), DPoint(5.2e6, 1.5e6),
-                          DPoint(2e6, 3e6)]
+                          DPoint(2e6, 3e6 + self.ro_line_dy_shift)]
         self.test_squids_pads = []
         for struct_center in struct_centers:
             ## JJ test structures ##
@@ -1029,7 +1044,7 @@ class Design5QTest(ChipDesign):
         test_dc_el2_centers = [
             DPoint(1.1e6, 1.8e6),
             DPoint(5.5e6, 2.0e6),
-            DPoint(2.6e6, 3.5e6)
+            DPoint(2.6e6, 3.5e6 + self.ro_line_dy_shift)
         ]
         for struct_center in test_dc_el2_centers:
             test_struct1 = TestStructurePadsSquare(struct_center)
@@ -1741,8 +1756,8 @@ def simulate_Cqr():
 
 
 if __name__ == "__main__":
-    # design = Design5QTest("testScript")
-    # design.draw()
-    # design.show()
+    design = Design5QTest("testScript")
+    design.draw()
+    design.show()
     # simulate_resonators_f_and_Q()
-    simulate_Cqr()
+    # simulate_Cqr()
