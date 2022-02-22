@@ -1,4 +1,4 @@
-__version__ = "v.0.3.0.8.T1"
+__version__ = "v.0.3.0.8.T3"
 
 '''
 Description:
@@ -15,6 +15,10 @@ SQUID loops and test structure geomtries.
 
 
 Changes log 
+v.0.3.0.8.T3
+Added bridges for resonators and RO waveguide.
+
+
 v.0.3.0.8.T2
 1. Removed contact pads from top side of the chip.
 2. Horizontal readout line and connected structures y coordinate is increased. 
@@ -71,7 +75,7 @@ import copy
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.5e3
+FABRICATION.OVERETCHING = 0.6e3
 SQUID_PARAMETERS = AsymSquidOneLegParams(
     pad_r=5e3, pads_distance=60e3,
     contact_pad_width=10e3, contact_pad_ext_r=200,
@@ -237,6 +241,8 @@ class Design5QTest(ChipDesign):
         self.L4_list += [self.L4_list[self.add_res_based_idx]] * 3
         self.to_line_list += [self.to_line_list[self.add_res_based_idx]] * 3
         self.fork_y_spans += [self.fork_y_spans[self.add_res_based_idx]] * 3
+        self.worm_x_list = [x * 1e6 for x in
+                       [1, 2.7, 3.5, 4.35, 7.6, 6.5, 5.5, 8.5]]
 
         # xmon parameters
         self.xmon_x_distance: float = 545e3  # from simulation of g_12
@@ -352,7 +358,7 @@ class Design5QTest(ChipDesign):
         self.draw_el_protection()
 
         self.draw_photo_el_marks()
-        # self.draw_bridges()
+        self.draw_bridges()
         self.draw_pinning_holes()
         # v.0.3.0.8 p.12 - ensure that contact pads consist no wholes
         for i, contact_pad in enumerate(self.contact_pads):
@@ -538,7 +544,6 @@ class Design5QTest(ChipDesign):
             )
         )
 
-        worm_x_list = [x * 1e6 for x in [1, 2.7, 3.5, 4.35, 7.6, 6.5, 5.5, 8.5]]
         for res_idx, params in enumerate(pars):
             # parameters exctraction
             L1 = params[0]
@@ -554,7 +559,7 @@ class Design5QTest(ChipDesign):
             # deduction for resonator placements
             # under condition that Xmon-Xmon distance equals
             # `xmon_x_distance`
-            worm_x = worm_x_list[res_idx]
+            worm_x = self.worm_x_list[res_idx]
             worm_y = self.chip.dy / 2 + to_line * (-1) ** (res_idx) + self.ro_line_dy_shift
 
             if res_idx % 2 == 0:
@@ -602,6 +607,8 @@ class Design5QTest(ChipDesign):
         _p1 = _p0 + DVector(self.ro_line_dy_shift/np.tan(turn_angle), self.ro_line_dy_shift)
         _p3 = self.contact_pads[4].end + DVector(-dx_clearance, 0)
         _p2 = _p3 + DVector(-self.ro_line_dy_shift/np.tan(turn_angle), self.ro_line_dy_shift)
+
+
 
         self.cpwrl_ro_line = DPathCPW(
             points=[self.contact_pads[0].end, _p0,
@@ -1212,23 +1219,6 @@ class Design5QTest(ChipDesign):
                         dest2=self.region_bridges2
                     )
 
-        # for contact wires
-        for key, val in self.__dict__.items():
-            if "cpwrl_md" in key:
-                Bridge1.bridgify_CPW(
-                    val, bridges_step,
-                    dest=self.region_bridges1, dest2=self.region_bridges2,
-                    avoid_points=[squid.origin for squid in self.squids],
-                    avoid_distance=200e3
-                )
-            elif "cpwrl_fl" in key:
-                Bridge1.bridgify_CPW(
-                    val, fl_bridges_step,
-                    dest=self.region_bridges1, dest2=self.region_bridges2,
-                    avoid_points=[squid.origin for squid in self.squids],
-                    avoid_distance=400e3
-                )
-
         for i, cpw_fl in enumerate(self.cpw_fl_lines):
             dy = 220e3
             bridge_center1 = cpw_fl.end + DVector(0, -dy)
@@ -1237,21 +1227,20 @@ class Design5QTest(ChipDesign):
             br.place(dest=self.region_bridges2, region_name="bridges_2")
 
         # for readout waveguide
-        bridgified_primitives_idxs = list(range(2))
-        bridgified_primitives_idxs += list(
-            range(2, 2 * (len(self.resonators) + 1) + 1, 2))
-        bridgified_primitives_idxs += list(range(
-            2 * (len(self.resonators) + 1) + 1,
-            len(self.cpwrl_ro_line.primitives.values())
+        avoid_resonator_points = []
+        for res in self.resonators:
+            avoid_resonator_points.append(
+                res.origin + DPoint(res.L_coupling/2, 0)
             )
-        )
+
         for idx, primitive in enumerate(
                 self.cpwrl_ro_line.primitives.values()):
-            if idx in bridgified_primitives_idxs:
-                Bridge1.bridgify_CPW(
-                    primitive, bridges_step,
-                    dest=self.region_bridges1, dest2=self.region_bridges2
-                )
+            Bridge1.bridgify_CPW(
+                primitive, bridges_step,
+                dest=self.region_bridges1, dest2=self.region_bridges2,
+                avoid_points=avoid_resonator_points,
+                avoid_distance=max(self.L_coupling_list)/2 + self.r
+            )
 
     def draw_pinning_holes(self):
         selection_region = Region(
