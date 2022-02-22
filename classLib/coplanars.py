@@ -564,6 +564,8 @@ class CPWRLPath(ComplexBase):
                     turn_radius * np.cos(prev_primitive_end_angle)
                 )
                 if self._cpw_parameters[i].smoothing:
+                    # smoothing between coplanars with different
+                    # CPWParameters values
                     if i > 0:
                         cpw1_params = self._cpw_parameters[i - 1]
                     else:
@@ -584,7 +586,7 @@ class CPWRLPath(ComplexBase):
                         trans_in=DCplxTrans(1, prev_primitive_end_angle
                                             * 180 / np.pi, False, 0, 0)
                     )
-                else:
+                else:  # draw constant width coplanar
                         cpw_arc = CPW2CPWArc(
                             origin=arc_center, r=turn_radius,
                             start_angle=-np.pi / 2,
@@ -598,7 +600,9 @@ class CPWRLPath(ComplexBase):
                 self.primitives["arc_" + str(idx_r)] = cpw_arc
                 idx_r += 1
             elif symbol == 'L':
-                # Turns are reducing segments' lengths so as if there were no roundings at all
+                # Turns are reducing segments' lengths so as if
+                # there were no roundings at all
+
                 # next 'R' segment if exists
                 if (i + 1 < self._N_elements
                         and self._shape_string[i + 1] == 'R'

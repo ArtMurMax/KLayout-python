@@ -729,7 +729,7 @@ class EMResonator_TL2Qbit_worm3_2_XmonFork(EMResonator_TL2Qbit_worm3_2):
         self.primitives["erased_fork_right_cpw_end"] = CPW(0, forkZ.b / 2, p1, p2)
 
 
-class EMResonatorTL3QbitWormRLTail(ComplexBase):
+class   EMResonatorTL3QbitWormRLTail(ComplexBase):
     """
     same as `EMResonator_TL3Qbit_worm3` but shorted and open ends are
     interchanged their places. In addition, width few primitives had been renamed.
