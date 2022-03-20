@@ -4,9 +4,9 @@ __version__ = "0.3.0.9"
 Changes log
 
 v.0.3.0.9
-1. Flux noise from terrible flux lines design leads to T1 times near
-100 ns. While flux and control lines are not bounded, T1 times increases
-to 10-15 us, and T2* to 2-4 us.
+1. While flux and control lines are not bounded, T1 times increases
+to 10-15 us, and T2* to 2-4 us. Such change is attributed to 
+flux noise from flux leads. Decision is to decrease mutual inductance in 5 times.
 2. Return to solution where DC flux line now goes through one of squid 
 loop's side. 
     Comparing to previous such iteration (v.3.0.3 and earlier), 
@@ -122,19 +122,6 @@ import copy
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
 FABRICATION.OVERETCHING = 0.6e3
-SQUID_PARAMETERS = AsymSquidOneLegParams(
-    pad_r=5e3, pads_distance=60e3,
-    contact_pad_width=10e3, contact_pad_ext_r=200,
-    sq_dy=15e3, sq_area=225e6,
-    j1_dx=114.551, j2_dx=398.086,
-    j1_dy=114.551, j2_dy=250,
-    bridge=180, b_ext=2e3,
-    inter_leads_width=500,
-    n=20,
-    flux_line_dx=50e3, flux_line_dy=25e3, flux_line_outer_width=2e3,
-    flux_line_inner_width=4e3,
-    flux_line_contact_width=4e3
-)
 
 
 class TestStructurePadsSquare(ComplexBase):
@@ -191,6 +178,325 @@ class TestStructurePadsSquare(ComplexBase):
         self.center = self.connections[0]
 
 
+class AsymSquid2Params:
+    def __init__(
+            self,
+            pads_d=20e3,
+            squid_dx=10e3,
+            squid_dy=5e3,
+            TC_dx=8e3,
+            BC_dx=8e3,
+            beta=0.5,
+            TCW_dx=2e3,
+            BCW_dx=8e3,
+            SQT_dy=500,
+            SQLTT_dx=None,
+            SQRTT_dx=None,
+            SQB_dy=4e3,
+            SQLBT_dx=None,
+            SQRBT_dx=None,
+            alpha=0.7,
+            shadow_gap=200,
+            TCB_dx=20e3,
+            TCB_dy=20e3,
+            BCB_dx=20e3,
+            BCB_dy=20e3,
+            band_el_tol=1e3,
+            band_ph_tol=2e3,
+            JJC=1e3,
+            SQLTJJ_dx=114.551,  # j1_dx
+            SQLBJJ_dy=114.551,  # j1_dy
+            SQLBJJ_dx=2e3,
+            SQRTJJ_dx=398.086,  # j2_dx
+            SQRBJJ_dy=250,      # j2_dy
+            SQRBJJ_dx=None,
+            bot_wire_x=-50e3,
+            SQRBT_dy=None
+    ):
+        """
+        For all undocumented pararmeters see corresponding PDF schematics.
+
+        Parameters
+        ----------
+        pads_d : float
+        squid_dx : float
+        squid_dy : float
+        TC_dx : float
+        BC_dx : float
+        beta : float
+            0 < beta < 1
+        TCW_dx : float
+        BCW_dx : float
+        SQT_dy : float
+        SQLTT_dx : Optional[float]
+        SQRTT_dx : Optional[float]
+        SQB_dy : Optional[float]
+        SQLBT_dx : Optional[float]
+        SQRBT_dx : Optional[float]
+        alpha : float
+            0 < alpha < 1
+        shadow_gap : float
+        TCB_dx : float
+        TCB_dy : float
+        BCB_dx : float
+        BCB_dy : float
+        band_el_tol : float
+        band_ph_tol : float
+        bot_wire_x : Union[float, List[float]]
+        """
+        self.pads_d = pads_d
+        self.squid_dx = squid_dx
+        self.squid_dy = squid_dy
+
+        self.bot_wire_x = bot_wire_x
+        # squid loop top side width
+        self.JJC = JJC
+        self.SQT_dy = SQT_dy
+
+        # squid loop left side width if not passed equals to top side width
+        self.SQLTT_dx = SQLTT_dx if SQLTT_dx is not None else SQT_dy
+        left_side_half = (squid_dy - shadow_gap) / 2
+        self.SQLTT_dy = alpha * left_side_half
+        self.SQRTT_dy = self.SQLTT_dy
+        # squid loop right top side width if not passed, equals to top
+        # side width
+        self.SQRTT_dx = SQRTT_dx if SQRTT_dx is not None else SQT_dy
+        # squid loop bottom left side width if not passed equals to top
+        # side width
+        self.SQLBT_dx = SQLBT_dx if SQLBT_dx is not None else SQT_dy
+        self.SQRBT_dx = SQRBT_dx if SQRBT_dx is not None else SQT_dy
+        self.SQB_dx = squid_dx + self.SQLBT_dx + self.SQRBT_dx
+        # squid loop bottom side width if not passed equals to top side
+        # width
+        self.SQB_dy = SQB_dy if SQB_dy is not None else SQT_dy
+        self.SQLBT_dy = left_side_half
+        self.SQRBT_dy = SQRBT_dy if SQRBT_dy is not None else self.SQLBT_dy
+
+        self.shadow_gap = shadow_gap
+
+        self.TC_dx = TC_dx
+        self.BC_dx = BC_dx
+        pads_top_left = (pads_d/2 - self.SQT_dy - squid_dy/2)
+        pads_bottom_left = (pads_d/2 - self.SQB_dy - squid_dy/2)
+        self.beta = beta
+        self.TC_dy = 2 * beta * pads_top_left
+        self.BC_dy = 2 * beta * pads_bottom_left
+        self.TCW_dx = TCW_dx
+        self.TCW_dy = (1 - beta) * pads_top_left
+        self.BCW_dy = (1 - beta) * pads_bottom_left
+        self.BCW_dx = BCW_dx
+
+        self.SQT_dx = self.squid_dx + self.SQLBT_dx/2 - self.JJC + \
+                      self.SQLTT_dx/2 + self.SQRBT_dx/2 - self.JJC + \
+                      self.SQRTT_dx/2
+
+        self.TCB_dx = TCB_dx
+        self.TCB_dy = TCB_dy
+
+        self.BCB_dx = BCB_dx
+        self.BCB_dy = BCB_dy
+
+        self.band_el_tol = band_el_tol
+        self.band_ph_tol = band_ph_tol
+
+        self.SQLTJJ_dx = SQLTJJ_dx
+        self.SQRTJJ_dx = SQRTJJ_dx if SQRTJJ_dx is not None else SQLTJJ_dx
+        self.SQLTJJ_dy = (1 - alpha) * left_side_half
+        self.SQRTJJ_dy = self.SQLTJJ_dy
+        self.SQLBJJ_dy = SQLBJJ_dy
+        self.SQLBJJ_dx = SQLBJJ_dx
+
+        ''' right side of the squid parameters '''
+        # RHS params, if not passed, equal to LHS params
+        self.SQRBJJ_dy = SQRBJJ_dy if SQRBJJ_dy is not None else SQLBJJ_dy
+        self.SQRBJJ_dx = SQRBJJ_dx if SQRBJJ_dx is not None else SQLBJJ_dx
+
+
+class AsymSquid2(ComplexBase):
+    def __init__(self, origin: DPoint, params: AsymSquid2Params,
+                 trans_in=None):
+        """
+
+        Parameters
+        ----------
+        origin : DPoint
+            where to put object's local coordinate system origin (after
+            trans_in is performed in local reference frame)
+        params : AsymSquid2Params
+            see `AsymSquid2Params` class description for parameters
+            details
+        trans_in : DCplxTrans
+            transformation to perform in object's reference frame
+        """
+        self.center=origin
+        self.squid_params = params
+        super().__init__(origin=origin, trans_in=trans_in)
+
+    def init_primitives(self):
+        # introducing shorthands for long-named variables
+        origin = DPoint(0, 0)
+        pars = self.squid_params
+
+        # (TC) Top contact polygon
+        tc_p1 = DPoint(0, pars.pads_d / 2 + pars.TC_dy / 2)
+        tc_p2 = DPoint(0, pars.pads_d / 2 - pars.TC_dy / 2)
+        self.TC = CPW(start=tc_p1, end=tc_p2, width=pars.TC_dx, gap=0)
+        self.primitives["TC"] = self.TC
+
+        # (TCW) Top contact wire
+        tcw_p1 = self.TC.end
+        tcw_p2 = tcw_p1 + DVector(0, -pars.TCW_dy)
+        self.TCW = CPW(start=tcw_p1, end=tcw_p2, width=pars.TCW_dx, gap=0)
+        self.primitives["TCW"] = self.TCW
+
+        # (SQT) squid loop top
+        sqt_p1 = origin + Vector(-pars.SQT_dx/2,
+                                 pars.squid_dy/2 + pars.SQT_dy/2)
+        sqt_p2 = sqt_p1 + DVector(pars.SQT_dx, 0)
+        self.SQT = CPW(start=sqt_p1, end=sqt_p2, width=pars.SQT_dy, gap=0)
+        self.primitives["SQT"] = self.SQT
+
+        # (SQLTT) squid loop left top thick
+        sqltt_p1 = self.SQT.start + DVector(
+            pars.SQLTT_dx / 2, -pars.SQT_dy/2
+        )
+        sqltt_p2 = sqltt_p1 + DVector(0, -pars.SQLTT_dy)
+        self.SQLTT = CPW(
+            start=sqltt_p1, end=sqltt_p2,
+            width=pars.SQLTT_dx, gap=0
+        )
+        self.primitives["SQLTT"] = self.SQLTT
+
+        # (SQLTJJ) squid loop left top JJ
+        sqltjj_p1 = self.SQLTT.end
+        sqltjj_p2 = sqltjj_p1 + DVector(0, -pars.SQLTJJ_dy)
+        self.SQLTJJ = CPW(start=sqltjj_p1, end=sqltjj_p2,
+                          width=pars.SQLTJJ_dx, gap=0)
+        self.primitives["SQLTJJ"] = self.SQLTJJ
+
+        # (SQB) squid bottom
+        sqb_p1 = origin + DVector(-pars.squid_dx / 2 - pars.SQLBT_dx,
+                                       -pars.squid_dy/2 - pars.SQB_dy/2)
+        sqb_p2 = sqb_p1 + DVector(pars.squid_dx + pars.SQLBT_dx +
+                                  pars.SQRBT_dx, 0)
+        self.SQB = CPW(start=sqb_p1, end=sqb_p2, width=pars.SQB_dy, gap=0)
+        self.primitives["SQB"] = self.SQB
+
+        # (SQLBT) squid left bottom thick
+        sqlbt_p1 = self.SQB.start + \
+                   DVector(pars.SQLBT_dx / 2, pars.SQB_dy / 2) + \
+                   DVector(0, pars.SQLBT_dy)
+        sqlbt_p2 = sqlbt_p1 + DVector(0, -pars.SQLBT_dy)
+        self.SQLBT = CPW(start=sqlbt_p1, end=sqlbt_p2, width=pars.SQLBT_dx,
+                         gap=0)
+        self.primitives["SQLBT"] = self.SQLBT
+
+        # (SQLBJJ) squid left botton JJ
+        if ((pars.SQLBT_dx / 2 + pars.SQLBJJ_dx + pars.SQLTJJ_dx) <
+                pars.JJC):
+            raise Warning("please, increase SQLBJJ_dy is too low")
+        sqlbjj_p1 = self.SQLBT.start + DVector(pars.SQLBT_dx / 2,
+                                             -pars.SQLBJJ_dy / 2)
+        sqlbjj_p2 = sqlbjj_p1 + DVector(pars.SQLBJJ_dx, 0)
+        self.SQLBJJ = CPW(start=sqlbjj_p1, end=sqlbjj_p2,
+                          width=pars.SQLBJJ_dy,
+                          gap=0)
+        self.primitives["SQLBJJ"] = self.SQLBJJ
+
+        # (SQRTT) squid loop right top thick
+        sqrtt_p1 = self.SQT.end + DVector(
+            -pars.SQRTT_dx / 2, -pars.SQT_dy/2
+        )
+        sqrtt_p2 = sqrtt_p1 + DVector(0, -pars.SQRTT_dy)
+        self.SQRTT = CPW(
+            start=sqrtt_p1, end=sqrtt_p2,
+            width=pars.SQRTT_dx, gap=0
+        )
+        self.primitives["SQRTT"] = self.SQRTT
+
+        # (SQRTJJ) squid loop right top JJ
+        sqrtjj_p1 = self.SQRTT.end
+        sqrtjj_p2 = sqrtjj_p1 + DVector(0, -pars.SQRTJJ_dy)
+        self.SQRTJJ = CPW(start=sqrtjj_p1, end=sqrtjj_p2,
+                          width=pars.SQRTJJ_dx, gap=0)
+        self.primitives["SQRTJJ"] = self.SQRTJJ
+
+        # (SQRBT) squid right bottom thick
+        sqrbt_p1 = self.SQB.end + \
+                   DVector(-pars.SQRBT_dx / 2, pars.SQB_dy / 2) + \
+                   DVector(0, pars.SQRBT_dy)
+        sqrbt_p2 = sqrbt_p1 + DVector(0, -pars.SQRBT_dy)
+        self.SQRBT = CPW(start=sqrbt_p1, end=sqrbt_p2,
+                         width=pars.SQRBT_dx, gap=0)
+        self.primitives["SQRBT"] = self.SQRBT
+
+        # (SQRBJJ) squid right botton JJ
+        if ((pars.SQRBT_dx / 2 + pars.SQRBJJ_dx + pars.SQRTJJ_dx) <
+                pars.JJC):
+            raise Warning("please, increase SQLBJJ_dy is too low")
+        sqrbjj_p1 = self.SQRBT.start + DVector(-pars.SQRBT_dx / 2,
+                                               -pars.SQRBJJ_dy / 2)
+        sqrbjj_p2 = sqrbjj_p1 + DVector(-pars.SQRBJJ_dx, 0)
+        self.SQRBJJ = CPW(start=sqrbjj_p1, end=sqrbjj_p2,
+                          width=pars.SQRBJJ_dy,
+                          gap=0)
+        self.primitives["SQRBJJ"] = self.SQRBJJ
+
+
+        ''' following code can enclude multiple bottom connections '''
+        if isinstance(pars.bot_wire_x, list):
+            pass
+        else:
+            pars.bot_wire_x = [pars.bot_wire_x]
+
+        for i, x in enumerate(pars.bot_wire_x):
+            # (BC) bottom contact polygon
+            bc_p1 = DPoint(x, -pars.pads_d / 2 + pars.BC_dy / 2)
+            bc_p2 = DPoint(x, -pars.pads_d / 2 - pars.BC_dy / 2)
+            name = "BC" + str(i)
+            setattr(
+                self,
+                name,
+                CPW(start=bc_p1, end=bc_p2, width=pars.BC_dx, gap=0)
+            )
+            self.primitives[name] = getattr(self, name)
+
+            # (BCW) Bottom contact wire
+            bcw_p1 = getattr(self, "BC"+str(i)).start + \
+                     DVector(0, pars.BCW_dy)
+            bcw_p2 = bcw_p1 + DVector(0, -pars.BCW_dy)
+            name = "BCW" + str(i)
+            setattr(
+                self,
+                name,
+                CPW(start=bcw_p1, end=bcw_p2, width=pars.BCW_dx, gap=0)
+            )
+            self.primitives[name] = getattr(self, name)
+
+            # (BCE) bottom contact extension
+            if x < (-pars.SQB_dx / 2+pars.BCW_dx/2):
+                bce_p1 = getattr(self, "BCW"+str(i)).start + \
+                         DVector(-pars.BCW_dx/2, pars.SQB_dy/2)
+                bce_p2 = self.SQB.start
+            elif x > (pars.SQB_dx /2 - pars.BCW_dx/2):
+                bce_p1 = getattr(self, "BCW" + str(i)).start + \
+                         DVector(pars.BCW_dx / 2, pars.SQB_dy / 2)
+                bce_p2 = self.SQB.end
+            else:
+                continue
+            name = "BCE" + str(i)
+            setattr(
+                self,
+                name,
+                CPW(start=bce_p1, end=bce_p2, width=pars.SQB_dy, gap=0)
+            )
+            self.primitives[name] = getattr(self, name)
+
+    def _refresh_named_connections(self):
+        self.center=self.origin
+
+SQUID_PARS = AsymSquid2Params()
+
 class Design5Q(ChipDesign):
     def __init__(self, cell_name):
         super().__init__(cell_name)
@@ -221,6 +527,7 @@ class Design5Q(ChipDesign):
         self.chip_box: pya.DBox = self.chip.box
         # Z = 50.09 E_eff = 6.235 (E = 11.45)
         self.z_md_fl: CPWParameters = CPWParameters(11e3, 5.7e3)
+        self.squid_pars = AsymSquid2Params()
         self.ro_Z: CPWParameters = self.chip.chip_Z
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
             [self.z_md_fl] * 10 + [self.ro_Z] * 2
@@ -283,8 +590,8 @@ class Design5Q(ChipDesign):
                 self.xmon_fork_gnd_gap + self.fork_metal_width)
 
         # squids
-        self.squids: List[AsymSquidOneLeg] = []
-        self.test_squids: List[AsymSquidOneLeg] = []
+        self.squids: List[AsymSquid2] = []
+        self.test_squids: List[AsymSquid2] = []
         # minimal distance between squid loop and photo layer
         self.squid_ph_clearance = 1.5e3
 
@@ -305,7 +612,9 @@ class Design5Q(ChipDesign):
         self.cont_lines_y_ref: float = None  # nm
 
         self.flLine_squidLeg_gap = 5e3
-        self.flux_lines_x_shifts: List[float] = [None] * len(self.L1_list)
+        self.flux_lines_x_shifts: List[float] = [
+            -(self.z_md_fl.b/4 + SQUID_PARS.TC_dx/2 + SQUID_PARS.band_el_tol)
+        ] * len(self.L1_list)
         self.current_line_width = 3.5e3 - 2 * FABRICATION.OVERETCHING
 
         self.md234_cross_bottom_dy = 55e3
@@ -368,9 +677,9 @@ class Design5Q(ChipDesign):
         self.draw_microwave_drvie_lines()
         self.draw_flux_control_lines()
 
-        self.draw_test_structures()
-        self.draw_el_dc_contacts()
-        self.draw_el_protection()
+        # self.draw_test_structures()
+        # self.draw_el_dc_contacts()
+        # self.draw_el_protection()
 
         # self.draw_photo_el_marks()
         # self.draw_bridges()
@@ -717,31 +1026,24 @@ class Design5Q(ChipDesign):
 
     def draw_josephson_loops(self):
         # place left squid
+        fl_line_shift = self.flux_lines_x_shifts[0]
+        pars = AsymSquid2Params(bot_wire_x=[-fl_line_shift, fl_line_shift])
         xmon0 = self.xmons[0]
         xmon0_xmon5_loop_shift = self.cross_len_x / 3
         center1 = DPoint(
             xmon0.cpw_l.end.x + xmon0_xmon5_loop_shift,
-            xmon0.center.y - xmon0.sideX_width / 2 - xmon0.sideX_gnd_gap +
-            SQUID_PARAMETERS.sq_dy / 2 +
-            SQUID_PARAMETERS.flux_line_inner_width / 2 +
-            self.squid_ph_clearance
+            xmon0.center.y - xmon0.sideX_width / 2 - xmon0.sideX_gnd_gap/2
         )
-        squid = AsymSquidOneLeg(center1, SQUID_PARAMETERS, 0, leg_side=-1)
+        squid = AsymSquid2(center1, pars)
         self.squids.append(squid)
         squid.place(self.region_el)
 
         # place intermediate squids
 
         for xmon_cross in self.xmons[1:-1]:
-            squid_center = xmon_cross.cpw_bempt.end
-            squid_center += DPoint(
-                0,
-                SQUID_PARAMETERS.sq_dy / 2 +
-                SQUID_PARAMETERS.flux_line_inner_width / 2 +
-                self.squid_ph_clearance
-            )
-            squid = AsymSquidOneLeg(squid_center, SQUID_PARAMETERS, 0,
-                                    leg_side=-1)
+            squid_center = (xmon_cross.cpw_bempt.end +
+                            xmon_cross.cpw_bempt.start)/2
+            squid = AsymSquid2(squid_center, pars)
             self.squids.append(squid)
             squid.place(self.region_el)
 
@@ -749,12 +1051,9 @@ class Design5Q(ChipDesign):
         xmon5 = self.xmons[4]
         center5 = DPoint(
             xmon5.cpw_r.end.x - xmon0_xmon5_loop_shift,
-            xmon5.center.y - xmon0.sideX_width / 2 - xmon0.sideX_gnd_gap +
-            SQUID_PARAMETERS.sq_dy / 2 +
-            SQUID_PARAMETERS.flux_line_inner_width / 2 +
-            self.squid_ph_clearance
+            xmon5.center.y - xmon5.sideX_width / 2 - xmon5.sideX_gnd_gap/2
         )
-        squid = AsymSquidOneLeg(center5, SQUID_PARAMETERS, 0, leg_side=-1)
+        squid = AsymSquid2(center5, pars)
         self.squids.append(squid)
         squid.place(self.region_el)
 
@@ -869,10 +1168,7 @@ class Design5Q(ChipDesign):
 
         # calculate flux line end horizontal shift from center of the
         # squid loop
-        self.flux_lines_x_shifts = [
-            -(squid.bot_inter_lead_dx / 2 + self.z_md_fl.b / 2) for squid
-            in
-            self.squids]
+        pars = AsymSquid2Params()
 
         # place caplanar line 1 fl
         _p1 = self.contact_pads[1].end
@@ -1009,79 +1305,8 @@ class Design5Q(ChipDesign):
     def draw_test_structures(self):
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
         def augment_with_bandage_test_contacts(test_struct: TestStructurePadsSquare,
-                                               test_jj: AsymSquidOneLeg = None):
-            if test_jj.leg_side == 1:
-                # DRAW FOR RIGHT LEG
-                clearance = 5e3
-                cb_left = CPW(
-                    width=test_struct.rectangles_gap - clearance,
-                    gap=0,
-                    start=DPoint(
-                        test_struct.top_rec.p1.x,
-                        test_struct.bot_rec.p2.y
-                        + test_struct.rectangles_gap / 2
-                    ),
-                    end=DPoint(
-                        test_jj.origin.x - test_jj.top_ph_el_conn_pad.width / 2,
-                        test_struct.bot_rec.p2.y +
-                        test_struct.rectangles_gap / 2
-                    )
-                )
-                cb_left.place(self.region_el)
-
-                # DRAW RIGHT ONE
-                clearance = 5e3
-                cb_right = CPW(
-                    width=test_struct1.rectangles_gap - clearance,
-                    gap=0,
-                    start=DPoint(
-                        test_struct.top_rec.p2.x,
-                        test_struct.bot_rec.p2.y
-                        + test_struct.rectangles_gap / 2
-                    ),
-                    end=DPoint(
-                        list(test_jj.bot_dc_flux_line_right.primitives.values())[1].end.x,
-                        test_struct.bot_rec.p2.y +
-                        test_struct.rectangles_gap / 2
-                    )
-                )
-                cb_right.place(self.region_el)
-            if test_jj.leg_side == -1:
-                # DRAW FOR RIGHT LEG
-                clearance = 5e3
-                cb_left = CPW(
-                    width=test_struct.rectangles_gap - clearance,
-                    gap=0,
-                    start=DPoint(
-                        test_struct.top_rec.p1.x,
-                        test_struct.bot_rec.p2.y
-                        + test_struct.rectangles_gap / 2
-                    ),
-                    end=DPoint(
-                        list(test_jj.bot_dc_flux_line_left.primitives.values())[1].end.x,
-                        test_struct.bot_rec.p2.y +
-                        test_struct.rectangles_gap / 2
-                    )
-                )
-                cb_left.place(self.region_el)
-
-                # DRAW RIGHT ONE
-                clearance = 5e3
-                cb_right = CPW(
-                    width=test_struct.rectangles_gap - clearance,
-                    gap=0,
-                    start=DPoint(
-                        test_struct.top_rec.p2.x,
-                        test_struct.bot_rec.p2.y
-                        + test_struct.rectangles_gap / 2
-                    ),
-                    end=DPoint(
-                        test_jj.origin.x + test_jj.top_ph_el_conn_pad.width / 2,
-                        test_struct.bot_rec.p2.y +
-                        test_struct.rectangles_gap / 2
-                    )
-                )
-                cb_right.place(self.region_el)
+                                               test_jj: AsymSquid2 = None):
+            pass
 
         struct_centers = [DPoint(1e6, 4e6), DPoint(8.7e6, 5.7e6),
                           DPoint(6.5e6, 2.7e6)]
@@ -1117,7 +1342,7 @@ class Design5Q(ChipDesign):
                 SQUID_PARAMETERS.flux_line_inner_width / 2 +
                 self.squid_ph_clearance
             )
-            test_jj = AsymSquidOneLeg(
+            test_jj = AsymSquid2(
                 squid_center, SQUID_PARAMETERS, side=1,
                 leg_side=1
             )
@@ -1148,7 +1373,7 @@ class Design5Q(ChipDesign):
                 SQUID_PARAMETERS.flux_line_inner_width / 2 +
                 self.squid_ph_clearance
             )
-            test_jj = AsymSquidOneLeg(
+            test_jj = AsymSquid2(
                 squid_center, SQUID_PARAMETERS, side=-1,
                 leg_side=-1
             )

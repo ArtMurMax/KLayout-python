@@ -279,6 +279,7 @@ class AsymSquid2(ComplexBase):
 
     def init_primitives(self):
         # introducing shorthands for long-named variables
+        origin = DPoint(0,0)
         pars = self.squid_params
 
         # (TC) Top contact polygon
@@ -318,7 +319,7 @@ class AsymSquid2(ComplexBase):
         self.primitives["SQLTJJ"] = self.SQLTJJ
 
         # (SQB) squid bottom
-        sqb_p1 = self.origin + DVector(-pars.squid_dx / 2 - pars.SQLBT_dx,
+        sqb_p1 = origin + DVector(-pars.squid_dx / 2 - pars.SQLBT_dx,
                                        -pars.squid_dy / 2 - pars.SQB_dy / 2)
         sqb_p2 = sqb_p1 + DVector(pars.squid_dx + pars.SQLBT_dx +
                                   pars.SQRBT_dx, 0)
