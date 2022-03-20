@@ -48,7 +48,7 @@ FABRICATION.OVERETCHING = 0.0e3  # nm
 SQUID_PARAMETERS = AsymSquidParams(
             pad_r=5e3, pads_distance=30e3,
             contact_pad_width=10e3, contact_pad_ext_r=200,
-            sq_len=15e3, sq_area=200e6,
+            sq_dy=15e3, sq_area=200e6,
             j_width_1=95, j_width_2=348,
             inter_leads_width=500, b_ext=1e3, j_length_1=94,
             n=20,

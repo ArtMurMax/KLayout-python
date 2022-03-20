@@ -876,7 +876,7 @@ class Design5Q(ChipDesign):
         new_pars_squid = AsymSquidParams(
             pad_r=5e3, pads_distance=30e3,
             p_ext_width=10e3, p_ext_r=200,
-            sq_len=15e3, sq_area=200e6,
+            sq_dy=15e3, sq_area=200e6,
             j_width_1=95, j_width_2=348,
             intermediate_width=500, b_ext=1e3, j_length=94, n=20,
             bridge=180, j_length_2=250
@@ -949,7 +949,7 @@ class Design5Q(ChipDesign):
         new_pars_squid = AsymSquidParams(
             pad_r=5e3, pads_distance=30e3,
             p_ext_width=10e3, p_ext_r=200,
-            sq_len=15e3, sq_area=200e6,
+            sq_dy=15e3, sq_area=200e6,
             j_width_1=94, j_width_2=347,
             intermediate_width=500, b_ext=1e3, j_length=94, n=20,
             bridge=180, j_length_2=250

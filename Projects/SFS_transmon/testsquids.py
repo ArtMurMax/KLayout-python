@@ -65,7 +65,7 @@ class SquidModel(ChipDesign):
         pads_distance = pars_probe['innergap'] + 3 * pad_side # The distance between triangle contact pads
         p_ext_width = 3e3 # The width of curved rectangle leads which connect triangle contact pads and junctions
         p_ext_r = 0.5e3 # The angle outer_r of the pad extension
-        sq_len = 7e3 # The length of the squid, along leads
+        sq_dy = 7e3 # The length of the squid, along leads
         sq_area = 15e6 # The total area of the squid
         j_width = 100 # The width of the upper small leads (straight) and also width width of the junction
         intermediate_width = 0.5e3 # The width of the lower small bended leads before bending
@@ -75,7 +75,7 @@ class SquidModel(ChipDesign):
         n = 7 # The number of angle in regular polygon which serves as width large contact pad
         bridge = 0.3e3 # The value of the gap between two parts of junction in the design
         pars_squid = AsymSquidParams(pad_side, pad_r, pads_distance, p_ext_width,
-                p_ext_r, sq_len, sq_area, j_width, intermediate_width,
+                p_ext_r, sq_dy, sq_area, j_width, intermediate_width,
                 b_ext, j_length_1, j_length_2, n,bridge)
         Test_Squid(DPoint(self.chip_x/2, self.chip_y/2), pars_probe, pars_squid).place(self.cell, self.layer_ph, self.layer_el)
 

@@ -1,13 +1,22 @@
-__version__ = "0.3.0.8"
+__version__ = "0.3.0.9"
 
 '''
 Changes log
+
+v.0.3.0.9
+1. Flux noise from terrible flux lines design leads to T1 times near
+100 ns. While flux and control lines are not bounded, T1 times increases
+to 10-15 us, and T2* to 2-4 us.
+2. Return to solution where DC flux line now goes through one of squid 
+loop's side. 
+    Comparing to previous such iteration (v.3.0.3 and earlier), 
+flux line width is increased to prevent approaching supercurrent regimes.
 
 v.0.3.0.8
 1. Fixed dx and dy for JJs (to comply with previous designs).
 2. Added resonators frequency approximation based on length and effective
 dielectric permitivity.
-3. SQUID construction is more rigid. Introducing `AsymSquidOneLegRigid` 
+3. SQUID construction is more rigid. Introducing `AsymSquidOneLeg` 
 class geometry.
 4. Resonators frequencies
 desired: 7.2 7.28 7.36 7.44 7.52 GHz
@@ -24,14 +33,17 @@ design file. Not at the sample itself.
 `self.cont_lines_y_ref` was changed for that purpose
 9. Bandage (dc contacts between squids and photolitography) code is 
 improved.
-10. `TestContactPadsSquare` now has distance between squiare pads equal to 
+10. `TestContactPadsSquare` now has distance between square pads equal to 
 `self.xmon[0].side_Y_gnd_gap`. Identical squids drawn on both pairs of 
-plains for `XmonCross` and `TestContactPadSquare`. So start keeping the 
-ground gap identical considered wise.
-11. JJ rectangles are formed by assuming additional fabrication extension along X and Y
+plains for `XmonCross` and `TestContactPadSquare`. Start keeping the 
+gap between SQUID terminals identical for working and testing structures 
+considered as improvement.
+11. JJ rectangles are formed by assuming additional fabrication extension 
+along X and Y
 directions:  40 and 70 along X for small junction
             80 and 90 along Y for big junction
-12. E-beam lytograpy is now overlapping photo litography at places of cut perimeter in photo region.
+12. E-beam litography is now overlapping photo litography at places of 
+cut perimeter in photo region.
 13. Contact pads for external communication are no longer filled with holes.
 14. Overetching is changed to be 0.6 um
 
@@ -93,7 +105,7 @@ from classLib.coplanars import CPWParameters, CPW, DPathCPW, \
     CPWRLPath, Bridge1
 from classLib.shapes import XmonCross, Rectangle, CutMark
 from classLib.resonators import EMResonatorTL3QbitWormRLTailXmonFork
-from classLib.josJ import AsymSquidOneLegParams, AsymSquidOneLegRigid
+from classLib.josJ import AsymSquidOneLegParams, AsymSquidOneLeg
 from classLib.chipTemplates import CHIP_10x10_12pads, FABRICATION
 from classLib.chipDesign import ChipDesign
 from classLib.marks import MarkBolgar
@@ -113,15 +125,15 @@ FABRICATION.OVERETCHING = 0.6e3
 SQUID_PARAMETERS = AsymSquidOneLegParams(
     pad_r=5e3, pads_distance=60e3,
     contact_pad_width=10e3, contact_pad_ext_r=200,
-    sq_len=5e3, sq_area=200e6,
+    sq_dy=15e3, sq_area=225e6,
     j1_dx=114.551, j2_dx=398.086,
     j1_dy=114.551, j2_dy=250,
     bridge=180, b_ext=2e3,
     inter_leads_width=500,
     n=20,
-    flux_line_dx=100e3, flux_line_dy=25e3, flux_line_outer_width=2e3,
-    flux_line_inner_width=370,
-    flux_line_contact_width=20e3
+    flux_line_dx=50e3, flux_line_dy=25e3, flux_line_outer_width=2e3,
+    flux_line_inner_width=4e3,
+    flux_line_contact_width=4e3
 )
 
 
@@ -271,8 +283,8 @@ class Design5Q(ChipDesign):
                 self.xmon_fork_gnd_gap + self.fork_metal_width)
 
         # squids
-        self.squids: List[AsymSquidOneLegRigid] = []
-        self.test_squids: List[AsymSquidOneLegRigid] = []
+        self.squids: List[AsymSquidOneLeg] = []
+        self.test_squids: List[AsymSquidOneLeg] = []
         # minimal distance between squid loop and photo layer
         self.squid_ph_clearance = 1.5e3
 
@@ -351,19 +363,19 @@ class Design5Q(ChipDesign):
         self.draw_readout_waveguide()
         self.draw_xmons_and_resonators()
 
-        # self.draw_josephson_loops()
-        #
-        # self.draw_microwave_drvie_lines()
-        # self.draw_flux_control_lines()
-        #
-        # self.draw_test_structures()
-        # self.draw_el_dc_contacts()
-        # self.draw_el_protection()
-        #
+        self.draw_josephson_loops()
+
+        self.draw_microwave_drvie_lines()
+        self.draw_flux_control_lines()
+
+        self.draw_test_structures()
+        self.draw_el_dc_contacts()
+        self.draw_el_protection()
+
         # self.draw_photo_el_marks()
         # self.draw_bridges()
         # self.draw_pinning_holes()
-        # v.0.3.0.8 p.12 - ensure that contact pads consist no wholes
+        # # v.0.3.0.8 p.12 - ensure that contact pads consist no wholes
         # for contact_pad in self.contact_pads:
         #     contact_pad.place(self.region_ph)
         # self.extend_photo_overetching()
@@ -709,12 +721,12 @@ class Design5Q(ChipDesign):
         xmon0_xmon5_loop_shift = self.cross_len_x / 3
         center1 = DPoint(
             xmon0.cpw_l.end.x + xmon0_xmon5_loop_shift,
-            xmon0.center.y - xmon0.sideX_width/2 - xmon0.sideX_gnd_gap +
-            SQUID_PARAMETERS.sq_len/2 +
-            SQUID_PARAMETERS.flux_line_inner_width/2 +
+            xmon0.center.y - xmon0.sideX_width / 2 - xmon0.sideX_gnd_gap +
+            SQUID_PARAMETERS.sq_dy / 2 +
+            SQUID_PARAMETERS.flux_line_inner_width / 2 +
             self.squid_ph_clearance
         )
-        squid = AsymSquidOneLegRigid(center1, SQUID_PARAMETERS, 0, leg_side=-1)
+        squid = AsymSquidOneLeg(center1, SQUID_PARAMETERS, 0, leg_side=-1)
         self.squids.append(squid)
         squid.place(self.region_el)
 
@@ -724,11 +736,11 @@ class Design5Q(ChipDesign):
             squid_center = xmon_cross.cpw_bempt.end
             squid_center += DPoint(
                 0,
-                SQUID_PARAMETERS.sq_len/2 +
-                SQUID_PARAMETERS.flux_line_inner_width/2 +
+                SQUID_PARAMETERS.sq_dy / 2 +
+                SQUID_PARAMETERS.flux_line_inner_width / 2 +
                 self.squid_ph_clearance
             )
-            squid = AsymSquidOneLegRigid(squid_center, SQUID_PARAMETERS, 0,
+            squid = AsymSquidOneLeg(squid_center, SQUID_PARAMETERS, 0,
                                     leg_side=-1)
             self.squids.append(squid)
             squid.place(self.region_el)
@@ -738,11 +750,11 @@ class Design5Q(ChipDesign):
         center5 = DPoint(
             xmon5.cpw_r.end.x - xmon0_xmon5_loop_shift,
             xmon5.center.y - xmon0.sideX_width / 2 - xmon0.sideX_gnd_gap +
-            SQUID_PARAMETERS.sq_len / 2 +
+            SQUID_PARAMETERS.sq_dy / 2 +
             SQUID_PARAMETERS.flux_line_inner_width / 2 +
             self.squid_ph_clearance
         )
-        squid = AsymSquidOneLegRigid(center5, SQUID_PARAMETERS, 0, leg_side=-1)
+        squid = AsymSquidOneLeg(center5, SQUID_PARAMETERS, 0, leg_side=-1)
         self.squids.append(squid)
         squid.place(self.region_el)
 
@@ -882,35 +894,35 @@ class Design5Q(ChipDesign):
         self.cpwrl_fl1.place(tmp_reg)
         self.cpw_fl_lines.append(self.cpwrl_fl1)
 
-        def draw_inductor_for_fl_line(design, fl_line_idx):
-            cpwrl_fl = self.cpw_fl_lines[fl_line_idx]
-            cpwrl_fl_inductor_start = cpwrl_fl.end + \
-                                      DVector(0,
-                                              -design.current_line_width / 2)
-            cpwrl_fl_inductor = CPW(
-                cpw_params=CPWParameters(
-                    width=design.current_line_width, gap=0
-                ),
-                start=cpwrl_fl_inductor_start,
-                end=
-                cpwrl_fl_inductor_start + DVector(
-                    2 * abs(design.flux_lines_x_shifts[fl_line_idx]), 0
-                )
-            )
-            cpwrl_fl_inductor.place(design.region_ph)
-            cpwrl_fl_inductor_empty_box = Rectangle(
-                origin=cpwrl_fl.end +
-                       DVector(
-                           0,
-                           -design.current_line_width - 2 * design.z_md_fl.gap
-                       ),
-                width=cpwrl_fl_inductor.dr.abs(),
-                height=2 * design.z_md_fl.gap,
-                inverse=True
-            )
-            cpwrl_fl_inductor_empty_box.place(design.region_ph)
+        # def draw_inductor_for_fl_line(design, fl_line_idx):
+        #     cpwrl_fl = self.cpw_fl_lines[fl_line_idx]
+        #     cpwrl_fl_inductor_start = cpwrl_fl.end + \
+        #                               DVector(0,
+        #                                       -design.current_line_width / 2)
+        #     cpwrl_fl_inductor = CPW(
+        #         cpw_params=CPWParameters(
+        #             width=design.current_line_width, gap=0
+        #         ),
+        #         start=cpwrl_fl_inductor_start,
+        #         end=
+        #         cpwrl_fl_inductor_start + DVector(
+        #             2 * abs(design.flux_lines_x_shifts[fl_line_idx]), 0
+        #         )
+        #     )
+        #     cpwrl_fl_inductor.place(design.region_ph)
+        #     cpwrl_fl_inductor_empty_box = Rectangle(
+        #         origin=cpwrl_fl.end +
+        #                DVector(
+        #                    0,
+        #                    -design.current_line_width - 2 * design.z_md_fl.gap
+        #                ),
+        #         width=cpwrl_fl_inductor.dr.abs(),
+        #         height=2 * design.z_md_fl.gap,
+        #         inverse=True
+        #     )
+        #     cpwrl_fl_inductor_empty_box.place(design.region_ph)
 
-        draw_inductor_for_fl_line(self, 0)
+        # draw_inductor_for_fl_line(self, 0)
 
         # place caplanar line 2 fl
         _p1 = self.contact_pads[2].end
@@ -930,7 +942,7 @@ class Design5Q(ChipDesign):
         )
         self.cpwrl_fl2.place(tmp_reg)
         self.cpw_fl_lines.append(self.cpwrl_fl2)
-        draw_inductor_for_fl_line(self, 1)
+        # draw_inductor_for_fl_line(self, 1)
 
         # place caplanar line 3 fl
         _p1 = self.contact_pads[4].end
@@ -951,7 +963,7 @@ class Design5Q(ChipDesign):
         )
         self.cpwrl_fl3.place(tmp_reg)
         self.cpw_fl_lines.append(self.cpwrl_fl3)
-        draw_inductor_for_fl_line(self, 2)
+        # draw_inductor_for_fl_line(self, 2)
 
         # place caplanar line 4 fl
         _p1 = self.contact_pads[6].end
@@ -971,7 +983,7 @@ class Design5Q(ChipDesign):
         )
         self.cpwrl_fl4.place(tmp_reg)
         self.cpw_fl_lines.append(self.cpwrl_fl4)
-        draw_inductor_for_fl_line(self, 3)
+        # draw_inductor_for_fl_line(self, 3)
 
         # place caplanar line 5 fl
         _p1 = self.contact_pads[8].end
@@ -992,12 +1004,12 @@ class Design5Q(ChipDesign):
         )
         self.cpwrl_fl5.place(tmp_reg)
         self.cpw_fl_lines.append(self.cpwrl_fl5)
-        draw_inductor_for_fl_line(self, 4)
+        # draw_inductor_for_fl_line(self, 4)
 
     def draw_test_structures(self):
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
         def augment_with_bandage_test_contacts(test_struct: TestStructurePadsSquare,
-                                               test_jj: AsymSquidOneLegRigid = None):
+                                               test_jj: AsymSquidOneLeg = None):
             if test_jj.leg_side == 1:
                 # DRAW FOR RIGHT LEG
                 clearance = 5e3
@@ -1101,11 +1113,11 @@ class Design5Q(ChipDesign):
                                   )
             squid_center += DPoint(
                 0,
-                SQUID_PARAMETERS.sq_len/2 +
-                SQUID_PARAMETERS.flux_line_inner_width/2 +
+                SQUID_PARAMETERS.sq_dy / 2 +
+                SQUID_PARAMETERS.flux_line_inner_width / 2 +
                 self.squid_ph_clearance
             )
-            test_jj = AsymSquidOneLegRigid(
+            test_jj = AsymSquidOneLeg(
                 squid_center, SQUID_PARAMETERS, side=1,
                 leg_side=1
             )
@@ -1132,11 +1144,11 @@ class Design5Q(ChipDesign):
                                   )
             squid_center += DPoint(
                 0,
-                SQUID_PARAMETERS.sq_len / 2 +
+                SQUID_PARAMETERS.sq_dy / 2 +
                 SQUID_PARAMETERS.flux_line_inner_width / 2 +
                 self.squid_ph_clearance
             )
-            test_jj = AsymSquidOneLegRigid(
+            test_jj = AsymSquidOneLeg(
                 squid_center, SQUID_PARAMETERS, side=-1,
                 leg_side=-1
             )
@@ -1259,7 +1271,7 @@ class Design5Q(ChipDesign):
                 hwidth = squid.top_ph_el_conn_pad.width/2 + self.dc_cont_el_clearance
                 fix_box = DBox(
                     squid.origin + DPoint(-hwidth, 0),
-                    squid.origin + DPoint(hwidth, squid.params.sq_len/2 - squid.params.inter_leads_width/2)
+                    squid.origin + DPoint(hwidth, squid.params.sq_dy / 2 - squid.params.inter_leads_width / 2)
                 )
                 self.region_el -= Region(fix_box)
 
@@ -1449,14 +1461,16 @@ def simulate_resonators_f_and_Q():
     freqs_span_corase = 0.5  # GHz
     corase_only = False
     freqs_span_fine = 0.050
-    dl_list = [0, 15e3, -15e3]
-    # dl_list = [0e3]
+    # dl_list = [0, 15e3, -15e3]
+    dl_list = [0e3]
     from itertools import product
 
     for dl, resonator_idx in list(product(
             dl_list,
             range(5)
     )):
+        if resonator_idx > 0:
+            continue
         fine_resonance_success = False
         freqs_span = freqs_span_corase
 
@@ -1496,7 +1510,7 @@ def simulate_resonators_f_and_Q():
         # print(arr)
         # print(resolution_dy)
         # resolution_dy = 8e3
-        resolution_dx = 2e3
+        resolution_dx = 4e3
 
         # cut part of the ground plane due to rectangular mesh in Sonnet
         crop_box.bottom = crop_box.bottom - int(crop_box.height()%resolution_dy)

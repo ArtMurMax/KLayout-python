@@ -33,7 +33,7 @@ from classLib import ElementBase
 SQUID_PARAMETERS = AsymSquidDCFluxParams(
     pad_r=5e3, pads_distance=30e3,
     contact_pad_width=10e3, contact_pad_ext_r=200,
-    sq_len=15e3, sq_area=200e6,
+    sq_dy=15e3, sq_area=200e6,
     j1_dx=95, j2_dx=348,
     inter_leads_width=500, b_ext=2e3, j1_dy=94, n=20,
     bridge=180, j2_dy=250,

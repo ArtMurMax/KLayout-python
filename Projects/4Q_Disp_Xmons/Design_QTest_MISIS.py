@@ -58,7 +58,7 @@ from classLib.coplanars import CPWParameters, CPW, DPathCPW, \
     CPWRLPath, Bridge1
 from classLib.shapes import XmonCross, Rectangle, CutMark
 from classLib.resonators import EMResonatorTL3QbitWormRLTailXmonFork
-from classLib.josJ import AsymSquidOneLegParams, AsymSquidOneLegRigid
+from classLib.josJ import AsymSquidOneLegParams, AsymSquidOneLeg
 from classLib.chipTemplates import CHIP_10x5_8pads, FABRICATION
 from classLib.chipDesign import ChipDesign
 from classLib.marks import MarkBolgar
@@ -79,7 +79,7 @@ FABRICATION.OVERETCHING = 0.6e3
 SQUID_PARAMETERS = AsymSquidOneLegParams(
     pad_r=5e3, pads_distance=60e3,
     contact_pad_width=10e3, contact_pad_ext_r=200,
-    sq_len=5e3, sq_area=200e6,
+    sq_dy=5e3, sq_area=200e6,
     j1_dx=114.551, j2_dx=398.086,
     j1_dy=114.551, j2_dy=250,
     bridge=180, b_ext=2e3,
@@ -262,8 +262,8 @@ class Design5QTest(ChipDesign):
                 self.xmon_fork_gnd_gap + self.fork_metal_width)
 
         # squids
-        self.squids: List[AsymSquidOneLegRigid] = []
-        self.test_squids: List[AsymSquidOneLegRigid] = []
+        self.squids: List[AsymSquidOneLeg] = []
+        self.test_squids: List[AsymSquidOneLeg] = []
         # minimal distance between squid loop and photo layer
         self.squid_ph_clearance = 1.5e3
 
@@ -697,7 +697,7 @@ class Design5QTest(ChipDesign):
                 squid_center = xmon_cross.cpw_tempt.end
                 squid_center += DPoint(
                     0,
-                    -(SQUID_PARAMETERS.sq_len / 2 +
+                    -(SQUID_PARAMETERS.sq_dy / 2 +
                       SQUID_PARAMETERS.flux_line_inner_width / 2 +
                       self.squid_ph_clearance)
                 )
@@ -706,13 +706,13 @@ class Design5QTest(ChipDesign):
                 squid_center = xmon_cross.cpw_bempt.end
                 squid_center += DPoint(
                     0,
-                    SQUID_PARAMETERS.sq_len / 2 +
+                    SQUID_PARAMETERS.sq_dy / 2 +
                     SQUID_PARAMETERS.flux_line_inner_width / 2 +
                     self.squid_ph_clearance
                 )
                 trans = DTrans.R0
-            squid = AsymSquidOneLegRigid(squid_center, SQUID_PARAMETERS, 0,
-                                         leg_side=-1, trans_in=trans)
+            squid = AsymSquidOneLeg(squid_center, SQUID_PARAMETERS, 0,
+                                    leg_side=-1, trans_in=trans)
             self.squids.append(squid)
             squid.place(self.region_el)
 
@@ -876,7 +876,7 @@ class Design5QTest(ChipDesign):
     def draw_test_structures(self):
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
         def augment_with_bandage_test_contacts(test_struct: TestStructurePadsSquare,
-                                               test_jj: AsymSquidOneLegRigid = None):
+                                               test_jj: AsymSquidOneLeg = None):
             if test_jj.leg_side == 1:
                 # DRAW FOR RIGHT LEG
                 clearance = 5e3
@@ -980,11 +980,11 @@ class Design5QTest(ChipDesign):
                                   )
             squid_center += DPoint(
                 0,
-                SQUID_PARAMETERS.sq_len / 2 +
+                SQUID_PARAMETERS.sq_dy / 2 +
                 SQUID_PARAMETERS.flux_line_inner_width / 2 +
                 self.squid_ph_clearance
             )
-            test_jj = AsymSquidOneLegRigid(
+            test_jj = AsymSquidOneLeg(
                 squid_center, SQUID_PARAMETERS, side=1,
                 leg_side=1
             )
@@ -1011,11 +1011,11 @@ class Design5QTest(ChipDesign):
                                   )
             squid_center += DPoint(
                 0,
-                SQUID_PARAMETERS.sq_len / 2 +
+                SQUID_PARAMETERS.sq_dy / 2 +
                 SQUID_PARAMETERS.flux_line_inner_width / 2 +
                 self.squid_ph_clearance
             )
-            test_jj = AsymSquidOneLegRigid(
+            test_jj = AsymSquidOneLeg(
                 squid_center, SQUID_PARAMETERS, side=-1,
                 leg_side=-1
             )
@@ -1137,7 +1137,7 @@ class Design5QTest(ChipDesign):
                 hwidth = squid.top_ph_el_conn_pad.width / 2 + self.dc_cont_el_clearance
                 fix_box = DBox(
                     squid.origin + DPoint(-hwidth, 0),
-                    squid.origin + DPoint(hwidth, squid.params.sq_len / 2 - squid.params.inter_leads_width / 2)
+                    squid.origin + DPoint(hwidth, squid.params.sq_dy / 2 - squid.params.inter_leads_width / 2)
                 )
                 self.region_el -= Region(fix_box)
 
