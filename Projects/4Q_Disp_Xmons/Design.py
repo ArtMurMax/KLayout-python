@@ -214,7 +214,7 @@ class AsymSquid2Params:
             SQRTJJ_dx=398.086,  # j2_dx
             SQRBJJ_dy=250,      # j2_dy
             SQRBJJ_dx=None,
-            bot_wire_x=-50e3,
+            bot_wire_x=0,
             SQRBT_dy=None
     ):
         """
@@ -502,6 +502,7 @@ class AsymSquid2(ComplexBase):
 
 SQUID_PARS = AsymSquid2Params()
 
+
 class Design5Q(ChipDesign):
     def __init__(self, cell_name):
         super().__init__(cell_name)
@@ -684,7 +685,7 @@ class Design5Q(ChipDesign):
         self.draw_microwave_drvie_lines()
         self.draw_flux_control_lines()
 
-        # self.draw_test_structures()
+        self.draw_test_structures()
         # self.draw_el_dc_contacts()
         # self.draw_el_protection()
 
@@ -1039,7 +1040,8 @@ class Design5Q(ChipDesign):
         xmon0_xmon5_loop_shift = self.cross_len_x / 3
         center1 = DPoint(
             xmon0.cpw_l.end.x + xmon0_xmon5_loop_shift,
-            xmon0.center.y - xmon0.sideX_width / 2 - xmon0.sideX_gnd_gap/2
+            xmon0.center.y - xmon0.sideX_width / 2 -
+            xmon0.sideX_gnd_gap/2
         )
         squid = AsymSquid2(center1, pars_local)
         self.squids.append(squid)
@@ -1295,12 +1297,48 @@ class Design5Q(ChipDesign):
         self.cpw_fl_lines.append(self.cpwrl_fl5)
         draw_inductor_for_fl_line(self, 4)
 
+
+    def _augment_with_bandage_test_contacts(
+            self, test_jj: AsymSquid2 = None
+    ):
+        # top bandage
+        self.bandage_width = 5e3
+        self.bandage_height = 10e3
+
+        top_bandage_reg = Region()
+        rectangle_lb = test_jj.TC.start + \
+                       DVector(
+                           -self.bandage_width/2,
+                           -self.bandage_height/2
+                       )
+        Rectangle(
+            origin=rectangle_lb,
+            width=self.bandage_width,
+            height=self.bandage_height
+        ).place(top_bandage_reg)
+        top_bandage_reg.round_corners(2e3, 2e3, 40)
+        self.dc_bandage_reg += top_bandage_reg
+
+        # bottom contacts
+        for name, primitive in test_jj.primitives.items():
+            if "BC" in name:  # bottom contact
+                bottom_contact = primitive
+                bot_bandage_reg = Region()
+                rectangle_lb = bottom_contact.end + \
+                               DVector(
+                                   -self.bandage_width / 2,
+                                   self.bandage_height / 2
+                               )
+                Rectangle(
+                    origin=rectangle_lb,
+                    width=self.bandage_width,
+                    height=self.bandage_height
+                ).place(bot_bandage_reg)
+                bot_bandage_reg.round_corners(2e3, 2e3, 40)
+                self.dc_bandage_reg += bot_bandage_reg
+
     def draw_test_structures(self):
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
-        def augment_with_bandage_test_contacts(test_struct: TestStructurePadsSquare,
-                                               test_jj: AsymSquid2 = None):
-            pass
-
         struct_centers = [DPoint(1e6, 4e6), DPoint(8.7e6, 5.7e6),
                           DPoint(6.5e6, 2.7e6)]
         self.test_squids_pads = []
@@ -1316,77 +1354,67 @@ class Design5Q(ChipDesign):
             )
             self.test_squids_pads.append(test_struct1)
             test_struct1.place(self.region_ph)
+
+
             text_reg = pya.TextGenerator.default_generator().text(
-                "48.32 nA", 0.001, 50, False, 0, 0)
-            text_bl = test_struct1.empty_rectangle.origin + DPoint(
-                test_struct1.gnd_gap, -4 * test_struct1.gnd_gap
-            )
+                "56 nA", 0.001, 25, False, 0, 0)
+            text_bl = test_struct1.empty_rectangle.p1 - DVector(0, 20e3)
             text_reg.transform(
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
 
             # DRAW TEST SQUID
-            squid_center = DPoint(test_struct1.center.x,
-                                  test_struct1.bot_rec.p2.y
-                                  )
-            squid_center += DPoint(
-                0,
-                SQUID_PARAMETERS.sq_dy / 2 +
-                SQUID_PARAMETERS.flux_line_inner_width / 2 +
-                self.squid_ph_clearance
-            )
+            squid_center = test_struct1.center
             test_jj = AsymSquid2(
-                squid_center, SQUID_PARAMETERS, side=1,
-                leg_side=1
+                squid_center,
+                AsymSquid2Params(
+                    SQRBT_dx=0,
+                    SQRBJJ_dy=0,
+                    bot_wire_x=-SQUID_PARS.SQB_dx/2 +
+                               SQUID_PARS.SQLBT_dx/2
+                )
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
-            augment_with_bandage_test_contacts(test_struct1, test_jj)
+            self._augment_with_bandage_test_contacts(test_jj)
 
             # test structure with low critical current
             test_struct2 = TestStructurePadsSquare(
                 struct_center + DPoint(0.3e6, 0))
             self.test_squids_pads.append(test_struct2)
             test_struct2.place(self.region_ph)
+
             text_reg = pya.TextGenerator.default_generator().text(
-                "9.66 nA", 0.001, 50, False, 0, 0)
-            text_bl = test_struct2.empty_rectangle.origin + DPoint(
-                test_struct2.gnd_gap, -4 * test_struct2.gnd_gap
-            )
+                "11 nA", 0.001, 25, False, 0, 0)
+            text_bl = test_struct2.empty_rectangle.p1 - DVector(0, 20e3)
             text_reg.transform(
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
 
-            squid_center = DPoint(test_struct2.center.x,
-                                  test_struct2.bot_rec.p2.y
-                                  )
-            squid_center += DPoint(
-                0,
-                SQUID_PARAMETERS.sq_dy / 2 +
-                SQUID_PARAMETERS.flux_line_inner_width / 2 +
-                self.squid_ph_clearance
-            )
+            squid_center = test_struct2.center
             test_jj = AsymSquid2(
-                squid_center, SQUID_PARAMETERS, side=-1,
-                leg_side=-1
+                squid_center,
+                AsymSquid2Params(
+                    SQLBT_dx=0,
+                    SQLBJJ_dy=0,
+                    bot_wire_x=SQUID_PARS.SQB_dx/2 -
+                               SQUID_PARS.SQLBT_dx/2
+                )
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
-            augment_with_bandage_test_contacts(test_struct2, test_jj)
-
+            self._augment_with_bandage_test_contacts(test_jj)
 
             # test structure for bridge DC contact
             test_struct3 = TestStructurePadsSquare(
                 struct_center + DPoint(0.6e6, 0))
             test_struct3.place(self.region_ph)
             text_reg = pya.TextGenerator.default_generator().text(
-                "DC", 0.001, 50, False, 0, 0
+                "DC", 0.001, 25, False, 0, 0
             )
-            text_bl = test_struct3.empty_rectangle.origin + DPoint(
-                test_struct3.gnd_gap, -4 * test_struct3.gnd_gap
-            )
+            text_bl = test_struct3.empty_rectangle.p1 - DVector(0, 20e3)
             text_reg.transform(
-                ICplxTrans(1.0, 0, False, test_struct3.center.x, text_bl.y)
+                ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y)
             )
             self.region_ph -= text_reg
 
