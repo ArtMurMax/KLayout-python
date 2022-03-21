@@ -185,21 +185,25 @@ class AsymSquid2Params:
             squid_dx=10e3,
             squid_dy=5e3,
             TC_dx=8e3,
-            BC_dx=8e3,
+            TC_dy=10e3,
+            BC_dx=5e3,
+            BC_dy=5e3,
             beta=0.5,
-            TCW_dx=2e3,
-            BCW_dx=8e3,
+            TCW_dx=1e3,
+            TCW_dy=4.5e3,
+            BCW_dx=1e3,
+            BCW_dy=6e3,
             SQT_dy=500,
             SQLTT_dx=None,
             SQRTT_dx=None,
-            SQB_dy=4e3,
+            SQB_dy=0,
             SQLBT_dx=None,
             SQRBT_dx=None,
             alpha=0.7,
             shadow_gap=200,
-            TCB_dx=20e3,
-            TCB_dy=20e3,
-            BCB_dx=20e3,
+            TCB_dx=2e3,
+            TCB_dy=8e3,
+            BCB_dx=5e3,
             BCB_dy=20e3,
             band_el_tol=1e3,
             band_ph_tol=2e3,
@@ -279,11 +283,11 @@ class AsymSquid2Params:
         pads_top_left = (pads_d/2 - self.SQT_dy - squid_dy/2)
         pads_bottom_left = (pads_d/2 - self.SQB_dy - squid_dy/2)
         self.beta = beta
-        self.TC_dy = 2 * beta * pads_top_left
-        self.BC_dy = 2 * beta * pads_bottom_left
+        self.TC_dy = TC_dy
+        self.BC_dy = BC_dy
         self.TCW_dx = TCW_dx
-        self.TCW_dy = (1 - beta) * pads_top_left
-        self.BCW_dy = (1 - beta) * pads_bottom_left
+        self.TCW_dy = TCW_dy
+        self.BCW_dy = BCW_dy
         self.BCW_dx = BCW_dx
 
         self.SQT_dx = self.squid_dx + self.SQLBT_dx/2 - self.JJC + \
@@ -338,8 +342,9 @@ class AsymSquid2(ComplexBase):
         pars = self.squid_params
 
         # (TC) Top contact polygon
-        tc_p1 = DPoint(0, pars.pads_d / 2 + pars.TC_dy / 2)
-        tc_p2 = DPoint(0, pars.pads_d / 2 - pars.TC_dy / 2)
+        tc_p1 = DPoint(0, pars.squid_dy/2 + pars.SQT_dy + pars.TCW_dy +
+                       pars.TC_dy)
+        tc_p2 = tc_p1 + DVector(0, -pars.TC_dy)
         self.TC = CPW(start=tc_p1, end=tc_p2, width=pars.TC_dx, gap=0)
         self.primitives["TC"] = self.TC
 
@@ -451,8 +456,8 @@ class AsymSquid2(ComplexBase):
 
         for i, x in enumerate(pars.bot_wire_x):
             # (BC) bottom contact polygon
-            bc_p1 = DPoint(x, -pars.pads_d / 2 + pars.BC_dy / 2)
-            bc_p2 = DPoint(x, -pars.pads_d / 2 - pars.BC_dy / 2)
+            bc_p1 = DPoint(x, -pars.squid_dy / 2 - pars.BCW_dy)
+            bc_p2 = bc_p1 + DVector(0, -pars.BC_dy)
             name = "BC" + str(i)
             setattr(
                 self,
@@ -584,6 +589,7 @@ class Design5Q(ChipDesign):
         self.cross_len_y = 155e3
         self.cross_width_y = 60e3
         self.cross_gnd_gap_y = 20e3
+        self.squid_DC_width = 4e3
 
         # fork at the end of resonator parameters
         self.fork_x_span = self.cross_width_y + 2 * (
@@ -613,7 +619,8 @@ class Design5Q(ChipDesign):
 
         self.flLine_squidLeg_gap = 5e3
         self.flux_lines_x_shifts: List[float] = [
-            -(self.z_md_fl.b/4 + SQUID_PARS.TC_dx/2 + SQUID_PARS.band_el_tol)
+            -(SQUID_PARS.squid_dx/2 + SQUID_PARS.SQLBT_dx/2 +
+              self.z_md_fl.width/2 - SQUID_PARS.BC_dx/2)
         ] * len(self.L1_list)
         self.current_line_width = 3.5e3 - 2 * FABRICATION.OVERETCHING
 
@@ -1026,15 +1033,15 @@ class Design5Q(ChipDesign):
 
     def draw_josephson_loops(self):
         # place left squid
-        fl_line_shift = self.flux_lines_x_shifts[0]
-        pars = AsymSquid2Params(bot_wire_x=[-fl_line_shift, fl_line_shift])
+        dx = SQUID_PARS.SQB_dx/2 - SQUID_PARS.SQLBT_dx/2
+        pars_local = AsymSquid2Params(bot_wire_x=[-dx, dx], SQB_dy=0)
         xmon0 = self.xmons[0]
         xmon0_xmon5_loop_shift = self.cross_len_x / 3
         center1 = DPoint(
             xmon0.cpw_l.end.x + xmon0_xmon5_loop_shift,
             xmon0.center.y - xmon0.sideX_width / 2 - xmon0.sideX_gnd_gap/2
         )
-        squid = AsymSquid2(center1, pars)
+        squid = AsymSquid2(center1, pars_local)
         self.squids.append(squid)
         squid.place(self.region_el)
 
@@ -1043,7 +1050,7 @@ class Design5Q(ChipDesign):
         for xmon_cross in self.xmons[1:-1]:
             squid_center = (xmon_cross.cpw_bempt.end +
                             xmon_cross.cpw_bempt.start)/2
-            squid = AsymSquid2(squid_center, pars)
+            squid = AsymSquid2(squid_center, pars_local)
             self.squids.append(squid)
             squid.place(self.region_el)
 
@@ -1053,9 +1060,12 @@ class Design5Q(ChipDesign):
             xmon5.cpw_r.end.x - xmon0_xmon5_loop_shift,
             xmon5.center.y - xmon5.sideX_width / 2 - xmon5.sideX_gnd_gap/2
         )
-        squid = AsymSquid2(center5, pars)
+        squid = AsymSquid2(center5, pars_local)
         self.squids.append(squid)
         squid.place(self.region_el)
+
+        self.region_el.merge()
+        self.region_el.round_corners(0.5e3, 0.5e3, 40)
 
     def draw_microwave_drvie_lines(self):
         self.cont_lines_y_ref = self.xmons[0].cpw_bempt.end.y - 300e3
@@ -1190,35 +1200,18 @@ class Design5Q(ChipDesign):
         self.cpwrl_fl1.place(tmp_reg)
         self.cpw_fl_lines.append(self.cpwrl_fl1)
 
-        # def draw_inductor_for_fl_line(design, fl_line_idx):
-        #     cpwrl_fl = self.cpw_fl_lines[fl_line_idx]
-        #     cpwrl_fl_inductor_start = cpwrl_fl.end + \
-        #                               DVector(0,
-        #                                       -design.current_line_width / 2)
-        #     cpwrl_fl_inductor = CPW(
-        #         cpw_params=CPWParameters(
-        #             width=design.current_line_width, gap=0
-        #         ),
-        #         start=cpwrl_fl_inductor_start,
-        #         end=
-        #         cpwrl_fl_inductor_start + DVector(
-        #             2 * abs(design.flux_lines_x_shifts[fl_line_idx]), 0
-        #         )
-        #     )
-        #     cpwrl_fl_inductor.place(design.region_ph)
-        #     cpwrl_fl_inductor_empty_box = Rectangle(
-        #         origin=cpwrl_fl.end +
-        #                DVector(
-        #                    0,
-        #                    -design.current_line_width - 2 * design.z_md_fl.gap
-        #                ),
-        #         width=cpwrl_fl_inductor.dr.abs(),
-        #         height=2 * design.z_md_fl.gap,
-        #         inverse=True
-        #     )
-        #     cpwrl_fl_inductor_empty_box.place(design.region_ph)
-
-        # draw_inductor_for_fl_line(self, 0)
+        def draw_inductor_for_fl_line(design, fl_line_idx):
+            cpwrl_fl = self.cpw_fl_lines[fl_line_idx]
+            cpw_pars = self.z_md_fl
+            p1 = cpwrl_fl.end + DVector(cpw_pars.width/2,
+                                        -self.squid_DC_width/2)
+            p2 = p1 + DVector(cpw_pars.gap, 0)
+            shunt_cpw = CPW(
+                start=p1, end=p2,
+                width=self.squid_DC_width, gap=0
+            )
+            shunt_cpw.place(design.region_ph)
+        draw_inductor_for_fl_line(self, 0)
 
         # place caplanar line 2 fl
         _p1 = self.contact_pads[2].end
@@ -1238,7 +1231,7 @@ class Design5Q(ChipDesign):
         )
         self.cpwrl_fl2.place(tmp_reg)
         self.cpw_fl_lines.append(self.cpwrl_fl2)
-        # draw_inductor_for_fl_line(self, 1)
+        draw_inductor_for_fl_line(self, 1)
 
         # place caplanar line 3 fl
         _p1 = self.contact_pads[4].end
@@ -1259,7 +1252,7 @@ class Design5Q(ChipDesign):
         )
         self.cpwrl_fl3.place(tmp_reg)
         self.cpw_fl_lines.append(self.cpwrl_fl3)
-        # draw_inductor_for_fl_line(self, 2)
+        draw_inductor_for_fl_line(self, 2)
 
         # place caplanar line 4 fl
         _p1 = self.contact_pads[6].end
@@ -1279,7 +1272,7 @@ class Design5Q(ChipDesign):
         )
         self.cpwrl_fl4.place(tmp_reg)
         self.cpw_fl_lines.append(self.cpwrl_fl4)
-        # draw_inductor_for_fl_line(self, 3)
+        draw_inductor_for_fl_line(self, 3)
 
         # place caplanar line 5 fl
         _p1 = self.contact_pads[8].end
@@ -1300,7 +1293,7 @@ class Design5Q(ChipDesign):
         )
         self.cpwrl_fl5.place(tmp_reg)
         self.cpw_fl_lines.append(self.cpwrl_fl5)
-        # draw_inductor_for_fl_line(self, 4)
+        draw_inductor_for_fl_line(self, 4)
 
     def draw_test_structures(self):
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
