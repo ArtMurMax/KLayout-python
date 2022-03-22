@@ -268,7 +268,7 @@ class AsymSquid2(ComplexBase):
             where to put object's local coordinate system origin (after
             trans_in is performed in local reference frame)
         params : AsymSquid2Params
-            see `AsymSquid2Params` class description for parameters
+            see `AsymSquidParams` class description for parameters
             details
         trans_in : DCplxTrans
             transformation to perform in object's reference frame
@@ -1740,3 +1740,6 @@ if __name__ == "__main__":
     design = Design5Q("testScript")
     design.draw()
     design.show()
+    import re
+    re_bottom = re.compile("BC\d{1}")
+    print(re_bottom.match("BC1"))
