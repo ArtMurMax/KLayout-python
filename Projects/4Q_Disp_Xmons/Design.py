@@ -1089,7 +1089,7 @@ class Design5Q(ChipDesign):
         self.test_squids_pads = []
         for struct_center in struct_centers:
             ## JJ test structures ##
-
+            dx = SQUID_PARS.SQB_dx / 2 - SQUID_PARS.SQLBT_dx / 2
             # test structure with big critical current (#1)
             test_struct1 = TestStructurePadsSquare(
                 struct_center,
@@ -1109,15 +1109,15 @@ class Design5Q(ChipDesign):
             self.region_ph -= text_reg
 
             # DRAW TEST SQUID
+            pars_local = deepcopy(SQUID_PARS)
+            pars_local.SQRBT_dx = 0
+            pars_local.SQRBJJ_dy = 0
+            pars_local.bot_wire_x = [-dx]
+
             squid_center = test_struct1.center
             test_jj = AsymSquid(
-                squid_center,
-                AsymSquidParams(
-                    SQRBT_dx=0,
-                    SQRBJJ_dy=0,
-                    bot_wire_x=-SQUID_PARS.SQB_dx/2 +
-                               SQUID_PARS.SQLBT_dx/2
-                )
+                squid_center + DVector(0, -self.squid_vertical_shift),
+                pars_local
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
@@ -1135,15 +1135,15 @@ class Design5Q(ChipDesign):
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
 
+            pars_local = deepcopy(SQUID_PARS)
+            pars_local.SQLBT_dx = 0
+            pars_local.SQLBJJ_dy = 0
+            pars_local.bot_wire_x = [dx]
+
             squid_center = test_struct2.center
             test_jj = AsymSquid(
-                squid_center,
-                AsymSquidParams(
-                    SQLBT_dx=0,
-                    SQLBJJ_dy=0,
-                    bot_wire_x=SQUID_PARS.SQB_dx/2 -
-                               SQUID_PARS.SQLBT_dx/2
-                )
+                squid_center + DVector(0, -self.squid_vertical_shift),
+                pars_local
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
