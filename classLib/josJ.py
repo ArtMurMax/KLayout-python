@@ -5,14 +5,12 @@ from math import pi
 import numpy as np
 
 import pya
-from pya import DPoint, DSimplePolygon, SimplePolygon
+from pya import DPoint, DVector, DSimplePolygon, SimplePolygon
 from pya import Trans, DTrans, DVector, DPath
 
 from classLib.baseClasses import ElementBase, ComplexBase
 from classLib.shapes import Circle, Kolbaska, DPathCL
 from classLib.coplanars import CPW, CPWParameters, CPWRLPath, CPW2CPW
-
-
 
 # print("josJ reloaded")
 # nice solution for parameters, man. Had really appreciated this one and put to use already (SH).
@@ -195,7 +193,7 @@ class AsymSquid(ComplexBase):
         self.primitives["TCW"] = self.TCW
 
         # (SQT) squid loop top
-        sqt_p1 = origin + Vector(-pars.SQT_dx/2,
+        sqt_p1 = origin + DVector(-pars.SQT_dx/2,
                                  pars.squid_dy/2 + pars.SQT_dy/2)
         sqt_p2 = sqt_p1 + DVector(pars.SQT_dx, 0)
         self.SQT = CPW(start=sqt_p1, end=sqt_p2, width=pars.SQT_dy, gap=0)

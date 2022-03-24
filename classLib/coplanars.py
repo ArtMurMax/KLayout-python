@@ -203,8 +203,8 @@ class CPWArc(ElementBase):
 
 class CPW2CPW(ElementBase):
     def __init__(self, Z0, Z1, start, end, trans_in=None):
-        self.Z0 = Z0
-        self.Z1 = Z1
+        self.Z0: CPWParameters = Z0
+        self.Z1: CPWParameters = Z1
         self.start = start
         self.end = end
         self.dr = self.end - self.start
@@ -858,14 +858,43 @@ class DPathCPW(ComplexBase):
                         "CPWDPath warning: segment length "
                         "is less than zero"
                     )
-                cpw = CPW(self._cpw_parameters[i].width,
-                          self._cpw_parameters[i].gap,
-                          prev_primitive_end, prev_primitive_end + DPoint(
-                        self._segment_lengths[idx_l], 0),
-                          trans_in=DCplxTrans(1,
-                                              prev_primitive_end_angle *
-                                              180 / np.pi,
-                                              False, 0, 0))
+
+                if self._cpw_parameters[i].smoothing:
+                    if i > 0:
+                        cpw1_params = self._cpw_parameters[i-1]
+                    else:
+                        raise ValueError(
+                            "No previous segment to smooth into"
+                        )
+
+                    if i < self._N_elements:
+                        cpw2_params = self._cpw_parameters[i+1]
+                        self._cpw_parameters[i] = cpw2_params
+
+                    cpw = CPW2CPW(
+                        Z0=prev_primitive.Z,
+                        start=prev_primitive_end,
+                        start_angle=-np.pi / 2,
+                        end_angle=turn_angle - np.pi / 2,
+                        cpw1_params=cpw1_params,
+                        cpw2_params=cpw2_params,
+                        trans_in=DCplxTrans(1, prev_primitive_end_angle
+                                            * 180 / np.pi, False, 0, 0)
+                    )
+                else:
+                    cpw = CPW(
+                        self._cpw_parameters[i].width,
+                        self._cpw_parameters[i].gap,
+                        prev_primitive_end,
+                        prev_primitive_end +
+                        DPoint(self._segment_lengths[idx_l], 0),
+                        trans_in=DCplxTrans(
+                            1,
+                            prev_primitive_end_angle *180 / np.pi,
+                            False,
+                            0, 0
+                        )
+                    )
 
                 self.primitives["cpw_" + str(idx_l)] = cpw
                 idx_l += 1
@@ -886,8 +915,8 @@ class DPathCPW(ComplexBase):
         )
 
     def _refresh_named_connections(self):
-        self.start = self.connections[0]
-        self.end = self.connections[1]
+        self.start = list(self.primitives.values())[0].start
+        self.end = list(self.primitives.values())[-1].end
 
     def _refresh_named_angles(self):
         self.alpha_start = self.angle_connections[0]

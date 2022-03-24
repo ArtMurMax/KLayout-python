@@ -351,7 +351,7 @@ class Design5QTest(ChipDesign):
         self.draw_josephson_loops()
 
         # self.draw_microwave_drvie_lines()
-        self.draw_flux_control_lines()
+        # self.draw_flux_control_lines()
 
         self.draw_test_structures()
         self.draw_el_dc_contacts()
@@ -452,9 +452,9 @@ class Design5QTest(ChipDesign):
         self.region_bridges2.insert(self.chip_box)
 
         self.region_ph.insert(self.chip_box)
-        for i, contact_pad in enumerate(self.contact_pads):
-            if i <= 4:
-                contact_pad.place(self.region_ph)
+        # for i, contact_pad in enumerate(self.contact_pads):
+        #     if i <= 4:
+        #         contact_pad.place(self.region_ph)
 
     def draw_cut_marks(self):
         chip_box_poly = DPolygon(self.chip_box)
