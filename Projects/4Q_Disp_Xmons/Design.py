@@ -188,11 +188,14 @@ class TestStructurePadsSquare(ComplexBase):
 
 SQUID_PARS = AsymSquidParams(
     band_ph_tol=1e3,
-    squid_dx=9.5e3,
+    squid_dx=15e3,
     squid_dy=7e3,
-    TCW_dy=7e3,
-    BCW_dy=0.5e3,
-    BC_dy=10e3
+    TC_dx=9e3,
+    TC_dy=7e3,
+    TCW_dy=3e3,
+    BCW_dy=3e3,
+    BC_dy=7e3,
+    BC_dx=7e3
 )
 
 
@@ -225,9 +228,10 @@ class Design5Q(ChipDesign):
         self.chip = CHIP_10x10_12pads
         self.chip_box: pya.DBox = self.chip.box
         # Z = 49.5656 E_eff = 6.30782 (E = 11.45)
-        self.z_md_fl: CPWParameters = CPWParameters(7e3, 4e3)
-        self.z_md_fl2: CPWParameters = CPWParameters(10e3, 3e3)
-        self.flux2ground_left_width = 4e3
+        self.z_md_fl: CPWParameters = CPWParameters(10e3, 5.7e3)
+        # Z = 50.136  E_eff = 6.28826 (E = 11.45)
+        self.z_md_fl2: CPWParameters = CPWParameters(10e3, 5.7e3)
+        self.flux2ground_left_width = 2e3
         self.squid_pars = AsymSquidParams()
         self.ro_Z: CPWParameters = self.chip.chip_Z
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
@@ -287,6 +291,14 @@ class Design5Q(ChipDesign):
         self.cross_gnd_gap_y = 20e3
         self.squid_DC_width = 4e3
 
+        # bandages
+        self.bandage_width = 5e3
+        self.bandage_height = 10e3
+        self.bandage_r_outer = 2e3
+        self.bandage_r_inner = 2e3
+        self.bandage_curve_pts_n = 40
+        self.bandages_regs_list = []
+
         # fork at the end of resonator parameters
         self.fork_x_span = self.cross_width_y + 2 * (
                 self.xmon_fork_gnd_gap + self.fork_metal_width)
@@ -295,7 +307,7 @@ class Design5Q(ChipDesign):
         self.squids: List[AsymSquid] = []
         self.test_squids: List[AsymSquid] = []
         # vertical shift of every squid local origin  coordinates
-        self.squid_vertical_shift = 3e3
+        self.squid_vertical_shift = 0e3
 
         # el-dc concacts attributes
         # e-beam polygon has to cover hole in photoregion and also
@@ -345,7 +357,7 @@ class Design5Q(ChipDesign):
         self.marks: List[MarkBolgar] = []
         ### ADDITIONAL VARIABLES SECTION END ###
 
-    def draw(self):
+    def draw(self, design_parameters=None):
         """
 
         Parameters
@@ -381,7 +393,10 @@ class Design5Q(ChipDesign):
         self.draw_flux_control_lines()
 
         self.draw_test_structures()
+        self.draw_test_structures_pads()
         self.draw_bandages()
+        self.draw_recess()
+        self.region_el.merge()
         self.draw_el_protection()
 
         self.draw_photo_el_marks()
@@ -1045,42 +1060,21 @@ class Design5Q(ChipDesign):
         flux_gnd_cpw.place(self.region_ph)
 
     def draw_squid_bandage(self, test_jj: AsymSquid = None):
+        bandages_regs_list: List[Region] = []
+
         import re
         # top bandage
-        self.bandage_width = 5e3
-        self.bandage_height = 10e3
-
-        top_bandage_reg = Region()
-        rectangle_lb = test_jj.TC.start + \
-                       DVector(
-                           -self.bandage_width/2,
-                           -self.bandage_height/2
-                       )
-        Rectangle(
-            origin=rectangle_lb,
-            width=self.bandage_width,
-            height=self.bandage_height
-        ).place(top_bandage_reg)
-        top_bandage_reg.round_corners(2e3, 2e3, 40)
+        top_bandage_reg = self._get_bandage_reg(test_jj.TC.start)
+        bandages_regs_list.append(top_bandage_reg)
         self.dc_bandage_reg += top_bandage_reg
+
         # bottom contacts
-        re_seek = re.compile("BC\d{1}")
-        for name, primitive in test_jj.primitives.items():
-            if re_seek.match(name):
-                bottom_contact = primitive
-                bot_bandage_reg = Region()
-                rectangle_lb = bottom_contact.end + \
-                               DVector(
-                                   -self.bandage_width / 2,
-                                   -self.bandage_height / 2
-                               )
-                Rectangle(
-                    origin=rectangle_lb,
-                    width=self.bandage_width,
-                    height=self.bandage_height
-                ).place(bot_bandage_reg)
-                bot_bandage_reg.round_corners(2e3, 2e3, 40)
-                self.dc_bandage_reg += bot_bandage_reg
+        for i, _ in enumerate(test_jj.squid_params.bot_wire_x):
+            BC = getattr(test_jj, "BC" + str(i))
+            bot_bandage_reg = self._get_bandage_reg(BC.end)
+            bandages_regs_list.append(bot_bandage_reg)
+            self.dc_bandage_reg += bot_bandage_reg
+        return bandages_regs_list
 
     def draw_test_structures(self):
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
@@ -1195,12 +1189,53 @@ class Design5Q(ChipDesign):
             dc_rec = Rectangle(p1, rec_width, rec_height)
             dc_rec.place(self.dc_bandage_reg)
 
+    def draw_test_structures_pads(self):
+        for squid, test_pad in zip(
+                self.test_squids[:-2],
+                self.test_squids_pads[:-2]
+        ):
+            if squid.squid_params.SQRBJJ_dy == 0:
+                # only left JJ is present
+                p1 = DPoint(squid.SQRTT.start.x, test_pad.center.y)
+                p2 = p1 + DVector(10e3, 0)
+                # express_test_contact_1
+                etc1 = CPW(
+                    start=p1, end=p2,
+                    width=test_pad.gnd_gap/2,
+                    gap=0
+                )
+                etc1.place(self.region_el)
+
+                p3 = DPoint(test_pad.top_rec.p2.x, p2.y)
+                etc2 = CPW(
+                    start=p2, end=p3,
+                    width=test_pad.gnd_gap-4e3,
+                    gap=0
+                )
+                etc2.place(self.region_el)
+            elif squid.squid_params.SQLBJJ_dy == 0:
+                # only right leg is present
+                p1 = DPoint(squid.SQLTT.start.x, test_pad.center.y)
+                p2 = p1 + DVector(-10e3, 0)
+                # express_test_contact_1
+                etc1 = CPW(
+                    start=p1, end=p2,
+                    width=test_pad.gnd_gap / 2,
+                    gap=0
+                )
+                etc1.place(self.region_el)
+
+                p3 = DPoint(test_pad.top_rec.p1.x, p2.y)
+                etc2 = CPW(
+                    start=p2, end=p3,
+                    width=test_pad.gnd_gap - 4e3,
+                    gap=0
+                )
+                etc2.place(self.region_el)
+
+
     def draw_bandages(self):
         """
-        TODO: add documentation and rework this function. It has to
-            operate only with upper and lower polygons that are
-             attached to the Tmon loop and has nothing to do with whether
-             it is xmon and flux line or test pads squares.
         Returns
         -------
 
@@ -1216,8 +1251,37 @@ class Design5Q(ChipDesign):
             # `self.dc_cont_clearance` represents minimum distance
             # from dc contact pad`s perimeter to the perimeter of the
             # e-beam and photo-deposed metal perimeter.
-            self.draw_squid_bandage(squid)
+            self.bandages_regs_list += self.draw_squid_bandage(squid)
             # collect all bottom contacts
+
+    def _get_bandage_reg(self, center):
+        rect_lb = center +\
+                  DVector(
+                      -self.bandage_width/2,
+                      -self.bandage_height/2
+                  )
+        bandage_reg = Rectangle(
+            origin=rect_lb,
+            width=self.bandage_width,
+            height=self.bandage_height
+        ).metal_region
+        bandage_reg.round_corners(
+            self.bandage_r_inner,
+            self.bandage_r_outer,
+            self.bandage_curve_pts_n
+        )
+
+        return bandage_reg
+
+    def draw_recess(self):
+        for squid in itertools.chain(self.squids, self.test_squids):
+            recess_reg = squid.TC.metal_region.dup().size(-1.5e3)
+            self.region_ph -= recess_reg
+
+            for i, _ in enumerate(squid.squid_params.bot_wire_x):
+                BC = getattr(squid, "BC"+str(i))
+                recess_reg = BC.metal_region.dup().size(-1.5e3)
+                self.region_ph -= recess_reg
 
     def draw_el_protection(self):
         protection_a = 300e3
@@ -1381,6 +1445,7 @@ class Design5Q(ChipDesign):
     def get_resonator_length(self, res_idx):
         resonator = self.resonators[res_idx]
         res_length = resonator.L_coupling
+        return res_length
 
 
 def simulate_resonators_f_and_Q():
