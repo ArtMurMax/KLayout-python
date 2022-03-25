@@ -1,23 +1,22 @@
-__version__ = "0.3.0.9"
+__version__ = "0.3.1.0"
 
 '''
 Changes log
 
-v.0.3.0.9
-1. While flux and control lines are not bounded, T1 times increases
-to 10-15 us, and T2* to 2-4 us. Such change is attributed to 
-decay noise from flux leads. Decision is to decrease mutual inductance 
-in 5 times.
-3. Bandages are now elispoids with fixed geometry (5х10 um)
-5. Flux line CPW parameters has changed from width=10, gap=?? (50 Ohm 
-Er=11.45) to width=7um. gap=4um (Er=11.45).
-6. While moving to the end of flux line it widens, to mitigate alignment 
-    of different litography layers.
-7. Vital improvement based on relaxation into flux line (potentials on 
+v.0.3.1.0
+While flux and control lines are not bounded, T1 times increases
+to 10-15 us, and T2* to 2-4 us. Such was rigirously attributed to decay 
+into flux control line.
+
+1. Vital improvement based on relaxation into flux line (potentials on 
 the left and right side of the end of flux lines must be equal).
-    7.1 bridges has to be moved closer to line
-    7.2 flux line now can't detach left and right coplanar grounds
+    1.1 bridges has to be moved closer to line
+    1.2 flux line now can't detach left and right coplanar grounds
         at flux line end.
+2. Bandages are now elispoids with fixed geometry (5х10 um). Based on 
+extensive bandage development tests from Kalacheva D. and Bolgar A.
+3. Flux line CPW parameters has changed from width=10, gap=?? 
+(50 Ohm, E=11.45).
 
 v.0.3.0.8
 1. Fixed dx and dy for JJs (to comply with previous designs).
@@ -129,7 +128,7 @@ import copy
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.0e3
+FABRICATION.OVERETCHING = 0.5e3
 
 
 class TestStructurePadsSquare(ComplexBase):
@@ -188,12 +187,12 @@ class TestStructurePadsSquare(ComplexBase):
 
 SQUID_PARS = AsymSquidParams(
     band_ph_tol=1e3,
-    squid_dx=15e3,
+    squid_dx=14.2e3,
     squid_dy=7e3,
     TC_dx=9e3,
     TC_dy=7e3,
-    TCW_dy=3e3,
-    BCW_dy=3e3,
+    TCW_dy=6e3,
+    BCW_dy=0e3,
     BC_dy=7e3,
     BC_dx=7e3
 )
@@ -307,7 +306,7 @@ class Design5Q(ChipDesign):
         self.squids: List[AsymSquid] = []
         self.test_squids: List[AsymSquid] = []
         # vertical shift of every squid local origin  coordinates
-        self.squid_vertical_shift = 0e3
+        self.squid_vertical_shift = 3e3
 
         # el-dc concacts attributes
         # e-beam polygon has to cover hole in photoregion and also
@@ -895,12 +894,6 @@ class Design5Q(ChipDesign):
         self.cpw_md_lines.append(self.cpwrl_md5)
 
     def draw_flux_control_lines(self):
-        tmp_reg = self.region_ph
-
-        # calculate flux line end horizontal shift from center of the
-        # squid loop
-        pars = AsymSquidParams()
-
         # place caplanar line 1 fl
         _p1 = self.contact_pads[1].end
         _p2 = self.contact_pads[1].end + DPoint(1e6, 0)
@@ -995,6 +988,7 @@ class Design5Q(ChipDesign):
 
         for flux_line in self.cpw_fl_lines:
             self.modify_flux_line_end(flux_line)
+        # self.region_ph.merge()
 
     def modify_flux_line_end(self, flux_line: DPathCPW):
         # make flux line wider to have a less chance to misalign
@@ -1022,7 +1016,7 @@ class Design5Q(ChipDesign):
             start=p2, end=p3
         )
         cpw_thick = CPW(
-            start=p3,
+            start=p3 + DVector(0, -2),  # rounding error correction
             end=p4,
             width=self.z_md_fl2.width,
             gap=self.z_md_fl2.gap
@@ -1233,7 +1227,6 @@ class Design5Q(ChipDesign):
                 )
                 etc2.place(self.region_el)
 
-
     def draw_bandages(self):
         """
         Returns
@@ -1350,22 +1343,43 @@ class Design5Q(ChipDesign):
                     val, bridges_step,
                     dest=self.region_bridges1, dest2=self.region_bridges2,
                     avoid_points=[squid.origin for squid in self.squids],
-                    avoid_distance=200e3
+                    avoid_distance=400e3
                 )
             elif "cpwrl_fl" in key:
                 Bridge1.bridgify_CPW(
                     val, fl_bridges_step,
                     dest=self.region_bridges1, dest2=self.region_bridges2,
                     avoid_points=[squid.origin for squid in self.squids],
-                    avoid_distance=100e3
+                    avoid_distance=400e3
                 )
 
+        # close bridges for cpw_fl line
         for i, cpw_fl in enumerate(self.cpw_fl_lines):
-            dy = 30e3
-            bridge_center1 = cpw_fl.end + DVector(0, -dy)
-            br = Bridge1(center=bridge_center1, trans_in=Trans.R90)
-            br.place(dest=self.region_bridges1, region_name="bridges_1")
-            br.place(dest=self.region_bridges2, region_name="bridges_2")
+            dy_list = [30e3, 130e3]
+            for dy in dy_list:
+                bridge_center1 = cpw_fl.end + DVector(0, -dy)
+                br = Bridge1(center=bridge_center1, trans_in=Trans.R90)
+                br.place(dest=self.region_bridges1, region_name="bridges_1")
+                br.place(dest=self.region_bridges2, region_name="bridges_2")
+
+        # close bridges for cpw_md line
+        for i, cpw_md in enumerate(self.cpw_md_lines):
+            dy_list = [55e3, 155e3]
+            for dy in dy_list:
+                if i == 0 or i == 4:
+                    bridge_center1 = cpw_md.end + DVector(-dy, 0)
+                    br = Bridge1(center=bridge_center1,
+                                 trans_in=None)
+                else:
+                    bridge_center1 = cpw_md.end + DVector(0, -dy)
+                    br = Bridge1(center=bridge_center1,
+                                 trans_in=Trans.R90)
+                br.place(dest=self.region_bridges1,
+                         region_name="bridges_1")
+                br.place(dest=self.region_bridges2,
+                         region_name="bridges_2")
+
+
 
         # for readout waveguide
         bridgified_primitives_idxs = list(range(2))
