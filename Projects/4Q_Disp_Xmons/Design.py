@@ -4,10 +4,10 @@ __version__ = "0.3.1.1"
 Changes log
 
 v.0.3.1.1
-1. Added missing express test pads but only for 2 test structures out of 3.
+1. Added missing express test pads for 2 test structures out of 3.
 The rest test structure can be examined to estimate eBeam 
-vicinity overexposure effect due to presence of large polygon in the 
-vicinity.
+vicinity overexposure effect due to presence of large polygon in the immediate
+vicinity of a JJ.
 
 v.0.3.1.0
 While flux and control lines are not bounded, T1 times increases
