@@ -1,7 +1,13 @@
-__version__ = "0.3.1.0"
+__version__ = "0.3.1.1"
 
 '''
 Changes log
+
+v.0.3.1.1
+1. Added missing express test pads but only for 2 test structures out of 3.
+The rest test structure can be examined to estimate eBeam 
+vicinity overexposure effect due to presence of large polygon in the 
+vicinity.
 
 v.0.3.1.0
 While flux and control lines are not bounded, T1 times increases
@@ -128,7 +134,7 @@ import copy
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.5e3
+FABRICATION.OVERETCHING = 0.0e3
 
 
 class TestStructurePadsSquare(ComplexBase):
@@ -392,7 +398,7 @@ class Design5Q(ChipDesign):
         self.draw_flux_control_lines()
 
         self.draw_test_structures()
-        self.draw_test_structures_pads()
+        self.draw_express_test_structures_pads()
         self.draw_bandages()
         self.draw_recess()
         self.region_el.merge()
@@ -1078,6 +1084,7 @@ class Design5Q(ChipDesign):
         for struct_center in struct_centers:
             ## JJ test structures ##
             dx = SQUID_PARS.SQB_dx / 2 - SQUID_PARS.SQLBT_dx / 2
+
             # test structure with big critical current (#1)
             test_struct1 = TestStructurePadsSquare(
                 struct_center,
@@ -1096,7 +1103,6 @@ class Design5Q(ChipDesign):
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
 
-            # DRAW TEST SQUID
             pars_local = deepcopy(SQUID_PARS)
             pars_local.SQRBT_dx = 0
             pars_local.SQRBJJ_dy = 0
@@ -1183,19 +1189,20 @@ class Design5Q(ChipDesign):
             dc_rec = Rectangle(p1, rec_width, rec_height)
             dc_rec.place(self.dc_bandage_reg)
 
-    def draw_test_structures_pads(self):
+    def draw_express_test_structures_pads(self):
         for squid, test_pad in zip(
                 self.test_squids[:-2],
                 self.test_squids_pads[:-2]
         ):
             if squid.squid_params.SQRBJJ_dy == 0:
                 # only left JJ is present
+
+                # test pad expanded to the left
                 p1 = DPoint(squid.SQRTT.start.x, test_pad.center.y)
                 p2 = p1 + DVector(10e3, 0)
-                # express_test_contact_1
                 etc1 = CPW(
                     start=p1, end=p2,
-                    width=test_pad.gnd_gap/2,
+                    width=1e3,
                     gap=0
                 )
                 etc1.place(self.region_el)
@@ -1207,14 +1214,34 @@ class Design5Q(ChipDesign):
                     gap=0
                 )
                 etc2.place(self.region_el)
+
+                # test pad expanded to the left
+                p1 = squid.BCW0.end
+                p2 = p1 - DVector(10e3, 0)
+                etc3 = CPW(
+                    start=p1, end=p2,
+                    width=1e3,  # TODO: hardcoded value
+                    gap=0
+                )
+                etc3.place(self.region_el)
+
+                p3 = DPoint(p2.x, test_pad.center.y)
+                p4 = DPoint(test_pad.top_rec.p1.x, test_pad.center.y)
+                etc4 = CPW(
+                    start=p3, end=p4,
+                    width=test_pad.gnd_gap - 4e3,
+                    gap=0
+                )
+                etc4.place(self.region_el)
+
             elif squid.squid_params.SQLBJJ_dy == 0:
                 # only right leg is present
                 p1 = DPoint(squid.SQLTT.start.x, test_pad.center.y)
                 p2 = p1 + DVector(-10e3, 0)
-                # express_test_contact_1
+                # test pad expanded to the left
                 etc1 = CPW(
                     start=p1, end=p2,
-                    width=test_pad.gnd_gap / 2,
+                    width=1e3,
                     gap=0
                 )
                 etc1.place(self.region_el)
@@ -1226,6 +1253,25 @@ class Design5Q(ChipDesign):
                     gap=0
                 )
                 etc2.place(self.region_el)
+
+                # test pad expanded to the right
+                p1 = squid.BCW0.end
+                p2 = p1 + DVector(10e3, 0)
+                etc3 = CPW(
+                    start=p1, end=p2,
+                    width=1e3,  # TODO: hardcoded value
+                    gap=0
+                )
+                etc3.place(self.region_el)
+
+                p3 = DPoint(p2.x, test_pad.center.y)
+                p4 = DPoint(test_pad.top_rec.p2.x, test_pad.center.y)
+                etc4 = CPW(
+                    start=p3, end=p4,
+                    width=test_pad.gnd_gap - 4e3,
+                    gap=0
+                )
+                etc4.place(self.region_el)
 
     def draw_bandages(self):
         """
