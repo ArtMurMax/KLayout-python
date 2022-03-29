@@ -3,6 +3,10 @@ __version__ = "0.3.1.1"
 '''
 Changes log
 
+v.0.3.1.2
+1. FIX. Bridges for the microwave line of righmost qubit were shifted in 
+the wrong direction.
+
 v.0.3.1.1
 1. Added missing express test pads for 2 test structures out of 3.
 The rest test structure can be examined to estimate eBeam 
@@ -134,7 +138,7 @@ import copy
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.0e3
+FABRICATION.OVERETCHING = 0.5e3
 
 
 class TestStructurePadsSquare(ComplexBase):
@@ -1412,8 +1416,10 @@ class Design5Q(ChipDesign):
         for i, cpw_md in enumerate(self.cpw_md_lines):
             dy_list = [55e3, 155e3]
             for dy in dy_list:
-                if i == 0 or i == 4:
+                if i == 0:
                     bridge_center1 = cpw_md.end + DVector(-dy, 0)
+                elif i == 4:
+                    bridge_center1 = cpw_md.end + DVector(dy, 0)
                     br = Bridge1(center=bridge_center1,
                                  trans_in=None)
                 else:
