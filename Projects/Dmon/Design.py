@@ -1722,7 +1722,7 @@ def simulate_Cqr():
         design.layout.write(
             os.path.join(project_dir, f"Cqr_{res_idx}_{dl}_um.gds")
         )
-        output_filepath = os.path.join(project_dir, "../Dmon/Xmon_resonator_Cqr_results.csv")
+        output_filepath = os.path.join(project_dir, "Xmon_resonator_Cqr_results.csv")
         if os.path.exists(output_filepath):
             # append data to file
             with open(output_filepath, "a", newline='') as csv_file:
