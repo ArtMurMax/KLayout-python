@@ -1,4 +1,4 @@
-__version__ = "v.0.0.0.0"
+__version__ = "v.0.0.1.0"
 
 '''
 Description:
@@ -16,7 +16,7 @@ SQUID loops and test structure geomtries.
 
 Changes log
 v.0.0.1.0
-1. Added fluix lines for qubits (taken from 5q v.0.3.1.2)
+1. Added fluix lines for qubits (taken from 5q v.0.3.1.2). Bridges taken accordingly.
 2. Contact pads are transformed by 90deg rotation in order to smooth
  the flux line.
 3. Readout line y-shift is eliminated. RO line is straight now.
@@ -799,27 +799,27 @@ class Design5QTest(ChipDesign):
         )
         self.cpw_fl_lines.append(self.cpwrl_fl1)
 
-        # place caplanar line 2 fl
+        # place caplanar line 3 fl
         _p1 = self.contact_pads[2].end
         _p2 = DPoint(self.xmons[3].center.x + self.flux_lines_x_shifts[3], _p1.y)
         _p3 = DPoint(_p2.x, self.xmons[3].cpw_bempt.end.y)
-        self.cpwrl_fl2 = DPathCPW(
-            points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
-            turn_radiuses=self.ctr_lines_turn_radius,
-        )
-        self.cpw_fl_lines.append(self.cpwrl_fl2)
-
-        # place caplanar line 2 fl
-        _p1 = self.contact_pads[3].end
-        _p2 = DPoint(self.xmons[5].center.x + self.flux_lines_x_shifts[5], _p1.y)
-        _p3 = DPoint(_p2.x, self.xmons[5].cpw_bempt.end.y)
         self.cpwrl_fl3 = DPathCPW(
             points=[_p1, _p2, _p3],
             cpw_parameters=self.z_md_fl,
             turn_radiuses=self.ctr_lines_turn_radius,
         )
         self.cpw_fl_lines.append(self.cpwrl_fl3)
+
+        # place caplanar line 5 fl
+        _p1 = self.contact_pads[3].end
+        _p2 = DPoint(self.xmons[5].center.x + self.flux_lines_x_shifts[5], _p1.y)
+        _p3 = DPoint(_p2.x, self.xmons[5].cpw_bempt.end.y)
+        self.cpwrl_fl5 = DPathCPW(
+            points=[_p1, _p2, _p3],
+            cpw_parameters=self.z_md_fl,
+            turn_radiuses=self.ctr_lines_turn_radius,
+        )
+        self.cpw_fl_lines.append(self.cpwrl_fl5)
 
         # place coplanar line 0 fl
         _p1 = self.contact_pads[-1].end
@@ -858,10 +858,10 @@ class Design5QTest(ChipDesign):
         self.cpw_fl_lines.append(self.cpwrl_fl2)
 
         for i, flux_line in enumerate(self.cpw_fl_lines):
-            if i%2==0: # for upper squids
-                dir_y = -1
-            else:
+            if i < 3:  # for lower squids
                 dir_y = 1
+            else:  # for upper squids
+                dir_y = -1
             self.modify_flux_line_end(flux_line, direction_y=dir_y)
 
 
@@ -892,7 +892,7 @@ class Design5QTest(ChipDesign):
         )
         cpw_thick = CPW(
             # rounding error correction
-            start=p3 + direction_y*DVector(0, -2),
+            start=p3 - 2*(p4-p3)/(p4-p3).abs(),
             end=p4,
             width=self.z_md_fl2.width,
             gap=self.z_md_fl2.gap
@@ -925,7 +925,7 @@ class Design5QTest(ChipDesign):
                  -cpw_thick.width / 2,
                  -direction_y*self.flux2ground_left_width / 2
              )
-        p2 = p1 + DVector(-direction_y*cpw_thick.gap, 0)
+        p2 = p1 - DVector(cpw_thick.gap, 0)
         flux_gnd_cpw = CPW(
             start=p1, end=p2,
             width=self.flux2ground_left_width, gap=0
@@ -1193,12 +1193,24 @@ class Design5QTest(ChipDesign):
                         dest2=self.region_bridges2
                     )
 
-        # for i, cpw_fl in enumerate(self.cpw_fl_lines):
-        #     dy = 220e3
-        #     bridge_center1 = cpw_fl.end + DVector(0, -dy)
-        #     br = Bridge1(center=bridge_center1, trans_in=Trans.R90)
-        #     br.place(dest=self.region_bridges1, region_name="bridges_1")
-        #     br.place(dest=self.region_bridges2, region_name="bridges_2")
+        for i, cpw_fl in enumerate(self.cpw_fl_lines):
+            Bridge1.bridgify_CPW(
+                cpw_fl, bridges_step=bridges_step,
+                dest=self.region_bridges1,
+                dest2=self.region_bridges2,
+                avoid_points=[cpw_fl.end],
+                avoid_distance=130e3
+            )
+            dy_list = [30e3, 130e3]
+            for dy in dy_list:
+                if i < 3:
+                    dy = dy
+                else:
+                    dy = -dy
+                bridge_center1 = cpw_fl.end + DVector(0, -dy)
+                br = Bridge1(center=bridge_center1, trans_in=Trans.R90)
+                br.place(dest=self.region_bridges1, region_name="bridges_1")
+                br.place(dest=self.region_bridges2, region_name="bridges_2")
 
         # for readout waveguide
         avoid_resonator_points = []
