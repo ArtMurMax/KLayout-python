@@ -240,7 +240,10 @@ class Design5Q(ChipDesign):
         self.z_md_fl: CPWParameters = CPWParameters(10e3, 5.7e3)
         # Z = 50.136  E_eff = 6.28826 (E = 11.45)
         self.z_md_fl2: CPWParameters = CPWParameters(10e3, 5.7e3)
+        # flux line widths at the end of flux line
         self.flux2ground_left_width = 2e3
+        self.flux2ground_right_width = 4e3
+
         self.squid_pars = AsymSquidParams()
         self.ro_Z: CPWParameters = self.chip.chip_Z
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
@@ -298,7 +301,6 @@ class Design5Q(ChipDesign):
         self.cross_len_y = 155e3
         self.cross_width_y = 60e3
         self.cross_gnd_gap_y = 20e3
-        self.squid_DC_width = 4e3
 
         # bandages
         self.bandage_width = 5e3
@@ -1042,11 +1044,11 @@ class Design5Q(ChipDesign):
 
         # draw mutual inductance for squid
         p1 = cpw_thick.end + DVector(cpw_thick.width / 2,
-                                     -self.squid_DC_width / 2)
+                                     -self.flux2ground_right_width / 2)
         p2 = p1 + DVector(cpw_thick.gap, 0)
         inductance_cpw = CPW(
             start=p1, end=p2,
-            width=self.squid_DC_width, gap=0
+            width=self.flux2ground_right_width, gap=0
         )
         inductance_cpw.place(self.region_ph)
 
