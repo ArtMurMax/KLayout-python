@@ -1,17 +1,13 @@
-__version__ = "v.0.0.1.1"
+__version__ = "v.0.3.1.2.BANT1"
 
 '''
 Description:
-This program is made to generate litography blueprints for testing of the 
-main series chips. E.g. this one is based on v.0.3.0.8 Design.py
-
+Design for testing qubit lifetimes dependance on squid's "bandages" area.
+Based on 
+1) Drawing logic: "Dmon v.0.0.1.0"
+2) Parameters: "5Q_0.3.1.1"
 
 Changes log
-v.0.0.1.1
-1. Due to up to date calculations, `C_qr` and hence 
-`design.fork_y_spans` values are resimulated.
-
-
 v.0.0.1.0
 1. Added fluix lines for qubits (taken from 5q v.0.3.1.2). Bridges taken accordingly.
 2. Contact pads are transformed by 90deg rotation in order to smooth
@@ -22,6 +18,7 @@ v.0.0.0.0
 Copied fromv.0.3.0.8.T3
 '''
 
+# Enter your Python code here
 # Enter your Python code here
 from math import cos, sin, tan, atan2, pi, degrees
 import itertools
@@ -39,7 +36,6 @@ from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans, DPath
 
 from importlib import reload
 import classLib
-
 reload(classLib)
 
 from classLib.baseClasses import ElementBase, ComplexBase
@@ -47,7 +43,7 @@ from classLib.coplanars import CPWParameters, CPW, DPathCPW, \
     CPWRLPath, Bridge1, CPW2CPW
 from classLib.shapes import XmonCross, Rectangle, CutMark
 from classLib.resonators import EMResonatorTL3QbitWormRLTailXmonFork
-from classLib.josJ import AsymSquidParams, AsymSquid
+from classLib.josJ import AsymSquid, AsymSquidParams
 from classLib.chipTemplates import CHIP_10x5_8pads, FABRICATION
 from classLib.chipDesign import ChipDesign
 from classLib.marks import MarkBolgar
@@ -55,7 +51,6 @@ from classLib.contactPads import ContactPad
 from classLib.helpers import fill_holes, split_polygons, extended_region
 
 import sonnetSim
-
 reload(sonnetSim)
 from sonnetSim import SonnetLab, SonnetPort, SimulationBox
 
@@ -65,24 +60,13 @@ import copy
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
 FABRICATION.OVERETCHING = 0.5e3
-SQUID_PARAMETERS = AsymSquidParams(
-    band_ph_tol=1e3,
-    squid_dx=14.2e3,
-    squid_dy=7e3,
-    TC_dx=9e3,
-    TC_dy=7e3,
-    TCW_dy=6e3,
-    BCW_dy=0e3,
-    BC_dy=7e3,
-    BC_dx=7e3
-)
 
 
 class TestStructurePadsSquare(ComplexBase):
     def __init__(self, center, trans_in=None, square_a=200e3,
                  gnd_gap=20e3, squares_gap=20e3):
         self.center = center
-        self.rectangle_a = square_a
+        self.rectangle_a =square_a
         self.gnd_gap = gnd_gap
         self.rectangles_gap = squares_gap
 
@@ -132,10 +116,24 @@ class TestStructurePadsSquare(ComplexBase):
         self.center = self.connections[0]
 
 
+SQUID_PARS = AsymSquidParams(
+    band_ph_tol=1e3,
+    squid_dx=14.2e3,
+    squid_dy=7e3,
+    TC_dx=9e3,
+    TC_dy=7e3,
+    TCW_dy=6e3,
+    BCW_dy=0e3,
+    BC_dy=7e3,
+    BC_dx=7e3
+)
+
+
 class Design5QTest(ChipDesign):
     def __init__(self, cell_name):
         super().__init__(cell_name)
-        dc_bandage_layer_i = pya.LayerInfo(3, 0)  # for DC contact deposition
+        # for DC contact deposition
+        dc_bandage_layer_i = pya.LayerInfo(3,0)
         self.dc_bandage_reg = Region()
         self.dc_bandage_layer = self.layout.layer(dc_bandage_layer_i)
 
@@ -151,7 +149,8 @@ class Design5QTest(ChipDesign):
         # on the `self.region_el` - e-beam litography layer
         info_el_protection = pya.LayerInfo(6, 0)
         self.region_el_protection = Region()
-        self.layer_el_protection = self.layout.layer(info_el_protection)
+        self.layer_el_protection = self.layout.layer(
+            info_el_protection)
 
         # has to call it once more to add new layers
         self.lv.add_missing_layers()
@@ -169,15 +168,24 @@ class Design5QTest(ChipDesign):
         self.flux2ground_right_width = 4e3
         self.ro_Z: CPWParameters = self.chip.chip_Z
         contact_pads_trans_list = [Trans.R0] + [Trans.R270] + 2 * [
-            Trans.R90] + [Trans.R0] + [Trans.R270]*3
+            Trans.R90] + [Trans.R0] + [Trans.R270] * 3
         for i, trans in enumerate(contact_pads_trans_list):
-            contact_pads_trans_list[i] = DCplxTrans(DTrans(contact_pads_trans_list[i]))
+            contact_pads_trans_list[i] = DCplxTrans(
+                DTrans(contact_pads_trans_list[i]))
             if trans == DTrans.R270:
-                contact_pads_trans_list[i] = DCplxTrans(DVector(-self.chip.pad_length, self.chip.pcb_Z.b/2 + self.chip.back_metal_width))*contact_pads_trans_list[i]
+                contact_pads_trans_list[i] = DCplxTrans(
+                    DVector(-self.chip.pad_length,
+                            self.chip.pcb_Z.b / 2 + self.chip.back_metal_width)) * \
+                                             contact_pads_trans_list[i]
             elif trans == DTrans.R90:
-                contact_pads_trans_list[i] = DCplxTrans(DVector(-self.chip.pad_length, -self.chip.pcb_Z.b/2 -self.chip.back_metal_width))*contact_pads_trans_list[i]
-        self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
-            [self.ro_Z] + [self.z_md_fl] * 3 + [self.ro_Z] + [self.z_md_fl] * 3,
+                contact_pads_trans_list[i] = DCplxTrans(
+                    DVector(-self.chip.pad_length,
+                            -self.chip.pcb_Z.b / 2 - self.chip.back_metal_width)) * \
+                                             contact_pads_trans_list[i]
+        self.contact_pads: list[
+            ContactPad] = self.chip.get_contact_pads(
+            [self.ro_Z] + [self.z_md_fl] * 3 + [self.ro_Z] + [
+                self.z_md_fl] * 3,
             cpw_trans_list=contact_pads_trans_list
         )
 
@@ -189,7 +197,8 @@ class Design5QTest(ChipDesign):
         # to chip-end contact pads.
         self.Z0: CPWParameters = CHIP_10x5_8pads.chip_Z
         # resonators objects list
-        self.resonators: List[EMResonatorTL3QbitWormRLTailXmonFork] = []
+        self.resonators: List[
+            EMResonatorTL3QbitWormRLTailXmonFork] = []
         # distance between nearest resonators central conductors centers
         # constant step between resonators origin points along x-axis.
         self.resonators_dx: float = 900e3
@@ -200,7 +209,8 @@ class Design5QTest(ChipDesign):
         # corresponding to resonanse freq is linspaced in interval [6,9) GHz
         self.L0 = 1000e3
         self.L1_list = [
-            1e3 * x for x in [58.4471, 20.3557, 76.3942, 74.6009, 25.8126]
+            1e3 * x for x in
+            [58.4471, 20.3557, 76.3942, 74.6009, 25.8126]
 
         ]
         self.r = 60e3
@@ -218,11 +228,11 @@ class Design5QTest(ChipDesign):
         # resonator-fork parameters
         # for coarse C_qr evaluation
         self.fork_y_spans = [
-            x * 1e3 for x in [95]*5
+            x * 1e3 for x in [95] * 5
         ]
 
         # 4 additional resonators based on resonator with idx 2, but
-        # only frequency is changed (7.58, 7.66, 7.84) GHz correspondingly
+        # only frequency is changed (7.6, 7.68, 7.86) GHz correspondingly
         self.add_res_based_idx = 2
         self.L1_list += [x*1e3 for x in [58.8006, 51.2927, 45.8894]]
         self.L_coupling_list += [self.L_coupling_list[
@@ -233,6 +243,7 @@ class Design5QTest(ChipDesign):
         self.L4_list += [self.L4_list[self.add_res_based_idx]] * 3
         self.to_line_list += [self.to_line_list[self.add_res_based_idx]] * 3
         self.fork_y_spans += [self.fork_y_spans[self.add_res_based_idx]] * 3
+        # resonator's `x` coordinate list. Natural order is disturbed
         self.worm_x_list = [x * 1e6 for x in
                        [1, 2.7, 3.5, 4.35, 7.6, 6.5, 5.5, 8.5]]
 
@@ -249,6 +260,14 @@ class Design5QTest(ChipDesign):
         self.cross_width_y = 60e3
         self.cross_gnd_gap_y = 20e3
 
+        # bandages
+        self.bandage_width = 5e3
+        self.bandage_height = 10e3
+        self.bandage_r_outer = 2e3
+        self.bandage_r_inner = 2e3
+        self.bandage_curve_pts_n = 40
+        self.bandages_regs_list = []
+
         # fork at the end of resonator parameters
         self.fork_x_span = self.cross_width_y + 2 * (
                 self.xmon_fork_gnd_gap + self.fork_metal_width)
@@ -256,6 +275,8 @@ class Design5QTest(ChipDesign):
         # squids
         self.squids: List[AsymSquid] = []
         self.test_squids: List[AsymSquid] = []
+        # vertical shift of every squid local origin  coordinates
+        self.squid_vertical_shift = 3e3
         # minimal distance between squid loop and photo layer
         self.squid_ph_clearance = 1.5e3
 
@@ -346,7 +367,9 @@ class Design5QTest(ChipDesign):
         self.draw_flux_control_lines()
 
         self.draw_test_structures()
-        # self.draw_el_dc_contacts()
+        self.draw_bandages()
+        self.draw_recess()
+        self.region_el.merge()
         self.draw_el_protection()
 
         self.draw_photo_el_marks()
@@ -552,9 +575,9 @@ class Design5QTest(ChipDesign):
             worm_x = self.worm_x_list[res_idx]
             worm_y = self.chip.dy / 2 + to_line * (-1) ** (res_idx)
 
-            if res_idx % 2 == 0:
+            if res_idx % 2 == 0:  # above RO line
                 trans = DTrans.M0
-            else:
+            else:  # beneath RO line
                 trans = DTrans.R0
             self.resonators.append(
                 EMResonatorTL3QbitWormRLTailXmonFork(
@@ -670,21 +693,23 @@ class Design5QTest(ChipDesign):
 
     def draw_josephson_loops(self):
         # place left squid
-        dx = SQUID_PARAMETERS.SQB_dx / 2 - SQUID_PARAMETERS.SQLBT_dx / 2
-        pars_local = deepcopy(SQUID_PARAMETERS)
+        dx = SQUID_PARS.SQB_dx / 2 - SQUID_PARS.SQLBT_dx / 2
+        pars_local = deepcopy(SQUID_PARS)
         pars_local.bot_wire_x = [-dx, dx]
         pars_local.SQB_dy = 0
         for res_idx, xmon_cross in enumerate(self.xmons[:-2]):
-            if res_idx % 2 == 0:
+            if res_idx % 2 == 0:  # above RO line
+                m = -1
                 squid_center = xmon_cross.cpw_tempt.end
                 squid_center += DPoint(
                     0,
-                    -(SQUID_PARAMETERS.squid_dy / 2 +
-                      SQUID_PARAMETERS.SQB_dy / 2 +
+                    -(SQUID_PARS.squid_dy / 2 +
+                      SQUID_PARS.SQB_dy / 2 +
                       self.squid_ph_clearance)
                 )
                 trans = DTrans.M0
-            else:
+            else:  # below RO line
+                m = 1
                 squid_center = xmon_cross.cpw_bempt.end
                 squid_center += DPoint(
                     0,
@@ -693,7 +718,11 @@ class Design5QTest(ChipDesign):
                     self.squid_ph_clearance
                 )
                 trans = DTrans.R0
-            squid = AsymSquid(squid_center, pars_local)
+            squid = AsymSquid(
+                squid_center + m*DVector(0, -self.squid_vertical_shift),
+                pars_local,
+                trans_in=trans
+            )
             self.squids.append(squid)
             squid.place(self.region_el)
 
@@ -774,15 +803,13 @@ class Design5QTest(ChipDesign):
         self.cpw_md_lines.append(self.cpwrl_md1)
 
     def draw_flux_control_lines(self):
-        tmp_reg = self.region_ph
-
         # calculate flux line end horizontal shift from center of the
         # squid loop
         self.flux_lines_x_shifts: List[float] = \
             [
-                -SQUID_PARAMETERS.squid_dx/ 2 - SQUID_PARAMETERS.SQLBT_dx/ 2 -
-                self.z_md_fl2.width/ 2 + SQUID_PARAMETERS.BC_dx / 2 +
-                SQUID_PARAMETERS.band_ph_tol
+                -SQUID_PARS.squid_dx/ 2 - SQUID_PARS.SQLBT_dx/ 2 -
+                self.z_md_fl2.width/ 2 + SQUID_PARS.BC_dx / 2 +
+                SQUID_PARS.band_ph_tol
             ] * len(self.L1_list)
 
         # place caplanar line 1 fl
@@ -861,7 +888,6 @@ class Design5QTest(ChipDesign):
                 dir_y = -1
             self.modify_flux_line_end(flux_line, direction_y=dir_y)
 
-
     def modify_flux_line_end(self, flux_line: DPathCPW, direction_y=1):
         # make flux line wider to have a less chance to misalign
         # bandage-eBeam-photo layers at the qubit bandage region.
@@ -937,7 +963,7 @@ class Design5QTest(ChipDesign):
         self.test_squids_pads = []
         for struct_center in struct_centers:
             ## JJ test structures ##
-            dx = SQUID_PARAMETERS.SQB_dx / 2 - SQUID_PARAMETERS.SQLBT_dx / 2
+            dx = SQUID_PARS.SQB_dx / 2 - SQUID_PARS.SQLBT_dx / 2
 
             # test structure with big critical current (#1)
             test_struct1 = TestStructurePadsSquare(
@@ -956,7 +982,7 @@ class Design5QTest(ChipDesign):
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
 
-            pars_local = deepcopy(SQUID_PARAMETERS)
+            pars_local = deepcopy(SQUID_PARS)
             pars_local.SQRBT_dx = 0
             pars_local.SQRBJJ_dy = 0
             pars_local.bot_wire_x = [-dx]
@@ -982,7 +1008,7 @@ class Design5QTest(ChipDesign):
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
 
-            pars_local = deepcopy(SQUID_PARAMETERS)
+            pars_local = deepcopy(SQUID_PARS)
             pars_local.SQLBT_dx = 0
             pars_local.SQLBJJ_dy = 0
             pars_local.bot_wire_x = [dx]
@@ -1042,12 +1068,8 @@ class Design5QTest(ChipDesign):
             dc_rec = Rectangle(p1, rec_width, rec_height)
             dc_rec.place(self.dc_bandage_reg)
 
-    def draw_el_dc_contacts(self):
+    def draw_bandages(self):
         """
-        TODO: add documentation and rework this function. It has to
-            operate only with upper and lower polygons that are
-             attached to the Tmon loop and has nothing to do with whether
-             it is xmon and flux line or test pads squares.
         Returns
         -------
 
@@ -1057,78 +1079,60 @@ class Design5QTest(ChipDesign):
                 zip(self.squids, self.xmons),
                 zip(self.test_squids, self.test_squids_pads)
         ):
-
-            # for optimization of boolean operations in the vicinitiy of
-            # a squid
-            photo_vicinity = self.region_ph & Region(
-                DBox(
-                    squid.origin + DPoint(100e3, 100e3),
-                    squid.origin - DPoint(100e3, 100e3)
-                )
-            )
             # dc contact pad has to be completely
             # inside union of both  e-beam and photo deposed
             # metal regions.
             # `self.dc_cont_clearance` represents minimum distance
             # from dc contact pad`s perimeter to the perimeter of the
             # e-beam and photo-deposed metal perimeter.
-
+            self.bandages_regs_list += self.draw_squid_bandage(squid)
             # collect all bottom contacts
 
-            # philling `cut_regs` array that consists of metal regions
-            # to be cutted from photo region
-            cut_regs = [squid.top_ph_el_conn_pad.metal_region,
-                        squid.pad_top.metal_region]
-            for bot_contact in [squid.bot_dc_flux_line_right,
-                                squid.bot_dc_flux_line_left]:
-                # some bottom parts of squid can be missing (for test pads)
-                if bot_contact is None:
-                    continue
-                bot_cut_regs = [
-                    primitive.metal_region for primitive in
-                    list(bot_contact.primitives.values())[:2]
-                ]
-                bot_cut_regs = bot_cut_regs[0] + bot_cut_regs[1]
-                cut_regs.append(bot_cut_regs)
+    def draw_squid_bandage(self, test_jj: AsymSquid = None):
+        bandages_regs_list: List[Region] = []
 
-            # creating bandages
-            for cut_reg in cut_regs:
-                # find only those polygons in photo-layer that overlap with
-                # bandage an return as a `Region()`
-                contact_reg = cut_reg.pull_overlapping(photo_vicinity)
-                # cut from photo region
-                self.region_ph -= cut_reg
+        import re
+        # top bandage
+        top_bandage_reg = self._get_bandage_reg(test_jj.TC.start)
+        bandages_regs_list.append(top_bandage_reg)
+        self.dc_bandage_reg += top_bandage_reg
 
-                # draw shrinked bandage on top of el region
-                el_extension = extended_region(cut_reg, self.el_overlaps_ph_by) & contact_reg
-                self.region_el += el_extension
-                # self.region_el.merge()
+        # bottom contacts
+        for i, _ in enumerate(test_jj.squid_params.bot_wire_x):
+            BC = getattr(test_jj, "BC" + str(i))
+            bot_bandage_reg = self._get_bandage_reg(BC.end)
+            bandages_regs_list.append(bot_bandage_reg)
+            self.dc_bandage_reg += bot_bandage_reg
+        return bandages_regs_list
 
-                # correction of extension into the SQUID loop
-                hwidth = squid.top_ph_el_conn_pad.width / 2 + self.dc_cont_el_clearance
-                fix_box = DBox(
-                    squid.origin + DPoint(-hwidth, 0),
-                    squid.origin + DPoint(hwidth, squid.params.sq_dy / 2 - squid.params.inter_leads_width / 2)
-                )
-                self.region_el -= Region(fix_box)
+    def _get_bandage_reg(self, center):
+        rect_lb = center +\
+                  DVector(
+                      -self.bandage_width/2,
+                      -self.bandage_height/2
+                  )
+        bandage_reg = Rectangle(
+            origin=rect_lb,
+            width=self.bandage_width,
+            height=self.bandage_height
+        ).metal_region
+        bandage_reg.round_corners(
+            self.bandage_r_inner,
+            self.bandage_r_outer,
+            self.bandage_curve_pts_n
+        )
 
-                el_bandage = extended_region(
-                    cut_reg,
-                    -self.dc_cont_el_clearance
-                )
-                self.dc_bandage_reg += el_bandage
-                self.dc_bandage_reg.merge()
+        return bandage_reg
 
-                # draw extended bandage in photo region
-                ph_bandage = extended_region(
-                    cut_reg, self.dc_cont_ph_ext)
-                ph_bandage = ph_bandage & contact_reg
-                ph_bandage = extended_region(
-                    ph_bandage,
-                    -self.dc_cont_ph_clearance
-                )
-                self.dc_bandage_reg += ph_bandage
-                self.dc_bandage_reg.merge()
+    def draw_recess(self):
+        for squid in itertools.chain(self.squids, self.test_squids):
+            recess_reg = squid.TC.metal_region.dup().size(-1.5e3)
+            self.region_ph -= recess_reg
+
+            for i, _ in enumerate(squid.squid_params.bot_wire_x):
+                BC = getattr(squid, "BC"+str(i))
+                recess_reg = BC.metal_region.dup().size(-1.5e3)
+                self.region_ph -= recess_reg
 
     def draw_el_protection(self):
         protection_a = 300e3

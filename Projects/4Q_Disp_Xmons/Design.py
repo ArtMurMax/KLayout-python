@@ -1,4 +1,4 @@
-__version__ = "0.3.1.1"
+__version__ = "5Q_0.3.1.1"
 
 '''
 Changes log
@@ -319,6 +319,8 @@ class Design5Q(ChipDesign):
         self.test_squids: List[AsymSquid] = []
         # vertical shift of every squid local origin  coordinates
         self.squid_vertical_shift = 3e3
+        # minimal distance between squid loop and photo layer
+        self.squid_ph_clearance = 1.5e3
 
         # el-dc concacts attributes
         # e-beam polygon has to cover hole in photoregion and also
@@ -1065,23 +1067,6 @@ class Design5Q(ChipDesign):
         )
         flux_gnd_cpw.place(self.region_ph)
 
-    def draw_squid_bandage(self, test_jj: AsymSquid = None):
-        bandages_regs_list: List[Region] = []
-
-        import re
-        # top bandage
-        top_bandage_reg = self._get_bandage_reg(test_jj.TC.start)
-        bandages_regs_list.append(top_bandage_reg)
-        self.dc_bandage_reg += top_bandage_reg
-
-        # bottom contacts
-        for i, _ in enumerate(test_jj.squid_params.bot_wire_x):
-            BC = getattr(test_jj, "BC" + str(i))
-            bot_bandage_reg = self._get_bandage_reg(BC.end)
-            bandages_regs_list.append(bot_bandage_reg)
-            self.dc_bandage_reg += bot_bandage_reg
-        return bandages_regs_list
-
     def draw_test_structures(self):
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
         struct_centers = [DPoint(1e6, 4e6), DPoint(8.7e6, 5.7e6),
@@ -1298,6 +1283,23 @@ class Design5Q(ChipDesign):
             # e-beam and photo-deposed metal perimeter.
             self.bandages_regs_list += self.draw_squid_bandage(squid)
             # collect all bottom contacts
+
+    def draw_squid_bandage(self, test_jj: AsymSquid = None):
+                bandages_regs_list: List[Region] = []
+
+                import re
+                # top bandage
+                top_bandage_reg = self._get_bandage_reg(test_jj.TC.start)
+                bandages_regs_list.append(top_bandage_reg)
+                self.dc_bandage_reg += top_bandage_reg
+
+                # bottom contacts
+                for i, _ in enumerate(test_jj.squid_params.bot_wire_x):
+                    BC = getattr(test_jj, "BC" + str(i))
+                    bot_bandage_reg = self._get_bandage_reg(BC.end)
+                    bandages_regs_list.append(bot_bandage_reg)
+                    self.dc_bandage_reg += bot_bandage_reg
+                return bandages_regs_list
 
     def _get_bandage_reg(self, center):
         rect_lb = center +\
