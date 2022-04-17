@@ -5,16 +5,13 @@ Description:
 This program is made to generate litography blueprints for testing of the 
 main series chips. E.g. this one is based on v.0.3.0.8 Design.py
 
-e.g. version v.0.3.0.8. Test layout is marked as T1, where `T` stands for `test`.
-T1 geometry parameters mainly follows those
-from v.0.3.0.8 design if not mensioned otherwise in `changes log`. 
-Resonators frequencies, shapes, Q-factors,
-readout and resonator coplanar geometries,
-Xmon crosses shape, qubit-resonator coupling capacitances,
-SQUID loops and test structure geomtries.
-
 
 Changes log
+v.0.0.1.1
+1. Due to up to date calculations, `C_qr` and hence 
+`design.fork_y_spans` values are resimulated.
+
+
 v.0.0.1.0
 1. Added fluix lines for qubits (taken from 5q v.0.3.1.2). Bridges taken accordingly.
 2. Contact pads are transformed by 90deg rotation in order to smooth
