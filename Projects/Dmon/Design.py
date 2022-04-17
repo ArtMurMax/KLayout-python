@@ -1,4 +1,4 @@
-__version__ = "v.0.0.1.2"
+__version__ = "v.0.0.1.3"
 
 '''
 Description:
@@ -7,7 +7,12 @@ main series chips. E.g. this one is based on v.0.3.0.8 Design.py
 
 
 Changes log
-v.0.0.1.1
+v.0.0.1.3
+1. Qubit beneath the RO line repeat corresponding from the 5Q design.
+Namely qubits 1, 3, 2 (starting from 0) from 5Q design
+are located below the RO line. 
+
+v.0.0.1.1, v.0.0.1.2
 1. Due to up to date calculations, `C_qr` and hence 
 `design.fork_y_spans` values are resimulated.
 
@@ -215,11 +220,24 @@ class Design5QTest(ChipDesign):
         self.fork_metal_width = 6e3
         self.fork_gnd_gap = 18e3
         self.xmon_fork_gnd_gap = 2e3
+
+        self.fork_metal_width_old = 10e3
+        self.fork_gnd_gap_old = 18e3
+        self.xmon_fork_gnd_gap_old = 14e3
         # resonator-fork parameters
         # for coarse C_qr evaluation
         self.fork_y_spans = [
-            x * 1e3 for x in [0.0, 11.168, 15.347,18.426, 17.802, 23.074]
+            x * 1e3 for x in
+            [
+                0.0,  # Dmon
+                87.202,  # 5Q
+                15.347,  # Dmon
+                90.72,  # 5Q
+                17.802,  # Dmon
+                42.834  # 5Q
+            ]
         ]
+        # for bottom
 
         # 4 additional resonators based on resonator with idx 2, but
         # only frequency is changed (7.58, 7.66, 7.84) GHz correspondingly
@@ -239,7 +257,17 @@ class Design5QTest(ChipDesign):
         # xmon parameters
         self.xmon_x_distance: float = 545e3  # from simulation of g_12
         # for fine C_qr evaluation
-        self.xmon_dys_Cg_coupling = [18e3] * len(self.L1_list)
+        self.xmon_dys_Cg_coupling = \
+            [
+                self.fork_gnd_gap,
+                self.fork_gnd_gap_old,
+                self.fork_gnd_gap,
+                self.fork_gnd_gap_old,
+                self.fork_gnd_gap,
+                self.fork_gnd_gap_old,
+                self.fork_gnd_gap,
+                self.fork_gnd_gap
+            ]
         self.xmons: list[XmonCross] = []
 
         self.cross_len_x = 180e3
@@ -250,8 +278,13 @@ class Design5QTest(ChipDesign):
         self.cross_gnd_gap_y = 20e3
 
         # fork at the end of resonator parameters
+        # ABOVE RO LINE
         self.fork_x_span = self.cross_width_y + 2 * (
                 self.xmon_fork_gnd_gap + self.fork_metal_width)
+
+        # BELOW RO LINE
+        self.fork_x_span_old = self.cross_width_y + 2 * (
+                self.xmon_fork_gnd_gap_old + self.fork_metal_width_old)
 
         # squids
         self.squids: List[AsymSquid] = []
@@ -563,9 +596,15 @@ class Design5QTest(ChipDesign):
             worm_x = self.worm_x_list[res_idx]
             worm_y = self.chip.dy / 2 + to_line * (-1) ** (res_idx)
 
-            if res_idx % 2 == 0:
+            if res_idx % 2 == 0:  # above RO line
                 trans = DTrans.M0
+                fork_x_span = self.fork_x_span
+                fork_metal_width = self.fork_metal_width
+                fork_gnd_gap = self.fork_gnd_gap
             else:
+                fork_x_span = self.fork_x_span_old
+                fork_metal_width = self.fork_metal_width_old
+                fork_gnd_gap = self.fork_gnd_gap_old
                 trans = DTrans.R0
             self.resonators.append(
                 EMResonatorTL3QbitWormRLTailXmonFork(
@@ -577,10 +616,10 @@ class Design5QTest(ChipDesign):
                     tail_segment_lengths=tail_segment_lengths,
                     tail_turn_angles=tail_turn_angles,
                     tail_trans_in=tail_trans_in,
-                    fork_x_span=self.fork_x_span,
+                    fork_x_span=fork_x_span,
                     fork_y_span=fork_y_span,
-                    fork_metal_width=self.fork_metal_width,
-                    fork_gnd_gap=self.fork_gnd_gap,
+                    fork_metal_width=fork_metal_width,
+                    fork_gnd_gap=fork_gnd_gap,
                     trans_in=trans
                 )
             )
@@ -970,7 +1009,7 @@ class Design5QTest(ChipDesign):
 
             squid_center = test_struct1.center
             test_jj = AsymSquid(
-                squid_center,
+                squid_center + DVector(0, -self.squid_vertical_shift),
                 pars_local
             )
             self.test_squids.append(test_jj)
@@ -996,7 +1035,7 @@ class Design5QTest(ChipDesign):
 
             squid_center = test_struct2.center
             test_jj = AsymSquid(
-                squid_center,
+                squid_center + DVector(0, -self.squid_vertical_shift),
                 pars_local
             )
             self.test_squids.append(test_jj)
