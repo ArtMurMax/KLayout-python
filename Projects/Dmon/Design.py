@@ -1,4 +1,4 @@
-__version__ = "v.0.0.1.0"
+__version__ = "v.0.0.1.1"
 
 '''
 Description:
@@ -215,13 +215,13 @@ class Design5QTest(ChipDesign):
         self.gap_res = 10e3
         self.Z_res = CPWParameters(self.width_res, self.gap_res)
         self.to_line_list = [58e3] * len(self.L1_list)
-        self.fork_metal_width = 10e3
-        self.fork_gnd_gap = 15e3
-        self.xmon_fork_gnd_gap = 14e3
+        self.fork_metal_width = 6e3
+        self.fork_gnd_gap = 18e3
+        self.xmon_fork_gnd_gap = 2e3
         # resonator-fork parameters
         # for coarse C_qr evaluation
         self.fork_y_spans = [
-            x * 1e3 for x in [95]*5
+            x * 1e3 for x in [0.0, 11.168, 15.347,18.426, 17.802, 23.074]
         ]
 
         # 4 additional resonators based on resonator with idx 2, but
@@ -242,7 +242,7 @@ class Design5QTest(ChipDesign):
         # xmon parameters
         self.xmon_x_distance: float = 545e3  # from simulation of g_12
         # for fine C_qr evaluation
-        self.xmon_dys_Cg_coupling = [14e3] * len(self.L1_list)
+        self.xmon_dys_Cg_coupling = [18e3] * len(self.L1_list)
         self.xmons: list[XmonCross] = []
 
         self.cross_len_x = 180e3
@@ -1569,13 +1569,13 @@ def simulate_resonators_f_and_Q():
 def simulate_Cqr():
     resolution_dx = 1e3
     resolution_dy = 1e3
-    dl_list = [0e3]
-    # dl_list = [0e3]
+    # dl_list = [0]
+    dl_list = [0, 10e3, 20e3, 30e3]
     from itertools import product
 
     for dl, res_idx in list(
             product(
-                dl_list, range(1)
+                dl_list, range(6)
             )
     ):
         ### DRAWING SECTION START ###
@@ -1599,8 +1599,8 @@ def simulate_Cqr():
         dr.x = abs(dr.x)
         dr.y = abs(dr.y)
 
-        box_side_x = 8 * xmonCross.sideX_length
-        box_side_y = 8 * xmonCross.sideY_length
+        box_side_x = 5 * xmonCross.sideX_length
+        box_side_y = 5 * xmonCross.sideY_length
         dv = DVector(box_side_x / 2, box_side_y / 2)
 
         crop_box = pya.Box().from_dbox(pya.Box(
