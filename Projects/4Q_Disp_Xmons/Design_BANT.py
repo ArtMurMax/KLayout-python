@@ -1186,35 +1186,46 @@ class Design5QTest(ChipDesign):
             # `self.dc_cont_clearance` represents minimum distance
             # from dc contact pad`s perimeter to the perimeter of the
             # e-beam and photo-deposed metal perimeter.
+            jjLoop_idx = None
+            if squid in self.squids:
+                jjLoop_idx = self.squids.index(squid)
             self.bandages_regs_list += \
-                self.draw_squid_bandage(squid)
+                self.draw_squid_bandage(squid, jjLoop_idx=jjLoop_idx)
 
-    def draw_squid_bandage(self, test_jj: AsymSquid = None):
+    def draw_squid_bandage(self, test_jj: AsymSquid = None,
+                           jjLoop_idx=None):
         bandages_regs_list: List[Region] = []
 
         import re
-        top_bandage_reg = self._get_bandage_reg(test_jj.TC.start)
+        top_bandage_reg = self._get_bandage_reg(test_jj.TC.start, jjLoop_idx)
         bandages_regs_list.append(top_bandage_reg)
         self.dc_bandage_reg += top_bandage_reg
 
         # collect all bottom contacts
         for i, _ in enumerate(test_jj.squid_params.bot_wire_x):
             BC = getattr(test_jj, "BC" + str(i))
-            bot_bandage_reg = self._get_bandage_reg(BC.end)
+            bot_bandage_reg = self._get_bandage_reg(BC.end, jjLoop_idx)
             bandages_regs_list.append(bot_bandage_reg)
             self.dc_bandage_reg += bot_bandage_reg
         return bandages_regs_list
 
     def _get_bandage_reg(self, center, i=None):
+        if i == None:
+            bandage_width = self.bandage_width
+            bandage_height = self.bandage_height
+        else:
+            bandage_width = self.bandages_width_list[i]
+            bandage_height = self.bandages_height_list[i]
+
         rect_lb = center +\
                   DVector(
-                      -self.bandage_width/2,
-                      -self.bandage_height/2
+                      -bandage_width/2,
+                      -bandage_height/2
                   )
         bandage_reg = Rectangle(
             origin=rect_lb,
-            width=self.bandage_width,
-            height=self.bandage_height
+            width=bandage_width,
+            height=bandage_height
         ).metal_region
         bandage_reg.round_corners(
             self.bandage_r_inner,
