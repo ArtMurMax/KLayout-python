@@ -8,14 +8,20 @@ Based on
 2) Parameters: "5Q_0.3.1.1"
 
 Changes log
-v.0.0.1.0
-1. Added fluix lines for qubits (taken from 5q v.0.3.1.2). Bridges taken accordingly.
-2. Contact pads are transformed by 90deg rotation in order to smooth
- the flux line.
-3. Readout line y-shift is eliminated. RO line is straight now.
-
-v.0.0.0.0
-Copied fromv.0.3.0.8.T3
+v.0.3.1.2.BANT1
+1. `dc_cont_ph_clearance` is reduced to 0.75 in order to support 
+for very little bandages.
+2. Area of bandage for resonators (by index)
+    0) 2.5x5 = 12.5 um^2  
+    1) ~= 25 um^2
+    2) =50 um^2 
+    3) ~= 100 um^2 
+    4) 200 um^2
+    5) ~= 400 um^2
+3. Resonators frequencies in 7.2-7.6 (with qubits) and 
+7.68, 7.76 with crosses only equidistant with step 80 MHz.
+4. dispersive-shift coefficient for resonators ~= 0.8 MHz.
+5. Resonator-waveguide coupling is ~= 0.8 MHz.
 '''
 
 # Enter your Python code here
@@ -59,7 +65,7 @@ import copy
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.5e3
+FABRICATION.OVERETCHING = 0.e3
 
 
 class TestStructurePadsSquare(ComplexBase):
@@ -228,7 +234,7 @@ class Design5QTest(ChipDesign):
         # resonator-fork parameters
         # for coarse C_qr evaluation
         self.fork_y_spans = [
-            x * 1e3 for x in [95] * 5
+            x * 1e3 for x in [35.044, 87.202, 42.834, 90.72, 46.767]
         ]
 
         # 4 additional resonators based on resonator with idx 2, but
@@ -261,6 +267,14 @@ class Design5QTest(ChipDesign):
         self.cross_gnd_gap_y = 20e3
 
         # bandages
+        # bandages width and height scales such that area
+        # scales as `(i+1)*2`, `i` starts from 0
+        self.bandages_width_list = [
+            1e3*x for x in [2.50, 3.53, 5.00, 7.07, 10, 14.14]
+        ]
+        self.bandages_height_list = [
+            1e3*x for x in [5.00, 7.07, 10.00, 14.14, 20, 28.28]
+        ]
         self.bandage_width = 5e3
         self.bandage_height = 10e3
         self.bandage_r_outer = 2e3
@@ -288,7 +302,7 @@ class Design5QTest(ChipDesign):
         self.dc_cont_el_clearance = 2e3  # 1.8e3
         # required clearance of dc contacts from photo layer polygon
         # perimeter
-        self.dc_cont_ph_clearance = 2e3
+        self.dc_cont_ph_clearance = 0.75e3
         # required extension into photo region over the hole cutted
         self.dc_cont_ph_ext = 10e3
 
@@ -364,7 +378,7 @@ class Design5QTest(ChipDesign):
         self.draw_josephson_loops()
 
         # self.draw_microwave_drvie_lines()
-        self.draw_flux_control_lines()
+        # self.draw_flux_control_lines()
 
         self.draw_test_structures()
         self.draw_bandages()
@@ -375,9 +389,11 @@ class Design5QTest(ChipDesign):
         self.draw_photo_el_marks()
         self.draw_bridges()
         self.draw_pinning_holes()
-        for contact_pad in self.contact_pads:  # delete holes from
-            # contact pads
-            contact_pad.place(self.region_ph)
+        # delete holes from contact pads to ensure
+        # robust bounding
+        for i, contact_pad in enumerate(self.contact_pads):
+            if i == 0 or i == 4:  # RO line contact pads only
+                contact_pad.place(self.region_ph)
         self.region_ph.merge()
         self.extend_photo_overetching()
         self.inverse_destination(self.region_ph)
@@ -467,7 +483,8 @@ class Design5QTest(ChipDesign):
 
         self.region_ph.insert(self.chip_box)
         for i, contact_pad in enumerate(self.contact_pads):
-             contact_pad.place(self.region_ph)
+            if i == 0 or i == 4:  # RO line contact pads only
+                contact_pad.place(self.region_ph)
 
     def draw_cut_marks(self):
         chip_box_poly = DPolygon(self.chip_box)
@@ -698,25 +715,21 @@ class Design5QTest(ChipDesign):
         pars_local.bot_wire_x = [-dx, dx]
         pars_local.SQB_dy = 0
         for res_idx, xmon_cross in enumerate(self.xmons[:-2]):
+            pars_local.BC_dx = self.bandages_width_list[res_idx]
+            pars_local.BC_dy = (self.bandages_height_list[res_idx])/2 + \
+                               3.5e3 - 1e3
+            pars_local.TC_dx = pars_local.BC_dx
+            pars_local.TC_dy = (self.bandages_height_list[res_idx])/2 + \
+                               3e3 - 1e3
             if res_idx % 2 == 0:  # above RO line
                 m = -1
-                squid_center = xmon_cross.cpw_tempt.end
-                squid_center += DPoint(
-                    0,
-                    -(SQUID_PARS.squid_dy / 2 +
-                      SQUID_PARS.SQB_dy / 2 +
-                      self.squid_ph_clearance)
-                )
+                squid_center = (xmon_cross.cpw_tempt.end +
+                                xmon_cross.cpw_tempt.start) / 2
                 trans = DTrans.M0
             else:  # below RO line
                 m = 1
-                squid_center = xmon_cross.cpw_bempt.end
-                squid_center += DPoint(
-                    0,
-                    pars_local.squid_dy / 2 +
-                    pars_local.SQB_dy / 2 +
-                    self.squid_ph_clearance
-                )
+                squid_center = (xmon_cross.cpw_bempt.end +
+                                xmon_cross.cpw_bempt.start) / 2
                 trans = DTrans.R0
             squid = AsymSquid(
                 squid_center + m*DVector(0, -self.squid_vertical_shift),
@@ -989,7 +1002,7 @@ class Design5QTest(ChipDesign):
 
             squid_center = test_struct1.center
             test_jj = AsymSquid(
-                squid_center,
+                squid_center + DVector(0, -self.squid_vertical_shift),
                 pars_local
             )
             self.test_squids.append(test_jj)
@@ -1015,7 +1028,7 @@ class Design5QTest(ChipDesign):
 
             squid_center = test_struct2.center
             test_jj = AsymSquid(
-                squid_center,
+                squid_center + DVector(0, -self.squid_vertical_shift),
                 pars_local
             )
             self.test_squids.append(test_jj)
@@ -1085,36 +1098,47 @@ class Design5QTest(ChipDesign):
             # `self.dc_cont_clearance` represents minimum distance
             # from dc contact pad`s perimeter to the perimeter of the
             # e-beam and photo-deposed metal perimeter.
-            self.bandages_regs_list += self.draw_squid_bandage(squid)
-            # collect all bottom contacts
+            jjLoop_idx = None
+            if squid in self.squids:
+                jjLoop_idx = self.squids.index(squid)
+            self.bandages_regs_list += \
+                self.draw_squid_bandage(squid, jjLoop_idx=jjLoop_idx)
 
-    def draw_squid_bandage(self, test_jj: AsymSquid = None):
+
+    def draw_squid_bandage(self, test_jj: AsymSquid = None,
+                           jjLoop_idx=None):
         bandages_regs_list: List[Region] = []
 
         import re
-        # top bandage
-        top_bandage_reg = self._get_bandage_reg(test_jj.TC.start)
+        top_bandage_reg = self._get_bandage_reg(test_jj.TC.start, jjLoop_idx)
         bandages_regs_list.append(top_bandage_reg)
         self.dc_bandage_reg += top_bandage_reg
 
-        # bottom contacts
+        # collect all bottom contacts
         for i, _ in enumerate(test_jj.squid_params.bot_wire_x):
             BC = getattr(test_jj, "BC" + str(i))
-            bot_bandage_reg = self._get_bandage_reg(BC.end)
+            bot_bandage_reg = self._get_bandage_reg(BC.end, jjLoop_idx)
             bandages_regs_list.append(bot_bandage_reg)
             self.dc_bandage_reg += bot_bandage_reg
         return bandages_regs_list
 
-    def _get_bandage_reg(self, center):
+    def _get_bandage_reg(self, center, i=None):
+        if i == None:
+            bandage_width = self.bandage_width
+            bandage_height = self.bandage_height
+        else:
+            bandage_width = self.bandages_width_list[i]
+            bandage_height = self.bandages_height_list[i]
+
         rect_lb = center +\
                   DVector(
-                      -self.bandage_width/2,
-                      -self.bandage_height/2
+                      -bandage_width/2,
+                      -bandage_height/2
                   )
         bandage_reg = Rectangle(
             origin=rect_lb,
-            width=self.bandage_width,
-            height=self.bandage_height
+            width=bandage_width,
+            height=bandage_height
         ).metal_region
         bandage_reg.round_corners(
             self.bandage_r_inner,
@@ -1126,12 +1150,12 @@ class Design5QTest(ChipDesign):
 
     def draw_recess(self):
         for squid in itertools.chain(self.squids, self.test_squids):
-            recess_reg = squid.TC.metal_region.dup().size(-1.5e3)
+            recess_reg = squid.TC.metal_region.dup().size(-self.dc_cont_ph_clearance)
             self.region_ph -= recess_reg
 
             for i, _ in enumerate(squid.squid_params.bot_wire_x):
                 BC = getattr(squid, "BC"+str(i))
-                recess_reg = BC.metal_region.dup().size(-1.5e3)
+                recess_reg = BC.metal_region.dup().size(-self.dc_cont_ph_clearance)
                 self.region_ph -= recess_reg
 
     def draw_el_protection(self):
