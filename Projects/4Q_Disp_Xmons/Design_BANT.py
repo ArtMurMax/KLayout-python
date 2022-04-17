@@ -1,4 +1,4 @@
-__version__ = "v.0.3.1.2.BANT1"
+__version__ = "v.0.3.1.2.BANT3"
 
 '''
 Description:
@@ -8,6 +8,9 @@ Based on
 2) Parameters: "5Q_0.3.1.1"
 
 Changes log
+v.0.3.1.2.BANT3
+1. Bandages size change returned
+
 v.0.3.1.2.BANT2
 1. Express pads for test structures are added.
 
@@ -68,7 +71,7 @@ import copy
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.5e3
+FABRICATION.OVERETCHING = 0.e3
 
 
 class TestStructurePadsSquare(ComplexBase):
