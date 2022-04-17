@@ -1,4 +1,4 @@
-__version__ = "v.0.0.1.1"
+__version__ = "v.0.0.1.2"
 
 '''
 Description:
@@ -256,6 +256,8 @@ class Design5QTest(ChipDesign):
         # squids
         self.squids: List[AsymSquid] = []
         self.test_squids: List[AsymSquid] = []
+        # vertical shift of every squid local origin  coordinates
+        self.squid_vertical_shift = 3e3
         # minimal distance between squid loop and photo layer
         self.squid_ph_clearance = 1.5e3
 
@@ -274,6 +276,14 @@ class Design5QTest(ChipDesign):
         # microwave and flux drive lines parameters
         self.ctr_lines_turn_radius = 40e3
         self.cont_lines_y_ref: float = 300e3  # nm
+
+        # bandages
+        self.bandage_width = 5e3
+        self.bandage_height = 10e3
+        self.bandage_r_outer = 2e3
+        self.bandage_r_inner = 2e3
+        self.bandage_curve_pts_n = 40
+        self.bandages_regs_list = []
 
         # distance between microwave-drive central coplanar line
         # to the face of Xmon's cross metal. Assuming that microwave
@@ -346,7 +356,8 @@ class Design5QTest(ChipDesign):
         self.draw_flux_control_lines()
 
         self.draw_test_structures()
-        # self.draw_el_dc_contacts()
+        self.draw_bandages()
+        self.draw_recess()
         self.draw_el_protection()
 
         self.draw_photo_el_marks()
@@ -675,25 +686,21 @@ class Design5QTest(ChipDesign):
         pars_local.bot_wire_x = [-dx, dx]
         pars_local.SQB_dy = 0
         for res_idx, xmon_cross in enumerate(self.xmons[:-2]):
-            if res_idx % 2 == 0:
-                squid_center = xmon_cross.cpw_tempt.end
-                squid_center += DPoint(
-                    0,
-                    -(SQUID_PARAMETERS.squid_dy / 2 +
-                      SQUID_PARAMETERS.SQB_dy / 2 +
-                      self.squid_ph_clearance)
-                )
+            if res_idx % 2 == 0:  # above RO line
+                m = -1
+                squid_center = (xmon_cross.cpw_tempt.end +
+                                xmon_cross.cpw_tempt.start) / 2
                 trans = DTrans.M0
-            else:
-                squid_center = xmon_cross.cpw_bempt.end
-                squid_center += DPoint(
-                    0,
-                    pars_local.squid_dy / 2 +
-                    pars_local.SQB_dy / 2 +
-                    self.squid_ph_clearance
-                )
+            else:  # below RO line
+                m = 1
+                squid_center = (xmon_cross.cpw_bempt.end +
+                                xmon_cross.cpw_bempt.start) / 2
                 trans = DTrans.R0
-            squid = AsymSquid(squid_center, pars_local)
+            squid = AsymSquid(
+                squid_center + m * DVector(0, -self.squid_vertical_shift),
+                pars_local,
+                trans_in=trans
+            )
             self.squids.append(squid)
             squid.place(self.region_el)
 
@@ -1042,12 +1049,8 @@ class Design5QTest(ChipDesign):
             dc_rec = Rectangle(p1, rec_width, rec_height)
             dc_rec.place(self.dc_bandage_reg)
 
-    def draw_el_dc_contacts(self):
+    def draw_bandages(self):
         """
-        TODO: add documentation and rework this function. It has to
-            operate only with upper and lower polygons that are
-             attached to the Tmon loop and has nothing to do with whether
-             it is xmon and flux line or test pads squares.
         Returns
         -------
 
@@ -1057,78 +1060,60 @@ class Design5QTest(ChipDesign):
                 zip(self.squids, self.xmons),
                 zip(self.test_squids, self.test_squids_pads)
         ):
-
-            # for optimization of boolean operations in the vicinitiy of
-            # a squid
-            photo_vicinity = self.region_ph & Region(
-                DBox(
-                    squid.origin + DPoint(100e3, 100e3),
-                    squid.origin - DPoint(100e3, 100e3)
-                )
-            )
             # dc contact pad has to be completely
             # inside union of both  e-beam and photo deposed
             # metal regions.
             # `self.dc_cont_clearance` represents minimum distance
             # from dc contact pad`s perimeter to the perimeter of the
             # e-beam and photo-deposed metal perimeter.
-
+            self.bandages_regs_list += self.draw_squid_bandage(squid)
             # collect all bottom contacts
 
-            # philling `cut_regs` array that consists of metal regions
-            # to be cutted from photo region
-            cut_regs = [squid.top_ph_el_conn_pad.metal_region,
-                        squid.pad_top.metal_region]
-            for bot_contact in [squid.bot_dc_flux_line_right,
-                                squid.bot_dc_flux_line_left]:
-                # some bottom parts of squid can be missing (for test pads)
-                if bot_contact is None:
-                    continue
-                bot_cut_regs = [
-                    primitive.metal_region for primitive in
-                    list(bot_contact.primitives.values())[:2]
-                ]
-                bot_cut_regs = bot_cut_regs[0] + bot_cut_regs[1]
-                cut_regs.append(bot_cut_regs)
+    def draw_squid_bandage(self, test_jj: AsymSquid = None):
+        bandages_regs_list: List[Region] = []
 
-            # creating bandages
-            for cut_reg in cut_regs:
-                # find only those polygons in photo-layer that overlap with
-                # bandage an return as a `Region()`
-                contact_reg = cut_reg.pull_overlapping(photo_vicinity)
-                # cut from photo region
-                self.region_ph -= cut_reg
+        import re
+        # top bandage
+        top_bandage_reg = self._get_bandage_reg(test_jj.TC.start)
+        bandages_regs_list.append(top_bandage_reg)
+        self.dc_bandage_reg += top_bandage_reg
 
-                # draw shrinked bandage on top of el region
-                el_extension = extended_region(cut_reg, self.el_overlaps_ph_by) & contact_reg
-                self.region_el += el_extension
-                # self.region_el.merge()
+        # bottom contacts
+        for i, _ in enumerate(test_jj.squid_params.bot_wire_x):
+            BC = getattr(test_jj, "BC" + str(i))
+            bot_bandage_reg = self._get_bandage_reg(BC.end)
+            bandages_regs_list.append(bot_bandage_reg)
+            self.dc_bandage_reg += bot_bandage_reg
+        return bandages_regs_list
 
-                # correction of extension into the SQUID loop
-                hwidth = squid.top_ph_el_conn_pad.width / 2 + self.dc_cont_el_clearance
-                fix_box = DBox(
-                    squid.origin + DPoint(-hwidth, 0),
-                    squid.origin + DPoint(hwidth, squid.params.sq_dy / 2 - squid.params.inter_leads_width / 2)
-                )
-                self.region_el -= Region(fix_box)
+    def _get_bandage_reg(self, center):
+        rect_lb = center +\
+                  DVector(
+                      -self.bandage_width/2,
+                      -self.bandage_height/2
+                  )
+        bandage_reg = Rectangle(
+            origin=rect_lb,
+            width=self.bandage_width,
+            height=self.bandage_height
+        ).metal_region
+        bandage_reg.round_corners(
+            self.bandage_r_inner,
+            self.bandage_r_outer,
+            self.bandage_curve_pts_n
+        )
 
-                el_bandage = extended_region(
-                    cut_reg,
-                    -self.dc_cont_el_clearance
-                )
-                self.dc_bandage_reg += el_bandage
-                self.dc_bandage_reg.merge()
+        return bandage_reg
 
-                # draw extended bandage in photo region
-                ph_bandage = extended_region(
-                    cut_reg, self.dc_cont_ph_ext)
-                ph_bandage = ph_bandage & contact_reg
-                ph_bandage = extended_region(
-                    ph_bandage,
-                    -self.dc_cont_ph_clearance
-                )
-                self.dc_bandage_reg += ph_bandage
-                self.dc_bandage_reg.merge()
+    def draw_recess(self):
+        for squid in itertools.chain(self.squids, self.test_squids):
+            recess_reg = squid.TC.metal_region.dup().size(-1.5e3)
+            self.region_ph -= recess_reg
+
+            for i, _ in enumerate(squid.squid_params.bot_wire_x):
+                BC = getattr(squid, "BC"+str(i))
+                recess_reg = BC.metal_region.dup().size(-1.5e3)
+                self.region_ph -= recess_reg
 
     def draw_el_protection(self):
         protection_a = 300e3
