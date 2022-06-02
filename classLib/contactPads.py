@@ -8,12 +8,28 @@ import math
 from classLib.baseClasses import ComplexBase, ElementBase
 from classLib.coplanars import CPWParameters, CPW, CPW2CPW
 
+
 class ContactPad(ComplexBase):
-    def __init__(self, origin, pcb_cpw_params=CPWParameters(width=200e3, gap=120e3),
+    def __init__(self, origin,
+                 pcb_cpw_params=CPWParameters(width=200e3, gap=120e3),
                  chip_cpw_params=CPWParameters(width=24.1e3, gap=12.95e3),
                  pad_length=300e3, back_metal_width=0, back_metal_gap=None,
                  transition_len=150e3,
                  trans_in=None):
+        '''
+
+        Parameters
+        ----------
+        origin : DPoint
+            center of the thick pad's outer side
+        pcb_cpw_params
+        chip_cpw_params
+        pad_length
+        back_metal_width
+        back_metal_gap
+        transition_len
+        trans_in
+        '''
 
         self.pcb_cpw_params: CPWParameters = pcb_cpw_params
         self.chip_cpw_params: CPWParameters = chip_cpw_params
@@ -67,7 +83,6 @@ class ContactPad(ComplexBase):
 
         self.connections = [origin, self.cpw2cpw.end]
         self.angle_connections = [0, self.cpw2cpw.alpha_end]
-
 
 
 class Test_frame(ElementBase):

@@ -235,6 +235,327 @@ class CHIP_10x10_12pads:
             modified_dict[prefix + key + postfix] = val
         return modified_dict
 
+
+class CHIP_14x14_20pads:
+    """
+    14x14 mm chip with 20 pads
+    PCB design GDrive:
+    https://drive.google.com/file/d/1cIX76_AHCMzT8Pas4I2N3TPsq8dLPARA/view?usp=sharing
+    PCB dimensions screenshot GDrive:
+    https://drive.google.com/file/d/1cVNBKMS8DUIpQVutobOhf1PxrLzkRabu/view?usp=sharing
+    """
+    dx = 14e6  # chip x dimension
+    dy = 14e6  # chip y dimension
+
+    ''' center of intersection of top side left-most pad vertical and 
+    left side top-most pad horizontal'''
+    pcb_tl_intersection = DPoint(1880e3, 1880e3)
+
+    pcb_width = 500e3  # 0.5 um, width of central line of PCB's CPW
+    pcb_gap = 580e3  # 330+250 = 580 um, gap of central line of PCB's CPW
+    pcb_feedline_d = 2560e3  # period if pins along x and y axis
+
+    # number of pads on each side of chip square
+    pads_per_side = 5
+
+    # PCB's CPW parameters structure
+    pcb_Z = CPWParameters(pcb_width, pcb_gap)
+
+    # on-chip cpw lines parameters
+    chip_cpw_width = 24e3
+    chip_cpw_gap = 12e3
+    chip_Z = CPWParameters(chip_cpw_width, chip_cpw_gap)
+
+    @staticmethod
+    def get_contact_pads(chip_Z_list: List[Union[CPWParameters, CPW, CPWArc]]=None,
+                         overetching: float =0.0e3):
+        """
+        Constructs objects that represent contact pads. Each pad
+        consists of cpw that matches PCB cpw dimension, then trapeziod
+        transition region that ends with dimensions corresponding to
+        on-chip cpw.
+
+        Parameters
+        ----------
+        chip_Z_list : List[Union[CPWParams, CPW, CPWArc]]
+            list of 20 structures containing dimensions of coplanar
+            waveguides on chip side.
+            Order starts from top-left (index 0) in  counterclockwise
+            direction: top-most pad on the left side has index 0.
+        overetching : float
+            parameter that is used to correct contact pad's dimension
+            according to fabrication process
+
+        Returns
+        -------
+        list[ContactPad]
+            List of contact pad objects indexed starting from top of the left corner
+            in counter-clockwise direction.
+        """
+        if chip_Z_list is None:
+            chip_Z_list = [
+                CPWParameters(
+                    CHIP_14x14_20pads.chip_cpw_width,
+                    CHIP_14x14_20pads.chip_cpw_gap
+                )
+                for i in range(4*CHIP_14x14_20pads.pads_per_side)
+            ]
+        elif len(chip_Z_list) != 4*CHIP_14x14_20pads.pads_per_side:
+            raise ValueError("`cpw_params_list` length is not equal to "
+                             "number of pads (20).")
+        else:
+            chip_Z_list = [
+                CPWParameters(
+                    chip_z.width + 2*overetching,
+                    chip_z.gap - 2*overetching
+                )
+                for chip_z in chip_Z_list
+            ]
+
+
+        dx = CHIP_14x14_20pads.dx
+        dy = CHIP_14x14_20pads.dy
+        pcb_tl_intersection = CHIP_14x14_20pads.pcb_tl_intersection
+        dy_new = dy - pcb_tl_intersection.y
+        dx_new = dx - pcb_tl_intersection.x
+        pcb_feedline_d = CHIP_14x14_20pads.pcb_feedline_d
+        pcb_Z = CHIP_14x14_20pads.pcb_Z
+        pads_per_side = CHIP_14x14_20pads.pads_per_side
+        back_metal_gap = 100e3
+
+        k = 0
+        print(dy_new)
+        contact_pads_left = [
+            ContactPad(
+                DPoint(0, dy_new - pcb_feedline_d * i),
+                pcb_cpw_params=pcb_Z,
+                chip_cpw_params=chip_Z_list[k + i],
+                back_metal_width=50e3,
+                back_metal_gap=back_metal_gap
+            ) for i in range(pads_per_side)
+        ]
+        k += pads_per_side  # each side has 5 pins
+
+        contact_pads_bottom = [
+            ContactPad(
+                DPoint(pcb_tl_intersection.x + pcb_feedline_d * i, 0),
+                pcb_Z, chip_Z_list[k +i],
+                back_metal_width=50e3,
+                back_metal_gap=back_metal_gap,
+                trans_in=Trans.R90
+            ) for i in range(pads_per_side)
+        ]
+        k += pads_per_side
+
+        contact_pads_right = [
+            ContactPad(
+                DPoint(dx, pcb_tl_intersection.y + pcb_feedline_d * i),
+                pcb_Z, chip_Z_list[k + i],
+                back_metal_width=50e3,
+                back_metal_gap=back_metal_gap,
+                trans_in=Trans.R180
+            ) for i in range(pads_per_side)
+        ]
+        k += pads_per_side
+
+        contact_pads_top = [
+            ContactPad(
+                DPoint(dx_new - pcb_feedline_d * i, dy),
+                pcb_Z, chip_Z_list[k + i],
+                back_metal_width=50e3,
+                back_metal_gap=back_metal_gap,
+                trans_in=Trans.R270
+            ) for i in range(pads_per_side)
+        ]
+
+        # contact pads are ordered starting with top-left corner in counter-clockwise direction
+        contact_pads = itertools.chain(
+            contact_pads_left, contact_pads_bottom,
+            contact_pads_right, contact_pads_top
+        )
+
+        return list(contact_pads)
+
+    origin = DPoint(0, 0)
+    box = pya.DBox(origin, origin + DPoint(dx, dy))
+
+    @staticmethod
+    def get_geometry_params_dict(prefix="", postfix=""):
+        from collections import OrderedDict
+        geometry_params = OrderedDict(
+            [
+                ("dx, um", CHIP_14x14_20pads.dx / 1e3),
+                ("dy, um", CHIP_14x14_20pads.dy / 1e3),
+                ("nX", CHIP_14x14_20pads.nX),
+                ("nY", CHIP_14x14_20pads.nY)
+            ]
+        )
+        modified_dict = OrderedDict()
+        for key, val in geometry_params.items():
+            modified_dict[prefix + key + postfix] = val
+        return modified_dict
+
+
+class CHIP_16p5x16p5_20pads:
+    """
+    14x14 mm chip with 20 pads
+    PCB design GDrive:
+    https://drive.google.com/file/d/1cIX76_AHCMzT8Pas4I2N3TPsq8dLPARA/view?usp=sharing
+    PCB dimensions screenshot GDrive:
+    https://drive.google.com/file/d/1cVNBKMS8DUIpQVutobOhf1PxrLzkRabu/view?usp=sharing
+    """
+    dx = 16.5e6  # chip x dimension
+    dy = 16.5e6  # chip y dimension
+
+    ''' center of intersection of top side left-most pad vertical and 
+    left side top-most pad horizontal'''
+    pcb_tl_intersection = DPoint(3130e3, 3130e3)
+
+    pcb_width = 500e3  # 0.5 um, width of central line of PCB's CPW
+    pcb_gap = 580e3  # 330+250 = 580 um, gap of central line of PCB's CPW
+    pcb_feedline_d = 2560e3  # period if pins along x and y axis
+
+    # number of pads on each side of chip square
+    pads_per_side = 5
+
+    # PCB's CPW parameters structure
+    pcb_Z = CPWParameters(pcb_width, pcb_gap)
+
+    # on-chip cpw lines parameters
+    chip_cpw_width = 24e3
+    chip_cpw_gap = 12e3
+    chip_Z = CPWParameters(chip_cpw_width, chip_cpw_gap)
+
+    @staticmethod
+    def get_contact_pads(chip_Z_list: List[Union[CPWParameters, CPW, CPWArc]]=None,
+                         overetching: float =0.0e3):
+        """
+        Constructs objects that represent contact pads. Each pad
+        consists of cpw that matches PCB cpw dimension, then trapeziod
+        transition region that ends with dimensions corresponding to
+        on-chip cpw.
+
+        Parameters
+        ----------
+        chip_Z_list : List[Union[CPWParams, CPW, CPWArc]]
+            list of 20 structures containing dimensions of coplanar
+            waveguides on chip side.
+            Order starts from top-left (index 0) in  counterclockwise
+            direction: top-most pad on the left side has index 0.
+        overetching : float
+            parameter that is used to correct contact pad's dimension
+            according to fabrication process
+
+        Returns
+        -------
+        list[ContactPad]
+            List of contact pad objects indexed starting from top of the left corner
+            in counter-clockwise direction.
+        """
+        if chip_Z_list is None:
+            chip_Z_list = [
+                CPWParameters(
+                    CHIP_16p5x16p5_20pads.chip_cpw_width,
+                    CHIP_16p5x16p5_20pads.chip_cpw_gap
+                )
+                for i in range(4*CHIP_16p5x16p5_20pads.pads_per_side)
+            ]
+        elif len(chip_Z_list) != 4*CHIP_16p5x16p5_20pads.pads_per_side:
+            raise ValueError("`cpw_params_list` length is not equal to "
+                             "number of pads (20).")
+        else:
+            chip_Z_list = [
+                CPWParameters(
+                    chip_z.width + 2*overetching,
+                    chip_z.gap - 2*overetching
+                )
+                for chip_z in chip_Z_list
+            ]
+
+
+        dx = CHIP_16p5x16p5_20pads.dx
+        dy = CHIP_16p5x16p5_20pads.dy
+        pcb_tl_intersection = CHIP_16p5x16p5_20pads.pcb_tl_intersection
+        dy_new = dy - pcb_tl_intersection.y
+        dx_new = dx - pcb_tl_intersection.x
+        pcb_feedline_d = CHIP_16p5x16p5_20pads.pcb_feedline_d
+        pcb_Z = CHIP_16p5x16p5_20pads.pcb_Z
+        pads_per_side = CHIP_16p5x16p5_20pads.pads_per_side
+        back_metal_gap = 100e3
+
+        k = 0
+        # print(dy_new)
+        contact_pads_left = [
+            ContactPad(
+                DPoint(0, dy_new - pcb_feedline_d * i),
+                pcb_cpw_params=pcb_Z,
+                chip_cpw_params=chip_Z_list[k + i],
+                back_metal_width=50e3,
+                back_metal_gap=back_metal_gap
+            ) for i in range(pads_per_side)
+        ]
+        k += pads_per_side  # each side has 5 pins
+
+        contact_pads_bottom = [
+            ContactPad(
+                DPoint(pcb_tl_intersection.x + pcb_feedline_d * i, 0),
+                pcb_Z, chip_Z_list[k +i],
+                back_metal_width=50e3,
+                back_metal_gap=back_metal_gap,
+                trans_in=Trans.R90
+            ) for i in range(pads_per_side)
+        ]
+        k += pads_per_side
+
+        contact_pads_right = [
+            ContactPad(
+                DPoint(dx, pcb_tl_intersection.y + pcb_feedline_d * i),
+                pcb_Z, chip_Z_list[k + i],
+                back_metal_width=50e3,
+                back_metal_gap=back_metal_gap,
+                trans_in=Trans.R180
+            ) for i in range(pads_per_side)
+        ]
+        k += pads_per_side
+
+        contact_pads_top = [
+            ContactPad(
+                DPoint(dx_new - pcb_feedline_d * i, dy),
+                pcb_Z, chip_Z_list[k + i],
+                back_metal_width=50e3,
+                back_metal_gap=back_metal_gap,
+                trans_in=Trans.R270
+            ) for i in range(pads_per_side)
+        ]
+
+        # contact pads are ordered starting with top-left corner in counter-clockwise direction
+        contact_pads = itertools.chain(
+            contact_pads_left, contact_pads_bottom,
+            contact_pads_right, contact_pads_top
+        )
+
+        return list(contact_pads)
+
+    origin = DPoint(0, 0)
+    box = pya.DBox(origin, origin + DPoint(dx, dy))
+
+    @staticmethod
+    def get_geometry_params_dict(prefix="", postfix=""):
+        from collections import OrderedDict
+        geometry_params = OrderedDict(
+            [
+                ("dx, um", CHIP_16p5x16p5_20pads.dx / 1e3),
+                ("dy, um", CHIP_16p5x16p5_20pads.dy / 1e3),
+                ("nX", CHIP_16p5x16p5_20pads.nX),
+                ("nY", CHIP_16p5x16p5_20pads.nY)
+            ]
+        )
+        modified_dict = OrderedDict()
+        for key, val in geometry_params.items():
+            modified_dict[prefix + key + postfix] = val
+        return modified_dict
+
+
 class CHIP_10x5_8pads:
     """
     10x5 mm chip
