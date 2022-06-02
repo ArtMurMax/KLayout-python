@@ -106,7 +106,7 @@ class ElementBase():
     # then displacement of the current state to the origin
     # after all, origin should be updated
     def _init_regions_trans(self):
-        self.init_regions()  # must be implemented in every subclass
+        self.init_regions()  # must be implemented in child classes
 
         dr_origin = DSimplePolygon([DPoint(0, 0)])
         if (self.DCplxTrans_init is not None):
@@ -121,7 +121,10 @@ class ElementBase():
             self.make_trans(dCplxTrans_temp)
             dr_origin.transform(dCplxTrans_temp)
 
-            # translation to the old origin (self.connections are already contain proper values)
+        # translation local coordinates to the program coordinates by
+        # tranlating geometry into `self.origin` - user-requested point
+        # in program's coordinate system
+        # Note: self.connections are already contain proper values
         self.make_trans(DCplxTrans(1, 0, False, self.origin))  # move to the origin
         self.origin += dr_origin.point(0)
 

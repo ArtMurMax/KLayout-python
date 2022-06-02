@@ -698,28 +698,31 @@ class DPathCPW(ComplexBase):
             raise Warning("DPathCPW received < 3 points. Use `CPW` class "
                           "or increase anchor points number ")
         self.points: List[DPoint] = points
-        # number of `CPW` segments + number of `CPW2CPWarc`s
+
+        # translating from points, to squences of segments lengths and
+        # turn angles
+        self._turn_angles = []
         self._shape_string = []
         for p1, p2, p3 in zip(points, points[1:], points[2:]):
             a = (p2 - p1)
             b = (p3 - p2)
             max_len = max(a.length(), b.length())
             # collinearity testing
-            if np.arccos(a.sprod(b)/a.length()/b.length())*max_len > 1:
-                # if vectors discrepancy is less bigger than 1 nm
-                self._shape_string += ["L", "R"]
+            angle = a.vprod_sign(b) * np.abs(
+                np.arccos(a.sprod(b) / (a.length() * b.length()))
+            )
+            if np.abs(angle) < 1e-6:
+                self._shape_string += ["L"]
             else:
-                if(
-                        len(self._shape_string) > 0
-                        and self._shape_string[-1] == "L"
-                ):
-                    self._shape_string += ["L"]
-                else:
-                    self._shape_string += ["L", "L"]
+                # non-colinear
+                self._shape_string += ["L", "R"]
+                self._turn_angles += [angle]
         if self._shape_string[-1] == "R":
             self._shape_string += ["L"]
 
+        # number of `CPW` segments + number of `CPW2CPWarc`s
         self._shape_string = "".join(self._shape_string)
+
         _ctr = Counter(self._shape_string)
         self._N_straights = _ctr["L"]
         self._N_turns = _ctr["R"]
@@ -749,23 +752,16 @@ class DPathCPW(ComplexBase):
         # print(segment_lengths)
         if hasattr(segment_lengths, "__len__"):
             if len(segment_lengths) != self._N_straights:
-                raise ValueError("Straight segments dimension mismatch")
+                raise ValueError(
+                     "Straight segments dimension mismatch"
+                     f"self._N_straights = {self._N_straights}\n"
+                     f"segment_lengths = {segment_lengths}"
+                )
             else:
                 self._segment_lengths = copy.deepcopy(segment_lengths)
         else:
             self._segment_lengths: List[float] = [segment_lengths] * \
                                        self._N_straights
-
-        self._turn_angles = []
-        for i, (p1, p2, p3) in enumerate(
-                zip(points, points[1:], points[2:])
-        ):
-            a = p2 - p1
-            b = p3 - p2
-            self._turn_angles.append(
-                a.vprod_sign(b) *
-                np.abs(np.arccos(a.sprod(b)/a.length()/b.length()))
-            )
 
         super().__init__(self.points[0], trans_in)
         self.start = self.connections[0]
@@ -837,7 +833,9 @@ class DPathCPW(ComplexBase):
                 self.primitives["arc_" + str(idx_r)] = cpw_arc
                 idx_r += 1
             elif symbol == 'L':
-                # Turns are reducing segments' lengths so as if there were no roundings at all
+                # Rounded courners
+                # are reducing segments' lengths so as if
+                # there were no roundings at all
                 # next 'R' segment if exists
                 if (i + 1 < self._N_elements
                         and self._shape_string[i + 1] == 'R'
