@@ -554,7 +554,7 @@ class CPWRLPath(ComplexBase):
                         f"for round segment with index {idx_r}:\n"
                         "turn radius may be depicted incorrectly due to "
                         "the fact that curvature radius is lesser that "
-                        "CPW metal width")
+                        "CPW half-width")
 
                 if turn_angle < 0:
                     turn_radius *= -1
@@ -698,6 +698,14 @@ class DPathCPW(ComplexBase):
             raise Warning("DPathCPW received < 3 points. Use `CPW` class "
                           "or increase anchor points number ")
         self.points: List[DPoint] = points
+        # force conversion since "DVector" has no method "distance()"
+        for i, point in enumerate(self.points):
+            if not isinstance(point, DPoint):
+                try:
+                    self.points[i] = DPoint(point)
+                except ValueError as e:
+                    print(e)
+
 
         # translating from points, to squences of segments lengths and
         # turn angles
@@ -717,8 +725,7 @@ class DPathCPW(ComplexBase):
                 # non-colinear
                 self._shape_string += ["L", "R"]
                 self._turn_angles += [angle]
-        if self._shape_string[-1] == "R":
-            self._shape_string += ["L"]
+        self._shape_string += ["L"]
 
         # number of `CPW` segments + number of `CPW2CPWarc`s
         self._shape_string = "".join(self._shape_string)
@@ -854,7 +861,8 @@ class DPathCPW(ComplexBase):
                 if (self._segment_lengths[idx_l] < 0):
                     raise Warning(
                         "CPWDPath warning: segment length "
-                        "is less than zero"
+                        "is less than zero\n"
+                        f"idx_l = {idx_l}"
                     )
 
                 if self._cpw_parameters[i].smoothing:
