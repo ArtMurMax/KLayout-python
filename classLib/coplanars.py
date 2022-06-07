@@ -738,10 +738,17 @@ class DPathCPW(ComplexBase):
         self._cpw_parameters: List[CPWParameters] = []
         # multi-type parameters parsing
         if hasattr(cpw_parameters, "__len__"):
-            if len(cpw_parameters) != self._N_elements:
-                raise ValueError("CPW parameters dimension mismatch")
+            l_length = len(cpw_parameters)
+            if l_length != self._N_elements and l_length != 1:
+                raise ValueError(
+                    "CPW parameters dimension mismatch\n"
+                    f"N_elements = {self._N_elements} != cpwpars given = "
+                    f"{len(cpw_parameters)}"
+                )
             else:
                 self._cpw_parameters = copy.deepcopy(cpw_parameters)
+            if l_length == 1:
+                self._cpw_parameters = [cpw_parameters[0]]*self._N_elements
         else:
             self._cpw_parameters = [cpw_parameters] * self._N_elements
 

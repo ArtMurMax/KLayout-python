@@ -46,7 +46,7 @@ simulated
 Such weird value is due to we agreed that 3.5 um will be in the very 
 design file. Not at the sample itself.
 8. Bridges of flux lines are now atleast 200 um away from flux line end. 
-`self.cont_lines_y_ref` was changed for that purpose
+`self.ctr_lines_y_ref` was changed for that purpose
 9. Bandage (dc contacts between squids and photolitography) code is 
 improved.
 10. `TestContactPadsSquare` now has distance between square pads equal to 

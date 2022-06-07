@@ -168,7 +168,7 @@ class Design8Q(ChipDesign):
         )
 
         # readout line parameters
-        self.ro_line_turn_radius: float = 200e3
+        self.ro_line_turn_radius: float = 100e3
         self.ro_line_dy: float = 1600e3
         self.cpwrl_ro_line1: DPathCPW = None
         # primitive indexes of `self.cpwrl_ro_line1` that will be covered
@@ -227,7 +227,10 @@ class Design8Q(ChipDesign):
         self.cross_width_y = 60e3
         self.cross_gnd_gap_y = 20e3
 
-        self.coupling_res_length = 800e3
+        # coupling resonators
+        self.coupling_res_length = 2.5e6
+        self.coupling_cpw: CPW = None  # coupling resonator
+        self.coupling_resonator_dx = 20e3  # distance from cross metal
 
         # bandages
         self.bandage_width = 5e3
@@ -263,7 +266,7 @@ class Design8Q(ChipDesign):
 
         # microwave and flux drive lines parameters
         self.ctr_lines_turn_radius = 100e3
-        self.cont_lines_y_ref: float = None  # nm
+        self.ctr_lines_y_ref: float = None  # nm
 
         self.flLine_squidLeg_gap = 5e3
         self.flux_lines_x_shifts: List[float] = \
@@ -273,9 +276,17 @@ class Design8Q(ChipDesign):
                 SQUID_PARS.BC_dx / 2 + SQUID_PARS.band_ph_tol
             ] * len(self.L1_list)
 
+
+        # shift from middle of cross bottom finder
+        # where md line should end
+        # for qubits 1,..,6
+        self.md_line_end_shift = DVector(50e3, -100e3)
         # distance from end of md control line (metal)
-        # to cross (metal)
-        self.md_cross_dist = 55e3
+        # to cross (metal) for qubits 0 and 7
+        self.md07_x_dist = 53e3
+
+        self.cpwrl_md0: DPathCPW = None
+        self.cpwrl_fl0: DPathCPW = None
 
         self.cpwrl_md1: DPathCPW = None
         self.cpwrl_fl1: DPathCPW = None
@@ -292,11 +303,15 @@ class Design8Q(ChipDesign):
         self.cpwrl_md5: DPathCPW = None
         self.cpwrl_fl5: DPathCPW = None
 
-        self.cpw_fl_lines: List[DPathCPW] = []
-        self.cpw_md_lines: List[DPathCPW] = []
+        self.cpwrl_md6: DPathCPW = None
+        self.cpwrl_fl6: DPathCPW = None
 
-        # control lines gathering curve
-        self.gathering_curve: list[DPoint] = []
+        self.cpwrl_md7: DPathCPW = None
+        self.cpwrl_fl7: DPathCPW = None
+
+        self.cpw_md_lines: List[DPathCPW] = []
+        self.cpw_fl_lines: List[DPathCPW] = []
+
         # marks
         self.marks: List[MarkBolgar] = []
 
@@ -333,18 +348,19 @@ class Design8Q(ChipDesign):
         self.create_resonator_objects()
         self.draw_xmons_and_resonators()
         self.draw_readout_waveguide()
-
+        #
         self.draw_josephson_loops()
-
+        #
         self.draw_microwave_drvie_lines()
         self.draw_flux_control_lines()
+        self.draw_coupling_res()
 
         # self.draw_test_structures()
         # self.draw_express_test_structures_pads()
         # self.draw_bandages()
         # self.draw_recess()
-        # self.region_el.merge()
-        # self.draw_el_protection()
+        self.region_el.merge()
+        self.draw_el_protection()
         #
         # self.draw_photo_el_marks()
         # self.draw_bridges()
@@ -536,11 +552,12 @@ class Design8Q(ChipDesign):
         worm_y = []
         for res_idx in range(4):
             worm_x.append(
-                self.contact_pads[-4].end.x +
-                (res_idx + 1 / 2) * self.resonators_dx - self.ro_line_dy
+                self.contact_pads[-1].end.x +
+                (res_idx + 1/2)*self.resonators_dx
+
             )
             worm_y.append(
-                self.contact_pads[-4].end.y -
+                self.contact_pads[-1].end.y -
                 self.ro_line_dy - self.to_line_list[res_idx]
             )
         worm_x = worm_x * 2
@@ -683,33 +700,11 @@ class Design8Q(ChipDesign):
                 )
             )
 
-            # point used in transformation
-            xmon0_center = \
-                (
-                        self.resonators[0].fork_x_cpw.start +
-                        self.resonators[0].fork_x_cpw.end
-                ) / 2 + \
-                DVector(
-                    0,
-                    -self.xmon_dys_Cg_coupling[0] -
-                    self.resonators[0].fork_metal_width / 2
-                )
-            xmon0_center += DPoint(
-                0,
-                -(
-                        self.cross_len_y + self.cross_width_x / 2 +
-                        self.cross_gnd_gap_y
-                )
-            )
-            trans1 = DCplxTrans(1, 0, False, -xmon0_center)
-            trans2 = DCplxTrans(1, 270, False, 0, 0)
-            trans3 = DCplxTrans(
+            trans_second = DCplxTrans(
                 1, 0, False,
-                xmon0_center + DVector(4 * self.xmon_x_distance, 0) +
-                VERT_ARR_SHIFT
+                self.coupling_res_length + 3*self.xmon_x_distance, 0
             )
-            trans_total = trans3 * trans2 * trans1
-            res.make_trans(trans_total)
+            res.make_trans(trans_second)
 
             self.xmons.append(
                 XmonCross(
@@ -725,7 +720,7 @@ class Design8Q(ChipDesign):
                 )
             )
             xmon_current = self.xmons[-1]
-            xmon_current.make_trans(trans_total)
+            xmon_current.make_trans(trans_second)
 
             if (res_idx is None) or (res_idx == res_idx):
                 self.xmons[-1].place(self.region_ph)
@@ -746,23 +741,7 @@ class Design8Q(ChipDesign):
                     ) / 2
                 )
                 self.xmons_corrected.append(xmonCross_corrected)
-                xmonCross_corrected.make_trans(
-                    DCplxTrans(
-                        1, 0, False,
-                        -xmon0_center
-                    )
-                )
-                xmonCross_corrected.make_trans(
-                    DCplxTrans(1, 270, False, 0, 0)
-                )
-                xmonCross_corrected.make_trans(
-                    DCplxTrans(
-                        1, 0, False,
-                        xmon0_center +
-                        DVector(4 * self.xmon_x_distance, 0) +
-                        VERT_ARR_SHIFT
-                    )
-                )
+                xmonCross_corrected.make_trans(trans_second)
                 xmonCross_corrected.place(self.region_ph)
 
     def draw_readout_waveguide(self):
@@ -795,20 +774,20 @@ class Design8Q(ChipDesign):
         # ro line exceeds resonators total horizontal length by
         ro_extension = self.resonators_dx / 2
         # horizontal readout line
-        p1 = self.contact_pads[-4].end
-        p_last = self.contact_pads[-5].end
+        p1 = self.contact_pads[-1].end
+        p_last = self.contact_pads[-2].end
         # start of readout
         p2 = p1 - DVector(0, 2*self.l_scale)
         p3 = self.resonators[0].origin + \
              DVector(
-                 -get_res_extension(self.resonators[0])/2 - ro_extension -
+                 -get_res_extension(self.resonators[0])/2 -
                  2*self.ro_line_turn_radius,
                  self.to_line_list[0]
              )
         p4 = self.resonators[3].origin + \
              DVector(
                  -get_res_extension(self.resonators[3])/2 +
-                 get_res_width(self.resonators[3]) + ro_extension +
+                 get_res_width(self.resonators[3]) +
                  2*self.ro_line_turn_radius,
                  self.to_line_list[3]
              )
@@ -822,25 +801,25 @@ class Design8Q(ChipDesign):
         self.cpwrl_ro_line1.place(self.region_ph)
 
         # readout line 2
-        p1 = self.contact_pads[-6].end
-        p_last = self.contact_pads[-7].end
+        p1 = self.contact_pads[-3].end
+        p_last = self.contact_pads[-4].end
         # start of readout
-        p2 = p1 - DVector(2 * self.l_scale, 0)
+        p2 = p1 + DVector(0, -2 * self.l_scale)
         p3 = self.resonators[4].origin + \
              DVector(
-                 self.to_line_list[4],
-                 get_res_extension(self.resonators[4])/2 + ro_extension +
-                 2 * self.ro_line_turn_radius
+                 -get_res_extension(self.resonators[4]) / 2 -
+                 2 * self.ro_line_turn_radius,
+                 self.to_line_list[4]
              )
         p4 = self.resonators[7].origin + \
              DVector(
-                 self.to_line_list[7],
-                 get_res_extension(self.resonators[7])/2 -
-                 get_res_width(self.resonators[7]) - ro_extension -
-                 2 * self.ro_line_turn_radius
+                 -get_res_extension(self.resonators[7]) / 2 +
+                 get_res_width(self.resonators[7]) +
+                 2 * self.ro_line_turn_radius,
+                 self.to_line_list[7]
              )
 
-        p5 = p_last - DVector(2 * self.l_scale, 0)
+        p5 = p_last + DVector(0, -2 * self.l_scale)
         self.cpwrl_ro_line2 = DPathCPW(
             points=[p1, p2, p3, p4, p5, p_last],
             cpw_parameters=self.ro_Z,
@@ -871,7 +850,7 @@ class Design8Q(ChipDesign):
                 squid.place(self.region_el)
             elif xmon_idx >= 4:  # vertical row
                 squid_center = DPoint(
-                    xmon.cpw_b.end.x + xmon_loop_shift,
+                    xmon.cpw_r.end.x - xmon_loop_shift,
                     xmon.center.y - xmon.cpw_b.b // 2
                 )
                 squid = AsymSquid(
@@ -886,157 +865,186 @@ class Design8Q(ChipDesign):
         # self.region_el.round_corners(0.5e3, 0.5e3, 40)
 
     def draw_microwave_drvie_lines(self):
-        gathering_line_start = self.xmons[0].center + \
-                               DVector(-self.xmon_x_distance, 0)
-        gathering_line_end = self.xmons[-1].center + \
-                             DVector(0, -self.xmon_x_distance)
-        for x,y in zip(
-            np.linspace(
-                gathering_line_start.x,
-                gathering_line_end.x,
-                2*len(self.squids)
-            ),
-            np.linspace(
-                    gathering_line_start.y,
-                    gathering_line_end.y,
-                    2 * len(self.squids)
-            )
+        self.ctr_lines_y_ref = self.xmons[0].cpw_bempt.end.y - 300e3
+        r_turn = self.ctr_lines_turn_radius
+
+        # place caplanar line 0md
+        p1 = self.contact_pads[0].end
+        p2 = p1 + DVector(2*r_turn, 0)
+        p3 = DPoint(p2.x, self.xmons[0].center.y)
+        p4 = DPoint(self.xmons[0].cpw_l.end.x -
+                    self.md07_x_dist, p3.y)
+        p5 = p4 + DVector(self.z_md_fl.b/2, 0)
+        self.cpwrl_md0 = DPathCPW(
+            points=[p1, p2, p3, p4, p5],
+            cpw_parameters=[self.z_md_fl] * 5 +
+                [CPWParameters(width=0, gap=self.z_md_fl.b / 2)],
+            turn_radiuses=r_turn
+        )
+        self.cpw_md_lines.append(self.cpwrl_md0)
+        self.cpwrl_md0.place(self.region_ph)
+
+        # place md7
+        for q_idx, cp_idx in enumerate(
+                [3, 5, 7, 8, 10, 12],
+                start=1
         ):
-            self.gathering_curve.append(DPoint(x, y))
-
-        self.cont_lines_y_ref = self.xmons[0].cpw_bempt.end.y - 300e3
-
-        tmp_reg = self.region_ph
-
-        # place caplanar line 1md
-        for q_idx, cp_idx in enumerate(range(-3,13,2)):
             cp = self.contact_pads[cp_idx]
+            cross = self.xmons[q_idx]
             p1 = cp.end
 
             cp_dv = cp.end - cp.start
             cp_dv /= cp_dv.abs()
 
-            p2 = p1 + self.ctr_lines_turn_radius * cp_dv
-            p3 = self.gathering_curve[2*q_idx]
-            cross_dv = self.xmons[q_idx].cpw_b.dr
+            p2 = p1 + 2*r_turn * cp_dv
+            cross_dv = cross.cpw_b.dr.dup()
             cross_dv /= cross_dv.abs()
-            p4 = self.xmons[q_idx].cpw_b.end + \
-                 (
-                         self.md_cross_dist + 2*self.ctr_lines_turn_radius
-                 ) * cross_dv
-            p5 = p4 - 2*self.ctr_lines_turn_radius * cross_dv
+            p3 = DPoint(
+                self.xmons[q_idx].cpw_b.end.x + self.md_line_end_shift.x,
+                self.ctr_lines_y_ref
+            )
+            p4 = DPoint(
+                p3.x,
+                self.xmons[q_idx].cpw_b.end.y + self.md_line_end_shift.y
+            )
+            p5 = p4 + DVector(0, self.z_md_fl.b/2)
             md_dpath = DPathCPW(
                 points=[p1, p2, p3, p4, p5],
-                cpw_parameters=self.z_md_fl,
-                turn_radiuses=self.z_md_fl.b
+                cpw_parameters=[self.z_md_fl]*5 +
+                [CPWParameters(width=0, gap=self.z_md_fl.b/2)],
+                turn_radiuses=r_turn
             )
             self.__setattr__("cpwrl_md_" + str(q_idx), md_dpath)
             self.cpw_md_lines.append(md_dpath)
             md_dpath.place(self.region_ph)
 
+        # place caplanar line 7md
+        p1 = self.contact_pads[-5].end
+        p2 = p1 + DVector(0, -2 * r_turn)
+        p3 = DPoint(p2.x, self.xmons[0].center.y)
+        p4 = DPoint(self.xmons[7].cpw_r.end.x +
+                    self.md07_x_dist, p3.y)
+        p5 = p4 + DVector(-self.z_md_fl.b / 2, 0)
+        self.cpwrl_md7 = DPathCPW(
+            points=[p1, p2, p3, p4, p5],
+            cpw_parameters=[self.z_md_fl] * 4 +
+                           [CPWParameters(width=0,
+                                          gap=self.z_md_fl.b / 2)],
+            turn_radiuses=r_turn
+        )
+        self.cpw_md_lines.append(self.cpwrl_md7)
+        self.cpwrl_md7.place(self.region_ph)
+
     def draw_flux_control_lines(self):
-        # place caplanar line 1 fl
-        p1 = self.contact_pads[-2].end
-        p2 = DPoint(
-            p1.x,
-            self.xmons[0].center.y - 3*self.ctr_lines_turn_radius
-        )
-        p3 = DPoint(
-            self.squids[0].center.x + self.flux_lines_x_shifts[0],
-            p2.y
-        )
-        p4 = DPoint(
-            p3.x,
-            self.xmons[0].center.y - self.xmons[0].cpw_l.b / 2
-        )
-        self.cpwrl_fl1 = DPathCPW(
-            points=[p1, p2, p3, p4],
-            cpw_parameters=self.z_md_fl,
-            turn_radiuses=self.ctr_lines_turn_radius,
-        )
-        self.cpw_fl_lines.append(self.cpwrl_fl1)
+        r_turn = self.ctr_lines_turn_radius
 
-        # place caplanar line 2 fl
-        p1 = self.contact_pads[0].end
-        p2 = self.contact_pads[0].end + DPoint(
-            self.ctr_lines_turn_radius, 0
-        )
-        p3 = DPoint(
-            self.squids[1].origin.x + self.flux_lines_x_shifts[1],
-            self.xmons[1].center.y - 6*self.ctr_lines_turn_radius
-        )
+        # place caplanar line 0 fl
+        p1 = self.contact_pads[1].end
+        p2 = p1 + DVector(2 * r_turn, 0)
+        p3 = DPoint(p2.x, self.xmons[0].cpw_b.end.y)
         p4 = DPoint(
-            p3.x,
-            self.xmons[0].center.y - self.xmons[0].cpw_l.b / 2
+            self.squids[0].center.x - self.flux_lines_x_shifts[0],
+            p3.y
         )
-        self.cpwrl_fl2 = DPathCPW(
-            points=[p1, p2, p3, p4],
+        p5 = DPoint(
+            p4.x,
+            self.xmons[0].center.y - self.xmons[0].cpw_l.b/2
+        )
+        self.cpwrl_md0 = DPathCPW(
+            points=[p1, p2, p3, p4, p5],
             cpw_parameters=self.z_md_fl,
-            turn_radiuses=self.ctr_lines_turn_radius,
+            turn_radiuses=r_turn
         )
-        self.cpw_fl_lines.append(self.cpwrl_fl2)
+        self.cpw_fl_lines.append(self.cpwrl_md0)
 
-        # # place caplanar line 3 fl
-        # _p1 = self.contact_pads[4].end
-        # _p2 = self.contact_pads[4].end + DPoint(0, 1e6)
-        # _p3 = _p2 + DPoint(-1e6, 1e6)
-        # _p4 = DPoint(
-        #     self.squids[2].origin.x + self.flux_lines_x_shifts[2],
-        #     self.cont_lines_y_ref
-        # )
-        # _p5 = DPoint(
-        #     _p4.x,
-        #     self.xmons[2].cpw_bempt.end.y
-        # )
-        # self.cpwrl_fl3 = DPathCPW(
-        #     points=[_p1, _p2, _p3, _p4, _p5],
-        #     cpw_parameters=self.z_md_fl,
-        #     turn_radiuses=self.ctr_lines_turn_radius,
-        # )
-        # self.cpw_fl_lines.append(self.cpwrl_fl3)
-        #
-        # # place caplanar line 4 fl
-        # _p1 = self.contact_pads[6].end
-        # _p2 = self.contact_pads[6].end + DPoint(-1.5e6, 0)
-        # _p3 = DPoint(
-        #     self.squids[3].origin.x + self.flux_lines_x_shifts[3],
-        #     self.cont_lines_y_ref
-        # )
-        # _p4 = DPoint(
-        #     _p3.x,
-        #     self.xmons[3].cpw_bempt.end.y
-        # )
-        # self.cpwrl_fl4 = DPathCPW(
-        #     points=[_p1, _p2, _p3, _p4],
-        #     cpw_parameters=self.z_md_fl,
-        #     turn_radiuses=self.ctr_lines_turn_radius,
-        # )
-        # self.cpw_fl_lines.append(self.cpwrl_fl4)
-        #
-        # # place caplanar line 5 fl
-        # _p1 = self.contact_pads[8].end
-        # _p2 = self.contact_pads[8].end + DPoint(-0.3e6, 0)
-        # _p4 = DPoint(
-        #     self.squids[4].origin.x + self.flux_lines_x_shifts[4],
-        #     self.cont_lines_y_ref
-        # )
-        # _p3 = _p4 + DVector(2e6, 0)
-        # _p5 = DPoint(
-        #     _p4.x,
-        #     self.xmons[4].center.y - self.xmons[4].cpw_l.b / 2
-        # )
-        # self.cpwrl_fl5 = DPathCPW(
-        #     points=[_p1, _p2, _p3, _p4, _p5],
-        #     cpw_parameters=self.z_md_fl,
-        #     turn_radiuses=self.ctr_lines_turn_radius,
-        # )
-        # self.cpw_fl_lines.append(self.cpwrl_fl5)
+        # place fl1,...,fl6
+        for q_idx, cp_idx in enumerate(
+                [2, 4, 6, 9, 11, 13],
+                start=1
+        ):
+            cp = self.contact_pads[cp_idx]
+            cross = self.xmons[q_idx]
+            squid = self.squids[q_idx]
+            p1 = cp.end
+
+            cp_dv = cp.end - cp.start
+            cp_dv /= cp_dv.abs()
+
+            p2 = p1 + 2 * r_turn * cp_dv
+            cross_dv = cross.cpw_b.dr.dup()
+            cross_dv /= cross_dv.abs()
+            if q_idx <= 3:
+                p3 = DPoint(
+                    squid.center.x - self.flux_lines_x_shifts[q_idx],
+                    self.ctr_lines_y_ref
+                )
+            elif q_idx >= 4:
+                p3 = DPoint(
+                    squid.center.x + self.flux_lines_x_shifts[q_idx],
+                    self.ctr_lines_y_ref
+                )
+            p4 = DPoint(
+                    p3.x,
+                    cross.center.y - cross.cpw_l.b/2
+                )
+
+            md_dpath = DPathCPW(
+                points=[p1, p2, p3, p4],
+                cpw_parameters=self.z_md_fl,
+                turn_radiuses=r_turn
+            )
+            self.__setattr__("cpwrl_fl_" + str(q_idx), md_dpath)
+            self.cpw_fl_lines.append(md_dpath)
+
+        # place caplanar line 7 fl
+        p1 = self.contact_pads[-6].end
+        p2 = p1 + DVector(-2 * r_turn, 0)
+        p3 = DPoint(p2.x, self.xmons[7].cpw_b.end.y)
+        p4 = DPoint(
+            self.squids[7].center.x + self.flux_lines_x_shifts[7],
+            p3.y
+        )
+        p5 = DPoint(
+            p4.x,
+            self.xmons[7].center.y - self.xmons[7].cpw_r.b / 2
+        )
+        self.cpwrl_md7 = DPathCPW(
+            points=[p1, p2, p3, p4, p5],
+            cpw_parameters=self.z_md_fl,
+            turn_radiuses=r_turn
+        )
+        self.cpw_fl_lines.append(self.cpwrl_md7)
 
         for flux_line in self.cpw_fl_lines:
-            self.modify_flux_line_end(flux_line)
+            self.modify_and_place_flux_line_end(flux_line)
         # self.region_ph.merge()
 
-    def modify_flux_line_end(self, flux_line: DPathCPW):
+    def draw_coupling_res(self):
+        # TODO: draw appropriate coupling
+        self.coupling_cpw = CPW(
+            start=self.xmons[3].cpw_rempt.end +
+                  DPoint(self.coupling_resonator_dx, 0),
+            end=self.xmons[4].cpw_lempt.end +
+                DPoint(-self.coupling_resonator_dx, 0),
+            cpw_params=self.Z_res
+        )
+        self.coupling_cpw.place(self.region_ph)
+
+        self.cpw_empty1 = CPW(
+            width=0, gap=self.Z_res.b/2,
+            start=self.coupling_cpw.start,
+            end=self.coupling_cpw.start + DVector(-self.Z_res.b/2, 0 )
+        )
+        self.cpw_empty1.place(self.region_ph)
+
+        self.cpw_empty2 = CPW(
+            width=0, gap=self.Z_res.b / 2,
+            start=self.coupling_cpw.end,
+            end=self.coupling_cpw.end + DVector(self.Z_res.b / 2, 0)
+        )
+        self.cpw_empty2.place(self.region_ph)
+
+    def modify_and_place_flux_line_end(self, flux_line: DPathCPW):
         # make flux line wider to have a less chance to misalign
         # bandage-eBeam-photo layers at the qubit bandage region.
         last_line = list(flux_line.primitives.values())[-1]
