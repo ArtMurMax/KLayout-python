@@ -1085,7 +1085,7 @@ class Design5Q(ChipDesign):
                     val, bridges_step,
                     dest=self.region_bridges1, dest2=self.region_bridges2,
                     avoid_points=[squid.origin for squid in self.squids],
-                    avoid_distance=500e3
+                    avoid_distances=500e3
                 )
         # for readout waveguide
         bridgified_primitives_idxs = list(range(2))

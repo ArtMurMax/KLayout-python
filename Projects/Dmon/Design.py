@@ -1220,7 +1220,7 @@ class Design5QTest(ChipDesign):
                 dest=self.region_bridges1,
                 dest2=self.region_bridges2,
                 avoid_points=[cpw_fl.end],
-                avoid_distance=130e3
+                avoid_distances=130e3
             )
             dy_list = [30e3, 130e3]
             for dy in dy_list:
@@ -1244,7 +1244,7 @@ class Design5QTest(ChipDesign):
             self.cpwrl_ro_line, bridges_step,
             dest=self.region_bridges1, dest2=self.region_bridges2,
             avoid_points=avoid_resonator_points,
-            avoid_distance=3/4*max(self.L_coupling_list) + self.r
+            avoid_distances=3 / 4 * max(self.L_coupling_list) + self.r
         )
 
     def draw_pinning_holes(self):

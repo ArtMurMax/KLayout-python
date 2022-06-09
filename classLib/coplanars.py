@@ -1029,10 +1029,12 @@ class Bridge1(ElementBase):
     @staticmethod
     def bridgify_CPW(cpw, bridges_step, dest=None, bridge_layer1=-1,
                      bridge_layer2=-1, dest2=None,
-                     avoid_points=[], avoid_distance=0):
+                     avoid_points=[], avoid_distances=[]):
         """
-            Function puts bridge patterns to fabricate bridges on coplanar waveguide
-        `cpw` with bridges having period of `bridges_step` along coplanar's wave
+            Function puts bridge patterns to fabricate bridges on
+            coplanar waveguide
+        `cpw` with bridges having period of `bridges_step` along
+        coplanar's wave
         propagation direction.
             Bridges are distributed over coplanar starting with its center.
 
@@ -1050,7 +1052,7 @@ class Bridge1(ElementBase):
             index of the layer in the `cell` with empty polygons
         avoid_points : list[Union[DPoint,Point,Vector, DVector]]
             list points that you wish to keep bridges away
-        avoid_distance : float
+        avoid_distances : Union[list[float], float]
             distance in nm where there will be no bridges
             near the `avoid_points`
         Returns
@@ -1062,12 +1064,12 @@ class Bridge1(ElementBase):
             cpw, bridges_step,
             dest=dest, bridge_layer1=bridge_layer1,
             bridge_layer2=bridge_layer2, dest2=dest2,
-            avoid_points=avoid_points, avoid_distance=avoid_distance
+            avoid_points=avoid_points, avoid_distances=avoid_distances
         )
 
     def __bridgify_CPW(self, cpw, bridges_step, dest=None,
                        bridge_layer1=-1, bridge_layer2=-1, dest2=None,
-                       avoid_points=[], avoid_distance=0):
+                       avoid_points=[], avoid_distances=[]):
         """
             Function puts bridge patterns to fabricate bridges on coplanar waveguide
         `cpw` with bridges having period of `bridges_step` along coplanar's wave
@@ -1088,13 +1090,19 @@ class Bridge1(ElementBase):
             index of the layer in the `cell` with empty polygons
         avoid_points : list[Union[DPoint,Point,Vector, DVector]]
             list points that you wish to keep bridges away
-        avoid_distance : float
+        avoid_distances : Union[list[float], float]
             distance in nm where there will be no bridges
-            near the `avoid_points`
+            near the `avoid_points`. Each avoid distance correspond to
+            avoid point.
         Returns
         -------
         None
         """
+        # if avoid distance passed as float - it is interpreted as the
+        # same for all points
+        if not hasattr(avoid_distances, "__len__"):
+            avoid_distances = [avoid_distances]*len(avoid_points)
+
         if isinstance(cpw, CPW):
             # recursion base
             alpha = atan2(cpw.dr.y, cpw.dr.x)
@@ -1115,7 +1123,8 @@ class Bridge1(ElementBase):
                 bridge_center = cpw.start + (cpw_len / 2 + i * bridges_step) * cpw_dir_unit_vector
 
                 avoid = False
-                for avoid_point in avoid_points:
+                for avoid_point, avoid_distance in zip(avoid_points,
+                                                       avoid_distances):
                     if (avoid_point - bridge_center).abs() < avoid_distance:
                         avoid = True
                         break
@@ -1146,7 +1155,7 @@ class Bridge1(ElementBase):
             v_arc_mid = DVector(np.cos(alpha_mid), np.sin(alpha_mid))
             arc_mid = cpw.center + cpw.R*v_arc_mid
             # tangent vector to the center of a bridge
-            v_arc_mid_tangent = DCplxTrans(1, 90, False, 0,0)*v_arc_mid
+            v_arc_mid_tangent = DCplxTrans(1, 90, False, 0, 0)*v_arc_mid
             alpha = np.arctan2(v_arc_mid_tangent.y, v_arc_mid_tangent.x)
             bridge = Bridge1(
                 center=arc_mid,
@@ -1167,7 +1176,8 @@ class Bridge1(ElementBase):
                     Bridge1.bridgify_CPW(
                         primitive, bridges_step,
                         dest, bridge_layer1, bridge_layer2, dest2=dest2,
-                        avoid_points=avoid_points, avoid_distance=avoid_distance
+                        avoid_points=avoid_points,
+                        avoid_distances=avoid_distances
                     )
         else:
             # do nothing for other shapes

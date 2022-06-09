@@ -1239,7 +1239,7 @@ class Design5QTest(ChipDesign):
                 primitive, bridges_step,
                 dest=self.region_bridges1, dest2=self.region_bridges2,
                 avoid_points=avoid_resonator_points,
-                avoid_distance=max(self.L_coupling_list)/2 + self.r
+                avoid_distances=max(self.L_coupling_list) / 2 + self.r
             )
 
     def draw_pinning_holes(self):

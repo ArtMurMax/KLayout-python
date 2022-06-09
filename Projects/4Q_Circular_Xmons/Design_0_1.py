@@ -1266,7 +1266,7 @@ class Design4QSquare(ChipDesign):
                             cpw, bridges_step,
                             dest=self.region_bridges1, dest2=self.region_bridges2,
                             avoid_points=[squid.origin for squid in self.squids],
-                            avoid_distance=200e3
+                            avoid_distances=200e3
                         )
                 elif isinstance(val, (CPW, CPWArc, CPWRLPath)):
                     cpw = val
@@ -1274,7 +1274,7 @@ class Design4QSquare(ChipDesign):
                         cpw, bridges_step,
                         dest=self.region_bridges1, dest2=self.region_bridges2,
                         avoid_points=[squid.origin for squid in self.squids],
-                        avoid_distance=200e3
+                        avoid_distances=200e3
                     )
             elif "cpwrl_fl" in key:
                 if isinstance(val, list):
@@ -1283,7 +1283,7 @@ class Design4QSquare(ChipDesign):
                             cpw, bridges_step,
                             dest=self.region_bridges1, dest2=self.region_bridges2,
                             avoid_points=[squid.origin for squid in self.squids],
-                            avoid_distance=500e3
+                            avoid_distances=500e3
                         )
                 elif isinstance(val, (CPW, CPWArc, CPWRLPath)):
                     cpw = val
@@ -1291,7 +1291,7 @@ class Design4QSquare(ChipDesign):
                         cpw, bridges_step,
                         dest=self.region_bridges1, dest2=self.region_bridges2,
                         avoid_points=[squid.origin for squid in self.squids],
-                        avoid_distance=500e3
+                        avoid_distances=500e3
                     )
         # for readout waveguide
         bridgified_primitives_idxs = [0, 2, 4, 5, 6, 7, 8, 10, 12]

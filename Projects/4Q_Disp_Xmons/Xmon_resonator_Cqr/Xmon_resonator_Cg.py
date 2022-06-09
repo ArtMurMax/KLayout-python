@@ -1092,7 +1092,7 @@ class Design5Q(ChipDesign):
                     val, fl_bridges_step,
                     dest=self.region_bridges1, dest2=self.region_bridges2,
                     avoid_points=[squid.origin for squid in self.squids],
-                    avoid_distance=400e3
+                    avoid_distances=400e3
                 )
 
         for cpw_fl in self.cpw_fl_lines:

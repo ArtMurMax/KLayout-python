@@ -233,8 +233,8 @@ class Design8Q(ChipDesign):
         self.coupling_resonator_dx = 20e3  # distance from cross metal
 
         # bandages
-        self.bandage_width = 5e3
-        self.bandage_height = 10e3
+        self.bandage_width = 2.5e3
+        self.bandage_height = 5e3
         self.bandage_r_outer = 2e3
         self.bandage_r_inner = 2e3
         self.bandage_curve_pts_n = 40
@@ -355,22 +355,22 @@ class Design8Q(ChipDesign):
         self.draw_flux_control_lines()
         self.draw_coupling_res()
 
-        # self.draw_test_structures()
-        # self.draw_express_test_structures_pads()
-        # self.draw_bandages()
-        # self.draw_recess()
+        self.draw_test_structures()
+        self.draw_express_test_structures_pads()
+        self.draw_bandages()
+        self.draw_recess()
         self.region_el.merge()
         self.draw_el_protection()
         #
-        # self.draw_photo_el_marks()
-        # self.draw_bridges()
+        self.draw_photo_el_marks()
+        self.draw_bridges()
         # self.draw_pinning_holes()
         # # v.0.3.0.8 p.12 - ensure that contact pads consist no wholes
         # for contact_pad in self.contact_pads:
         #     contact_pad.place(self.region_ph)
-        # self.extend_photo_overetching()
+        self.extend_photo_overetching()
         # self.inverse_destination(self.region_ph)
-        # self.draw_cut_marks()
+        self.draw_cut_marks()
         # # convert to gds acceptable polygons (without inner holes)
         # self.resolve_holes()
         # # convert to litograph readable format. Litograph can't handle
@@ -840,7 +840,7 @@ class Design8Q(ChipDesign):
             if xmon_idx < 4:  # horizontal row
                 squid_center = DPoint(
                     xmon.cpw_l.end.x + xmon_loop_shift,
-                    xmon.center.y - xmon.cpw_l.b//2
+                    xmon.center.y - (xmon.cpw_l.width + xmon.cpw_l.gap)/2
                 )
                 squid = AsymSquid(
                     squid_center + DVector(0, -self.squid_vertical_shift),
@@ -851,7 +851,7 @@ class Design8Q(ChipDesign):
             elif xmon_idx >= 4:  # vertical row
                 squid_center = DPoint(
                     xmon.cpw_r.end.x - xmon_loop_shift,
-                    xmon.center.y - xmon.cpw_b.b // 2
+                    xmon.center.y - (xmon.cpw_r.width + xmon.cpw_r.gap)/2
                 )
                 squid = AsymSquid(
                     squid_center + DVector(0, -self.squid_vertical_shift),
@@ -943,19 +943,19 @@ class Design8Q(ChipDesign):
         p2 = p1 + DVector(2 * r_turn, 0)
         p3 = DPoint(p2.x, self.xmons[0].cpw_b.end.y)
         p4 = DPoint(
-            self.squids[0].center.x - self.flux_lines_x_shifts[0],
+            self.squids[0].center.x + self.flux_lines_x_shifts[0],
             p3.y
         )
         p5 = DPoint(
             p4.x,
             self.xmons[0].center.y - self.xmons[0].cpw_l.b/2
         )
-        self.cpwrl_md0 = DPathCPW(
+        self.cpwrl_fl0 = DPathCPW(
             points=[p1, p2, p3, p4, p5],
             cpw_parameters=self.z_md_fl,
             turn_radiuses=r_turn
         )
-        self.cpw_fl_lines.append(self.cpwrl_md0)
+        self.cpw_fl_lines.append(self.cpwrl_fl0)
 
         # place fl1,...,fl6
         for q_idx, cp_idx in enumerate(
@@ -973,27 +973,21 @@ class Design8Q(ChipDesign):
             p2 = p1 + 2 * r_turn * cp_dv
             cross_dv = cross.cpw_b.dr.dup()
             cross_dv /= cross_dv.abs()
-            if q_idx <= 3:
-                p3 = DPoint(
-                    squid.center.x - self.flux_lines_x_shifts[q_idx],
-                    self.ctr_lines_y_ref
-                )
-            elif q_idx >= 4:
-                p3 = DPoint(
-                    squid.center.x + self.flux_lines_x_shifts[q_idx],
-                    self.ctr_lines_y_ref
-                )
+            p3 = DPoint(
+                squid.center.x + self.flux_lines_x_shifts[q_idx],
+                self.ctr_lines_y_ref
+            )
             p4 = DPoint(
                     p3.x,
                     cross.center.y - cross.cpw_l.b/2
-                )
+            )
 
             md_dpath = DPathCPW(
                 points=[p1, p2, p3, p4],
                 cpw_parameters=self.z_md_fl,
                 turn_radiuses=r_turn
             )
-            self.__setattr__("cpwrl_fl_" + str(q_idx), md_dpath)
+            self.__setattr__("cpwrl_fl" + str(q_idx), md_dpath)
             self.cpw_fl_lines.append(md_dpath)
 
         # place caplanar line 7 fl
@@ -1008,41 +1002,16 @@ class Design8Q(ChipDesign):
             p4.x,
             self.xmons[7].center.y - self.xmons[7].cpw_r.b / 2
         )
-        self.cpwrl_md7 = DPathCPW(
+        self.cpwrl_fl7 = DPathCPW(
             points=[p1, p2, p3, p4, p5],
             cpw_parameters=self.z_md_fl,
             turn_radiuses=r_turn
         )
-        self.cpw_fl_lines.append(self.cpwrl_md7)
+        self.cpw_fl_lines.append(self.cpwrl_fl7)
 
         for flux_line in self.cpw_fl_lines:
             self.modify_and_place_flux_line_end(flux_line)
         # self.region_ph.merge()
-
-    def draw_coupling_res(self):
-        # TODO: draw appropriate coupling
-        self.coupling_cpw = CPW(
-            start=self.xmons[3].cpw_rempt.end +
-                  DPoint(self.coupling_resonator_dx, 0),
-            end=self.xmons[4].cpw_lempt.end +
-                DPoint(-self.coupling_resonator_dx, 0),
-            cpw_params=self.Z_res
-        )
-        self.coupling_cpw.place(self.region_ph)
-
-        self.cpw_empty1 = CPW(
-            width=0, gap=self.Z_res.b/2,
-            start=self.coupling_cpw.start,
-            end=self.coupling_cpw.start + DVector(-self.Z_res.b/2, 0 )
-        )
-        self.cpw_empty1.place(self.region_ph)
-
-        self.cpw_empty2 = CPW(
-            width=0, gap=self.Z_res.b / 2,
-            start=self.coupling_cpw.end,
-            end=self.coupling_cpw.end + DVector(self.Z_res.b / 2, 0)
-        )
-        self.cpw_empty2.place(self.region_ph)
 
     def modify_and_place_flux_line_end(self, flux_line: DPathCPW):
         # make flux line wider to have a less chance to misalign
@@ -1107,10 +1076,35 @@ class Design8Q(ChipDesign):
         )
         flux_gnd_cpw.place(self.region_ph)
 
+    def draw_coupling_res(self):
+        # TODO: draw appropriate coupling
+        self.coupling_cpw = CPW(
+            start=self.xmons[3].cpw_rempt.end +
+                  DPoint(self.coupling_resonator_dx, 0),
+            end=self.xmons[4].cpw_lempt.end +
+                DPoint(-self.coupling_resonator_dx, 0),
+            cpw_params=self.Z_res
+        )
+        self.coupling_cpw.place(self.region_ph)
+
+        self.cpw_empty1 = CPW(
+            width=0, gap=self.Z_res.b/2,
+            start=self.coupling_cpw.start,
+            end=self.coupling_cpw.start + DVector(-self.Z_res.b/2, 0 )
+        )
+        self.cpw_empty1.place(self.region_ph)
+
+        self.cpw_empty2 = CPW(
+            width=0, gap=self.Z_res.b / 2,
+            start=self.coupling_cpw.end,
+            end=self.coupling_cpw.end + DVector(self.Z_res.b / 2, 0)
+        )
+        self.cpw_empty2.place(self.region_ph)
+
     def draw_test_structures(self):
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
-        struct_centers = [DPoint(1e6, 4e6), DPoint(8.7e6, 5.7e6),
-                          DPoint(6.5e6, 2.7e6)]
+        struct_centers = [DPoint(4.6e6, 15.1e6), DPoint(9.5e6, 15.1e6),
+                          DPoint(7.5e6, 11.5e6)]
         self.test_squids_pads = []
         for struct_center in struct_centers:
             ## JJ test structures ##
@@ -1197,9 +1191,9 @@ class Design8Q(ChipDesign):
 
         # bandages test structures
         test_dc_el2_centers = [
-            DPoint(2.5e6, 2.4e6),
-            DPoint(4.2e6, 1.6e6),
-            DPoint(9.0e6, 3.8e6)
+            DPoint(2.5e6, 11.5e6),
+            DPoint(12.1e6, 13.6e6),
+            DPoint(7.0e6, 15.3e6)
         ]
         for struct_center in test_dc_el2_centers:
             test_struct1 = TestStructurePadsSquare(struct_center)
@@ -1340,14 +1334,14 @@ class Design8Q(ChipDesign):
             self.dc_bandage_reg += bot_bandage_reg
         return bandages_regs_list
 
-    def _get_bandage_reg(self, center):
+    def _get_bandage_reg(self, center, shift_y=0e3):
         rect_lb = center + \
                   DVector(
                       -self.bandage_width / 2,
                       -self.bandage_height / 2
                   )
         bandage_reg = Rectangle(
-            origin=rect_lb,
+            origin=rect_lb - ,
             width=self.bandage_width,
             height=self.bandage_height
         ).metal_region
@@ -1385,9 +1379,9 @@ class Design8Q(ChipDesign):
 
     def draw_photo_el_marks(self):
         marks_centers = [
-            DPoint(1e6, 9e6), DPoint(1e6, 1e6),
-            DPoint(9e6, 1e6), DPoint(9e6, 9e6),
-            DPoint(8e6, 4e6), DPoint(1e6, 6e6)
+            DPoint(2.2e6, 14.1e6), DPoint(7.8e6, 10e6),
+            DPoint(12.16, 14.9e6), DPoint(2.5e6, 3.3e6),
+            DPoint(9.0e6, 4.8e6), DPoint(14e6, 3.2e6)
         ]
         for mark_center in marks_centers:
             self.marks.append(
@@ -1432,18 +1426,19 @@ class Design8Q(ChipDesign):
         # for contact wires
         for key, val in self.__dict__.items():
             if "cpwrl_md" in key:
+                cpwrl_md = val
                 Bridge1.bridgify_CPW(
-                    val, bridges_step,
+                    cpwrl_md, bridges_step,
                     dest=self.region_bridges1, dest2=self.region_bridges2,
-                    avoid_points=[squid.origin for squid in self.squids],
-                    avoid_distance=400e3
+                    avoid_points=[squid.origin for squid in self.squids]
                 )
             elif "cpwrl_fl" in key:
+                cpwrl_fl = val
                 Bridge1.bridgify_CPW(
-                    val, fl_bridges_step,
+                    cpwrl_fl, fl_bridges_step,
                     dest=self.region_bridges1, dest2=self.region_bridges2,
                     avoid_points=[squid.origin for squid in self.squids],
-                    avoid_distance=400e3
+                    avoid_distances=200e3
                 )
 
         # close bridges for cpw_fl line
@@ -1458,29 +1453,42 @@ class Design8Q(ChipDesign):
                          region_name="bridges_2")
 
         # close bridges for cpw_md line
-        for i, cpw_md in enumerate(self.cpw_md_lines):
-            dy_list = [55e3, 155e3]
-            for dy in dy_list:
-                if i == 0:
-                    bridge_center1 = cpw_md.end + DVector(-dy, 0)
-                elif i == 4:
-                    bridge_center1 = cpw_md.end + DVector(dy, 0)
-                    br = Bridge1(center=bridge_center1,
-                                 trans_in=None)
-                else:
-                    bridge_center1 = cpw_md.end + DVector(0, -dy)
-                    br = Bridge1(center=bridge_center1,
-                                 trans_in=Trans.R90)
-                br.place(dest=self.region_bridges1,
-                         region_name="bridges_1")
-                br.place(dest=self.region_bridges2,
-                         region_name="bridges_2")
+        # for i, cpw_md in enumerate(self.cpw_md_lines):
+        #     dy_list = [55e3, 200e3]
+        #     for dy in dy_list:
+        #         if i == 0:
+        #             bridge_center1 = cpw_md.end + DVector(-dy, 0)
+        #         elif i == 4:
+        #             bridge_center1 = cpw_md.end + DVector(dy, 0)
+        #             br = Bridge1(center=bridge_center1,
+        #                          trans_in=None)
+        #         else:
+        #             bridge_center1 = cpw_md.end + DVector(0, -dy)
+        #             br = Bridge1(center=bridge_center1,
+        #                          trans_in=Trans.R90)
+        #         br.place(dest=self.region_bridges1,
+        #                  region_name="bridges_1")
+        #         br.place(dest=self.region_bridges2,
+        #                  region_name="bridges_2")
 
-        # for readout waveguide
-        # TODO: add avoid points and repeat for second ro_line
+        # for readout waveguides
+        avoid_points = []
+        avoid_distances = []
+        for res in self.resonators:
+            av_pt = res.origin + DPoint(res.L_coupling/2, 0)
+            avoid_points.append(av_pt)
+            av_dist = res.L_coupling/2 + res.r + res.Z0.b/2
+            avoid_distances.append(av_dist)
+
         Bridge1.bridgify_CPW(
-            self.cpwrl_ro_line1, bridges_step,
-            dest=self.region_bridges1, dest2=self.region_bridges2
+            self.cpwrl_ro_line1, bridges_step=bridges_step,
+            dest=self.region_bridges1, dest2=self.region_bridges2,
+            avoid_points=avoid_points, avoid_distances=avoid_distances
+        )
+        Bridge1.bridgify_CPW(
+            self.cpwrl_ro_line2, bridges_step=bridges_step,
+            dest=self.region_bridges1, dest2=self.region_bridges2,
+            avoid_points=avoid_points, avoid_distances=avoid_distances
         )
 
     def draw_pinning_holes(self):
@@ -2129,4 +2137,4 @@ if __name__ == "__main__":
     # simulate_Cqr()
 
     ''' Simulation of C_{q1,q2} in fF '''
-    # simulate_Cqq(3, 4, resolution=(2e3, 2e3))
+    # simulate_Cqq(3, 4, resolution2e3, 2e3))
