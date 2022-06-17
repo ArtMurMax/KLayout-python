@@ -427,8 +427,12 @@ class CHIP_16p5x16p5_20pads:
     chip_Z = CPWParameters(chip_cpw_width, chip_cpw_gap)
 
     @staticmethod
-    def get_contact_pads(chip_Z_list: List[Union[CPWParameters, CPW, CPWArc]]=None,
-                         overetching: float =0.0e3):
+    def get_contact_pads(
+            chip_Z_list: List[Union[CPWParameters, CPW, CPWArc]]=None,
+            overetching: float =0.0e3,
+            pad_length=300e3, back_metal_width=50e3, back_metal_gap=100e3,
+            transition_len=150e3
+    ):
         """
         Constructs objects that represent contact pads. Each pad
         consists of cpw that matches PCB cpw dimension, then trapeziod
@@ -481,7 +485,6 @@ class CHIP_16p5x16p5_20pads:
         pcb_feedline_d = CHIP_16p5x16p5_20pads.pcb_feedline_d
         pcb_Z = CHIP_16p5x16p5_20pads.pcb_Z
         pads_per_side = CHIP_16p5x16p5_20pads.pads_per_side
-        back_metal_gap = 100e3
 
         k = 0
         # print(dy_new)
@@ -490,8 +493,10 @@ class CHIP_16p5x16p5_20pads:
                 DPoint(0, dy_new - pcb_feedline_d * i),
                 pcb_cpw_params=pcb_Z,
                 chip_cpw_params=chip_Z_list[k + i],
-                back_metal_width=50e3,
-                back_metal_gap=back_metal_gap
+                pad_length=pad_length,
+                back_metal_width=back_metal_width,
+                back_metal_gap=back_metal_gap,
+                transition_len=transition_len
             ) for i in range(pads_per_side)
         ]
         k += pads_per_side  # each side has 5 pins
@@ -500,8 +505,10 @@ class CHIP_16p5x16p5_20pads:
             ContactPad(
                 DPoint(pcb_tl_intersection.x + pcb_feedline_d * i, 0),
                 pcb_Z, chip_Z_list[k +i],
-                back_metal_width=50e3,
+                pad_length=pad_length,
+                back_metal_width=back_metal_width,
                 back_metal_gap=back_metal_gap,
+                transition_len=transition_len,
                 trans_in=Trans.R90
             ) for i in range(pads_per_side)
         ]
@@ -511,8 +518,10 @@ class CHIP_16p5x16p5_20pads:
             ContactPad(
                 DPoint(dx, pcb_tl_intersection.y + pcb_feedline_d * i),
                 pcb_Z, chip_Z_list[k + i],
-                back_metal_width=50e3,
+                pad_length=pad_length,
+                back_metal_width=back_metal_width,
                 back_metal_gap=back_metal_gap,
+                transition_len=transition_len,
                 trans_in=Trans.R180
             ) for i in range(pads_per_side)
         ]
@@ -522,13 +531,16 @@ class CHIP_16p5x16p5_20pads:
             ContactPad(
                 DPoint(dx_new - pcb_feedline_d * i, dy),
                 pcb_Z, chip_Z_list[k + i],
-                back_metal_width=50e3,
+                pad_length=pad_length,
+                back_metal_width=back_metal_width,
                 back_metal_gap=back_metal_gap,
+                transition_len=transition_len,
                 trans_in=Trans.R270
             ) for i in range(pads_per_side)
         ]
 
-        # contact pads are ordered starting with top-left corner in counter-clockwise direction
+        # contact pads are ordered starting with top-left corner
+        # in counter-clockwise direction
         contact_pads = itertools.chain(
             contact_pads_left, contact_pads_bottom,
             contact_pads_right, contact_pads_top

@@ -51,7 +51,7 @@ import copy
 # 0.0 - for development
 # 0.8e3 - estimation for fabrication by Bolgar photolytography etching
 # recipe
-FABRICATION.OVERETCHING = 0.0e3
+FABRICATION.OVERETCHING = 0.6e3
 PROJECT_DIR = os.path.dirname(__file__)
 
 
@@ -164,7 +164,11 @@ class Design8Q(ChipDesign):
         self.squid_pars = AsymSquidParams()
         self.ro_Z: CPWParameters = self.chip.chip_Z
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
-            [self.z_md_fl] * 16 + [self.ro_Z] * 4
+            [self.z_md_fl] * 16 + [self.ro_Z] * 4,
+            back_metal_gap=200e3,
+            back_metal_width=0e3,
+            pad_length=700e3,
+            transition_len=250e3
         )
 
         # readout line parameters
@@ -364,18 +368,18 @@ class Design8Q(ChipDesign):
         #
         self.draw_photo_el_marks()
         self.draw_bridges()
-        # self.draw_pinning_holes()
-        # # v.0.3.0.8 p.12 - ensure that contact pads consist no wholes
-        # for contact_pad in self.contact_pads:
-        #     contact_pad.place(self.region_ph)
+        self.draw_pinning_holes()
+        # # v.0.3.0.8 p.12 - ensure that contact pads has no holes
+        for contact_pad in self.contact_pads:
+            contact_pad.place(self.region_ph)
         self.extend_photo_overetching()
-        # self.inverse_destination(self.region_ph)
+        self.inverse_destination(self.region_ph)
         self.draw_cut_marks()
-        # # convert to gds acceptable polygons (without inner holes)
-        # self.resolve_holes()
-        # # convert to litograph readable format. Litograph can't handle
-        # # polygons with more than 200 vertices.
-        # self.split_polygons_in_layers(max_pts=180)
+        # convert to gds acceptable polygons (without inner holes)
+        self.resolve_holes()
+        # convert to litograph readable format. Litograph can't handle
+        # polygons with more than 200 vertices.
+        self.split_polygons_in_layers(max_pts=180)
 
     def draw_for_res_f_and_Q_sim(self, res_idx):
         """
@@ -941,7 +945,8 @@ class Design8Q(ChipDesign):
         # place caplanar line 0 fl
         p1 = self.contact_pads[1].end
         p2 = p1 + DVector(2 * r_turn, 0)
-        p3 = DPoint(p2.x, self.xmons[0].cpw_b.end.y)
+        # TODO: hardcoded 100e3
+        p3 = DPoint(p2.x, self.ctr_lines_y_ref + 100e3)
         p4 = DPoint(
             self.squids[0].center.x + self.flux_lines_x_shifts[0],
             p3.y
@@ -993,7 +998,8 @@ class Design8Q(ChipDesign):
         # place caplanar line 7 fl
         p1 = self.contact_pads[-6].end
         p2 = p1 + DVector(-2 * r_turn, 0)
-        p3 = DPoint(p2.x, self.xmons[7].cpw_b.end.y)
+        # TODO: hardcoded value 100e3
+        p3 = DPoint(p2.x, self.ctr_lines_y_ref + 100e3)
         p4 = DPoint(
             self.squids[7].center.x + self.flux_lines_x_shifts[7],
             p3.y
@@ -1317,31 +1323,38 @@ class Design8Q(ChipDesign):
             self.bandages_regs_list += self.draw_squid_bandage(squid)
             # collect all bottom contacts
 
-    def draw_squid_bandage(self, test_jj: AsymSquid = None):
+    def draw_squid_bandage(self, test_jj: AsymSquid = None, shift_to_center=0):
         bandages_regs_list: List[Region] = []
 
-        import re
+        center_dv = DVector(0, 0.25*self.bandage_height)
         # top bandage
-        top_bandage_reg = self._get_bandage_reg(test_jj.TC.start)
+        top_bandage_reg = self._get_bandage_reg(
+            center=test_jj.TC.start,
+            shift=-center_dv
+        )
         bandages_regs_list.append(top_bandage_reg)
         self.dc_bandage_reg += top_bandage_reg
 
         # bottom contacts
         for i, _ in enumerate(test_jj.squid_params.bot_wire_x):
             BC = getattr(test_jj, "BC" + str(i))
-            bot_bandage_reg = self._get_bandage_reg(BC.end)
+            bot_bandage_reg = self._get_bandage_reg(
+                center=BC.end,
+                shift=center_dv
+            )
             bandages_regs_list.append(bot_bandage_reg)
             self.dc_bandage_reg += bot_bandage_reg
         return bandages_regs_list
 
-    def _get_bandage_reg(self, center, shift_y=0e3):
+    def _get_bandage_reg(self, center, shift: DVector=DVector(0, 0)):
+        center += shift
         rect_lb = center + \
                   DVector(
                       -self.bandage_width / 2,
                       -self.bandage_height / 2
                   )
         bandage_reg = Rectangle(
-            origin=rect_lb - ,
+            origin=rect_lb,
             width=self.bandage_width,
             height=self.bandage_height
         ).metal_region
@@ -1380,7 +1393,7 @@ class Design8Q(ChipDesign):
     def draw_photo_el_marks(self):
         marks_centers = [
             DPoint(2.2e6, 14.1e6), DPoint(7.8e6, 10e6),
-            DPoint(12.16, 14.9e6), DPoint(2.5e6, 3.3e6),
+            DPoint(12.e6, 14.9e6), DPoint(2.5e6, 3.3e6),
             DPoint(9.0e6, 4.8e6), DPoint(14e6, 3.2e6)
         ]
         for mark_center in marks_centers:
@@ -1492,8 +1505,18 @@ class Design8Q(ChipDesign):
         )
 
     def draw_pinning_holes(self):
+        # points that select polygons of interest if they were clicked at
+        selection_pts = [
+            Point(0.1e6, 0.1e6),
+            (self.contact_pads[-1].end + self.contact_pads[-2].end) / 2,
+            (self.contact_pads[-3].end + self.contact_pads[-4].end) / 2
+        ]
+
+        # creating region of small boxes (polygon selection requires
+        # regions)
+        dv = DVector(10, 10)
         selection_region = Region(
-            pya.Box(Point(100e3, 100e3), Point(101e3, 101e3))
+            [pya.Box(pt, pt+dv) for pt in selection_pts]
         )
         tmp_ph = self.region_ph.dup()
         other_regs = tmp_ph.select_not_interacting(selection_region)
