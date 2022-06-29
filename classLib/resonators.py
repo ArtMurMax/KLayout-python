@@ -944,6 +944,7 @@ class EMResonatorTL3QbitWormRLTailXmonFork(EMResonatorTL3QbitWormRLTail):
 
     def _refresh_named_connections(self):
         self.origin = self.connections[0]
+        self.end = self.connections[1]
 
 
 
