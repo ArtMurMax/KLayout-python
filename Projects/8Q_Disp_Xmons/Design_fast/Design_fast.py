@@ -232,9 +232,8 @@ class Design8Q(ChipDesign):
         self.L3_list = [0e3] * len(self.L1_list)  # to be constructed
         # vertical line connected to L3
         self.L4_list = [self.res_r] * len(self.L1_list)
-        self.width_res = 20e3
-        self.gap_res = 10e3
-        self.Z_res = CPWParameters(self.width_res, self.gap_res)
+        # Z = 51.0, E_eff = 6.29
+        self.Z_res = CPWParameters(10e3, 6e3)
         self.to_line_list = [58e3] * len(self.L1_list)
         # fork at the end of resonator parameters
         self.fork_metal_width = 10e3
