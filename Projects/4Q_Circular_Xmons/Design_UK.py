@@ -417,6 +417,9 @@ class Design4QSquare(ChipDesign):
         ### RESONATORS TAILS CALCULATIONS SECTION START ###
         # key to the calculations can be found in hand-written format here:
         # https://drive.google.com/file/d/1wFmv5YmHAMTqYyeGfiqz79a9kL1MtZHu/view?usp=sharing
+        # though, this calculations were implemented poorly
+        # instead of \Delta = Const, implemented \Delta + S_i = const
+        # see sketch for details
 
         # x span between left long vertical line and
         # right-most center of central conductors
