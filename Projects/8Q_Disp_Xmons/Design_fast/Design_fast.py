@@ -174,7 +174,7 @@ class Design8Q(ChipDesign):
         )
         # xmon parameters
         self.NQUBITS = 8
-        self.xmon_x_distance: float = 545e3  # from simulation of g_12
+        self.xmon_x_distance: float = 680e3  # from simulation of g_12
         # distance between open end (excluding fork) of resonator
         # and cross polygons
         self.xmon_res_d = 229e3
@@ -182,7 +182,7 @@ class Design8Q(ChipDesign):
         self.xmons: list[XmonCross] = []
         self.xmons_corrected: list[XmonCross] = []
 
-        self.cross_len_x = 180e3
+        self.cross_len_x = 3/2*180e3
         self.cross_width_x = 60e3
         self.cross_gnd_gap_x = 20e3
         self.cross_len_y = 155e3
@@ -206,24 +206,32 @@ class Design8Q(ChipDesign):
         self.resonators: List[EMResonatorTL3QbitWormRLTailXmonFork] = []
         # distance between nearest resonators central conductors centers
         # constant step between resonators origin points along x-axis.
-        self.resonators_dx: float = 900e3
+        self.resonators_dx: float = 700e3
         # resonator parameters
         self.L_coupling_list: list[float] = [
             1e3 * x for x in [310, 320, 320, 310] * 2
         ]
-        # corresponding to resonanse freq is linspaced in interval [6,9) GHz
+        # corresponding to resonanse freq is linspaced in
+        # interval [7.2,7.44] GHz
         self.L0 = 986e3
+        # long vertical line length
         self.L0_list = [self.L0] * self.NQUBITS
         # from f_res, Q_res simulations
+        # horizontal coil line length
         self.L1_list = [
             1e3 * x for x in
             [64.9406, 22.0042, 79.661, 75.5318] * 2
         ]
-        self.r = 60e3
+        # curvature radius of resonators CPW turns
+        self.res_r = 60e3
+        # coil consist of L1, 2r, L1, 2r segment
         self.N_coils = [2, 3, 3, 3] * 2
-        self.L2_list = [self.r] * len(self.L1_list)
+        # another vertical line connected to L0
+        self.L2_list = [self.res_r] * len(self.L1_list)
+        # horizontal line connected to L2
         self.L3_list = [0e3] * len(self.L1_list)  # to be constructed
-        self.L4_list = [self.r] * len(self.L1_list)
+        # vertical line connected to L3
+        self.L4_list = [self.res_r] * len(self.L1_list)
         self.width_res = 20e3
         self.gap_res = 10e3
         self.Z_res = CPWParameters(self.width_res, self.gap_res)
@@ -284,7 +292,6 @@ class Design8Q(ChipDesign):
                 self.z_md_fl2.width / 2 +
                 SQUID_PARS.BC_dx / 2 + SQUID_PARS.band_ph_tol
             ] * len(self.L1_list)
-
 
         # shift from middle of cross bottom finder
         # where md line should end
@@ -482,16 +489,20 @@ class Design8Q(ChipDesign):
 
         # x span between left long vertical line and
         # right-most center of central conductors
-        resonators_widths = [2 * self.r + L_coupling for L_coupling in
+        resonators_widths = [2 * self.res_r + L_coupling for L_coupling in
                              self.L_coupling_list]
-        x1 = 2 * self.resonators_dx + resonators_widths[
-            2] / 2 - 2 * self.xmon_x_distance
+        x1 = 2 * self.resonators_dx + resonators_widths[2] / 2 - \
+             2 * self.xmon_x_distance
         x2 = x1 + self.xmon_x_distance - self.resonators_dx
         x3 = resonators_widths[2] / 2
         x4 = 3 * self.resonators_dx - (x1 + 3 * self.xmon_x_distance)
+        x4 = abs(x4)
+        print(x4)
+        # x4 = self.resonators_dx - resonators_widths[2] / 2 - \
+        # self.xmon_x_distance
 
         res_tail_shape = "LRLRL"
-        tail_turn_radiuses = self.r
+        tail_turn_radiuses = self.res_r
 
         # along single horizontal line
         self.L2_list[0] += 6 * self.Z_res.b
@@ -526,10 +537,10 @@ class Design8Q(ChipDesign):
                                      zip(self.L2_list, self.L3_list,
                                          self.L4_list)]
         tail_turn_angles_list = [
-                                    [pi / 2, -pi / 2],
-                                    [pi / 2, -pi / 2],
-                                    [pi / 2, -pi / 2],
-                                    [-pi / 2, pi / 2]
+                                    [np.pi / 2, -np.pi / 2],
+                                    [np.pi / 2, -np.pi / 2],
+                                    [np.pi / 2, -np.pi / 2],
+                                    [np.pi / 2, -np.pi / 2]
                                 ] * 2
         tail_trans_in_list = [
                                  Trans.R270,
@@ -554,23 +565,29 @@ class Design8Q(ChipDesign):
         # `xmon_x_distance`
         worm_x = []
         worm_y = []
-        for res_idx in range(4):
+        for res_idx in range(int(self.NQUBITS/2)):
             worm_x.append(
-                self.contact_pads[-1].end.x +
-                (res_idx + 1/2)*self.resonators_dx
-
+                self.chip.box.center().x +
+                (
+                    (res_idx - self.NQUBITS / 2) + 1 / 2
+                ) * self.resonators_dx
             )
             worm_y.append(
-                self.contact_pads[-1].end.y -
-                self.ro_line_dy - self.to_line_list[res_idx]
+                self.chip.box.center().y + sum(
+                    map(
+                        max,
+                        [self.L0_list, self.L2_list, self.L4_list]
+                    )
+                ) + self.xmon_res_d
             )
-        worm_x = worm_x * 2
-        worm_y = worm_y * 2
+        worm_x = worm_x*2
+        worm_y = worm_y*2
 
         # create horizontal qubit line resonators twice
-        # copy with idx=[4,5,6,7] will be transformed to
-        # form vertical qubit line resonators
+        # copy with idx=[4,5,6,7] will be transformed versions
+        # of [0,1,2,3] resonators
         for res_idx, params in enumerate(pars):
+            print(res_idx)
             # parameters exctraction
             L1 = params[0]
             to_line = params[1]
@@ -587,7 +604,7 @@ class Design8Q(ChipDesign):
                     self.Z_res, DPoint(worm_x[res_idx], worm_y[res_idx]),
                     L_coupling,
                     L0=L0,
-                    L1=L1, r=self.r, N=n_coils,
+                    L1=L1, r=self.res_r, N=n_coils,
                     tail_shape=res_tail_shape,
                     tail_turn_radiuses=tail_turn_radiuses,
                     tail_segment_lengths=tail_segment_lengths,
@@ -599,6 +616,56 @@ class Design8Q(ChipDesign):
                     fork_gnd_gap=self.fork_gnd_gap
                 )
             )
+            res = self.resonators[-1]
+
+            # centerize QC structure on chip
+            xmon_center = res.end + DVector(0, -self.xmon_res_d)
+            trans1 = DCplxTrans(1, 0, False, -DVector(xmon_center))
+            chip_center = self.chip.box.center()
+            v_dx = DVector(self.xmon_x_distance, 0)
+            x_shift_mul = None
+            if res_idx < 4:
+                x_shift_mul = res_idx - 3.5
+            else:
+                x_shift_mul = res_idx - 3.5 - 4
+            trans2 = DCplxTrans(
+                1, 0, False, chip_center + x_shift_mul * v_dx
+            )
+            res.make_trans(trans2*trans1)
+
+            # swap resonators 4-7, 5-6 and mirror them at y-axis going
+            # through corresponding crosses
+            if res_idx >= 4:
+                res = self.resonators[-1]
+                # based on first 4 xmons locations
+                xmon_center = res.end + \
+                              DVector(
+                                  0,
+                                  -self.xmon_res_d
+                              )
+                # shift such that cross center is at x-axis
+                trans1 = DCplxTrans(1, 0, False, -DVector(xmon_center))
+                # mirror at x-axis then at y-axis
+                trans2 = DTrans(DTrans.M90) * DTrans(DTrans.M0)
+                # shift to proper x
+                trans3 = DCplxTrans(
+                    1, 0, False,
+                    (
+                            xmon_center.x +
+                            (7 - 2*(res_idx-4)) * self.xmon_x_distance
+                    ),
+                    xmon_center.y
+                )
+                trans_total = trans3 * trans2 * trans1
+
+                # performing trans of resonator
+                res.make_trans(trans_total)
+
+        # repair resonators order. They are to be iterated from
+        # the left-most to the right-most
+        self.resonators = self.resonators[:4] + list(
+            reversed(self.resonators[4:])
+        )
         # print([self.L0 - xmon_dy_Cg_coupling for xmon_dy_Cg_coupling in  self.xmon_dys_Cg_coupling])
         # print(self.L1_list)
         # print(self.L2_list)
@@ -608,7 +675,7 @@ class Design8Q(ChipDesign):
     def draw_xmons_and_resonators(self, res_idx=None):
         """
         Fills photolitography Region() instance with resonators
-        and Xmons crosses structures.
+        and crosses.
 
         Parameters
         ----------
@@ -627,8 +694,11 @@ class Design8Q(ChipDesign):
                 zip(self.resonators, self.fork_y_spans)
             )
         )
-        for res_idx, (res, fork_y_span) in it_list[4:]:
-            xmon_center = res.end + DVector(0, -self.xmon_res_d)
+        for res_idx, (res, fork_y_span) in it_list:
+            if res_idx < 4:  # first 4 resonators
+                xmon_center = res.end + DVector(0, -self.xmon_res_d)
+            else:  # second 4 resonators
+                xmon_center = res.end + DVector(0, self.xmon_res_d)
             self.xmons.append(
                 XmonCross(
                     xmon_center,
@@ -644,59 +714,6 @@ class Design8Q(ChipDesign):
             )
             self.xmons[-1].place(self.region_ph)
             res.place(self.region_ph)
-            xmonCross_corrected = XmonCross(
-                xmon_center,
-                sideX_length=self.cross_len_x,
-                sideX_width=self.cross_width_x,
-                sideX_gnd_gap=self.cross_gnd_gap_x,
-                sideY_length=self.cross_len_y,
-                sideY_width=self.cross_width_y,
-                sideY_gnd_gap=max(
-                    0,
-                    self.fork_x_span - 2 * self.fork_metal_width -
-                    self.cross_width_y -
-                    max(self.cross_gnd_gap_y, self.fork_gnd_gap)
-                ) / 2
-            )
-            self.xmons_corrected.append(xmonCross_corrected)
-            xmonCross_corrected.place(self.region_ph)
-
-        # draw second 4 Xmons
-        for res_idx, (res, fork_y_span) in it_list[4:]:
-            # based on first 4 xmons locations
-            xmon_center = res.end + DVector(0, -self.xmon_res_d)
-            # shift such that cross center is at x-axis
-            trans1 = DCplxTrans(1, 0, False, -DVector(xmon_center))
-            # 2 mirror at x-axis
-            trans2 = DCplxTrans(1, 0, True, 0, 0)
-            # shift to proper x
-            trans3 = DCplxTrans(
-                1, 0, False,
-                xmon_center.x + 4*self.xmon_x_distance, xmon_center.y
-            )
-            trans_total = trans3*trans2*trans1
-
-            # performing trans of resonator
-            res.make_trans(trans_total)
-
-            xmon_center = res.end + DVector(0, self.xmon_res_d)
-
-            self.xmons.append(
-                XmonCross(
-                    xmon_center,
-                    sideX_length=self.cross_len_x,
-                    sideX_width=self.cross_width_x,
-                    sideX_gnd_gap=self.cross_gnd_gap_x,
-                    sideY_length=self.cross_len_y,
-                    sideY_width=self.cross_width_y,
-                    sideY_gnd_gap=self.cross_gnd_gap_y,
-                    sideX_face_gnd_gap=self.cross_gnd_gap_x,
-                    sideY_face_gnd_gap=self.cross_gnd_gap_y
-                )
-            )
-            self.xmons[-1].place(self.region_ph)
-            res.place(self.region_ph)
-
             xmonCross_corrected = XmonCross(
                 xmon_center,
                 sideX_length=self.cross_len_x,
@@ -741,28 +758,26 @@ class Design8Q(ChipDesign):
             return (resonator.L_coupling + get_res_extension(
                 resonator))
 
-        # ro line exceeds resonators total horizontal length by
-        ro_extension = self.resonators_dx / 2
-        # horizontal readout line
-        p1 = self.contact_pads[-1].end
-        p_last = self.contact_pads[-2].end
+        # 1st readout line
+        p1 = self.contact_pads[1].end
+        p_last = self.contact_pads[0].end
         # start of readout
-        p2 = p1 - DVector(0, 2*self.l_scale)
+        p2 = p1 + DVector(2 * self.l_scale, 0)
         p3 = self.resonators[0].origin + \
              DVector(
-                 -get_res_extension(self.resonators[0])/2 -
-                 2*self.ro_line_turn_radius,
+                 -get_res_extension(self.resonators[0]) / 2 -
+                 2 * self.ro_line_turn_radius,
                  self.to_line_list[0]
              )
         p4 = self.resonators[3].origin + \
              DVector(
-                 -get_res_extension(self.resonators[3])/2 +
+                 -get_res_extension(self.resonators[3]) / 2 +
                  get_res_width(self.resonators[3]) +
-                 2*self.ro_line_turn_radius,
+                 2 * self.ro_line_turn_radius,
                  self.to_line_list[3]
              )
 
-        p5 = p_last - DVector(0, 2*self.l_scale)
+        p5 = p_last + DVector(2 * self.l_scale, 0)
         self.cpwrl_ro_line1 = DPathCPW(
             points=[p1, p2, p3, p4, p5, p_last],
             cpw_parameters=self.ro_Z,
@@ -770,26 +785,26 @@ class Design8Q(ChipDesign):
         )
         self.cpwrl_ro_line1.place(self.region_ph)
 
-        # readout line 2
-        p1 = self.contact_pads[-3].end
-        p_last = self.contact_pads[-4].end
+        # 2nd readout line
+        p1 = self.contact_pads[10].end
+        p_last = self.contact_pads[11].end
         # start of readout
-        p2 = p1 + DVector(0, -2 * self.l_scale)
+        p2 = p1 + DVector(-2*self.l_scale, 0)
         p3 = self.resonators[4].origin + \
              DVector(
-                 -get_res_extension(self.resonators[4]) / 2 -
+                 get_res_extension(self.resonators[4])/2 -
+                 get_res_width(self.resonators[4]) -
                  2 * self.ro_line_turn_radius,
-                 self.to_line_list[4]
+                 -self.to_line_list[4]
              )
         p4 = self.resonators[7].origin + \
              DVector(
-                 -get_res_extension(self.resonators[7]) / 2 +
-                 get_res_width(self.resonators[7]) +
+                 get_res_extension(self.resonators[7]) / 2 +
                  2 * self.ro_line_turn_radius,
-                 self.to_line_list[7]
+                 -self.to_line_list[7]
              )
 
-        p5 = p_last + DVector(0, -2 * self.l_scale)
+        p5 = p_last + DVector(-2*self.l_scale,0)
         self.cpwrl_ro_line2 = DPathCPW(
             points=[p1, p2, p3, p4, p5, p_last],
             cpw_parameters=self.ro_Z,
@@ -804,13 +819,13 @@ class Design8Q(ChipDesign):
         pars_local.bot_wire_x = [-dx, dx]
         pars_local.SQB_dy = 0
 
-        xmon_loop_shift = self.cross_len_x/3
+        xmon_loop_shift = self.cross_len_x / 3
 
         for xmon_idx, xmon in enumerate(self.xmons):
             if xmon_idx < 4:  # horizontal row
                 squid_center = DPoint(
                     xmon.cpw_l.end.x + xmon_loop_shift,
-                    xmon.center.y - (xmon.cpw_l.width + xmon.cpw_l.gap)/2
+                    xmon.center.y - (xmon.cpw_l.width + xmon.cpw_l.gap) / 2
                 )
                 squid = AsymSquid(
                     squid_center + DVector(0, -self.squid_vertical_shift),
@@ -821,7 +836,7 @@ class Design8Q(ChipDesign):
             elif xmon_idx >= 4:  # vertical row
                 squid_center = DPoint(
                     xmon.cpw_r.end.x - xmon_loop_shift,
-                    xmon.center.y - (xmon.cpw_r.width + xmon.cpw_r.gap)/2
+                    xmon.center.y - (xmon.cpw_r.width + xmon.cpw_r.gap) / 2
                 )
                 squid = AsymSquid(
                     squid_center + DVector(0, -self.squid_vertical_shift),
@@ -840,15 +855,16 @@ class Design8Q(ChipDesign):
 
         # place caplanar line 0md
         p1 = self.contact_pads[0].end
-        p2 = p1 + DVector(2*r_turn, 0)
+        p2 = p1 + DVector(2 * r_turn, 0)
         p3 = DPoint(p2.x, self.xmons[0].center.y)
         p4 = DPoint(self.xmons[0].cpw_l.end.x -
                     self.md07_x_dist, p3.y)
-        p5 = p4 + DVector(self.z_md_fl.b/2, 0)
+        p5 = p4 + DVector(self.z_md_fl.b / 2, 0)
         self.cpwrl_md0 = DPathCPW(
             points=[p1, p2, p3, p4, p5],
             cpw_parameters=[self.z_md_fl] * 5 +
-                [CPWParameters(width=0, gap=self.z_md_fl.b / 2)],
+                           [CPWParameters(width=0,
+                                          gap=self.z_md_fl.b / 2)],
             turn_radiuses=r_turn
         )
         self.cpw_md_lines.append(self.cpwrl_md0)
@@ -866,7 +882,7 @@ class Design8Q(ChipDesign):
             cp_dv = cp.end - cp.start
             cp_dv /= cp_dv.abs()
 
-            p2 = p1 + 2*r_turn * cp_dv
+            p2 = p1 + 2 * r_turn * cp_dv
             cross_dv = cross.cpw_b.dr.dup()
             cross_dv /= cross_dv.abs()
             p3 = DPoint(
@@ -877,11 +893,12 @@ class Design8Q(ChipDesign):
                 p3.x,
                 self.xmons[q_idx].cpw_b.end.y + self.md_line_end_shift.y
             )
-            p5 = p4 + DVector(0, self.z_md_fl.b/2)
+            p5 = p4 + DVector(0, self.z_md_fl.b / 2)
             md_dpath = DPathCPW(
                 points=[p1, p2, p3, p4, p5],
-                cpw_parameters=[self.z_md_fl]*5 +
-                [CPWParameters(width=0, gap=self.z_md_fl.b/2)],
+                cpw_parameters=[self.z_md_fl] * 5 +
+                               [CPWParameters(width=0,
+                                              gap=self.z_md_fl.b / 2)],
                 turn_radiuses=r_turn
             )
             self.__setattr__("cpwrl_md_" + str(q_idx), md_dpath)
@@ -919,7 +936,7 @@ class Design8Q(ChipDesign):
         )
         p5 = DPoint(
             p4.x,
-            self.xmons[0].center.y - self.xmons[0].cpw_l.b/2
+            self.xmons[0].center.y - self.xmons[0].cpw_l.b / 2
         )
         self.cpwrl_fl0 = DPathCPW(
             points=[p1, p2, p3, p4, p5],
@@ -949,8 +966,8 @@ class Design8Q(ChipDesign):
                 self.ctr_lines_y_ref
             )
             p4 = DPoint(
-                    p3.x,
-                    cross.center.y - cross.cpw_l.b/2
+                p3.x,
+                cross.center.y - cross.cpw_l.b / 2
             )
 
             md_dpath = DPathCPW(
@@ -1060,9 +1077,9 @@ class Design8Q(ChipDesign):
         self.coupling_cpw.place(self.region_ph)
 
         self.cpw_empty1 = CPW(
-            width=0, gap=self.Z_res.b/2,
+            width=0, gap=self.Z_res.b / 2,
             start=self.coupling_cpw.start,
-            end=self.coupling_cpw.start + DVector(-self.Z_res.b/2, 0 )
+            end=self.coupling_cpw.start + DVector(-self.Z_res.b / 2, 0)
         )
         self.cpw_empty1.place(self.region_ph)
 
@@ -1289,10 +1306,11 @@ class Design8Q(ChipDesign):
             self.bandages_regs_list += self.draw_squid_bandage(squid)
             # collect all bottom contacts
 
-    def draw_squid_bandage(self, test_jj: AsymSquid = None, shift_to_center=0):
+    def draw_squid_bandage(self, test_jj: AsymSquid = None,
+                           shift_to_center=0):
         bandages_regs_list: List[Region] = []
 
-        center_dv = DVector(0, 0.25*self.bandage_height)
+        center_dv = DVector(0, 0.25 * self.bandage_height)
         # top bandage
         top_bandage_reg = self._get_bandage_reg(
             center=test_jj.TC.start,
@@ -1312,7 +1330,7 @@ class Design8Q(ChipDesign):
             self.dc_bandage_reg += bot_bandage_reg
         return bandages_regs_list
 
-    def _get_bandage_reg(self, center, shift: DVector=DVector(0, 0)):
+    def _get_bandage_reg(self, center, shift: DVector = DVector(0, 0)):
         center += shift
         rect_lb = center + \
                   DVector(
@@ -1454,9 +1472,9 @@ class Design8Q(ChipDesign):
         avoid_points = []
         avoid_distances = []
         for res in self.resonators:
-            av_pt = res.origin + DPoint(res.L_coupling/2, 0)
+            av_pt = res.origin + DPoint(res.L_coupling / 2, 0)
             avoid_points.append(av_pt)
-            av_dist = res.L_coupling/2 + res.r + res.Z0.b/2
+            av_dist = res.L_coupling / 2 + res.r + res.Z0.b / 2
             avoid_distances.append(av_dist)
 
         Bridge1.bridgify_CPW(
@@ -1482,7 +1500,7 @@ class Design8Q(ChipDesign):
         # regions)
         dv = DVector(10, 10)
         selection_region = Region(
-            [pya.Box(pt, pt+dv) for pt in selection_pts]
+            [pya.Box(pt, pt + dv) for pt in selection_pts]
         )
         tmp_ph = self.region_ph.dup()
         other_regs = tmp_ph.select_not_interacting(selection_region)
@@ -2121,6 +2139,8 @@ if __name__ == "__main__":
     design = Design8Q("testScript")
     design.draw()
     design.show()
+    print(design.contact_pads[2].end.y)
+    print(design.xmons[0].center.y)
 
     # simulate_resonators_f_and_Q()
     # simulate_Cqr()
