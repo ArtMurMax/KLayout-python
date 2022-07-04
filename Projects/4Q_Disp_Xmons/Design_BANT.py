@@ -1418,7 +1418,7 @@ def simulate_resonators_f_and_Q():
 
     for dl, resonator_idx in list(product(
             dl_list,
-            range(8)
+            range(4)
     )):
         fine_resonance_success = False
         freqs_span = freqs_span_corase
@@ -1850,5 +1850,6 @@ if __name__ == "__main__":
     design = Design5QTest("testScript")
     design.draw()
     design.show()
-    # simulate_resonators_f_and_Q()
+
+    simulate_resonators_f_and_Q()
     # simulate_Cqr()
