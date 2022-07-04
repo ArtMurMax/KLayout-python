@@ -174,7 +174,7 @@ class Design8Q(ChipDesign):
         )
         # xmon parameters
         self.NQUBITS = 8
-        self.xmon_x_distance: float = 680e3  # from simulation of g_12
+        self.xmon_x_distance: float = 700e3  # from simulation of g_12
         # distance between open end (excluding fork) of resonator
         # and cross polygons
         self.xmon_res_d = 229e3
@@ -362,7 +362,7 @@ class Design8Q(ChipDesign):
         '''
         self.create_resonator_objects()
         self.draw_xmons_and_resonators()
-        self.draw_readout_waveguide()
+        # self.draw_readout_waveguide()
         #
         # self.draw_josephson_loops()
         # #
@@ -490,15 +490,13 @@ class Design8Q(ChipDesign):
         # right-most center of central conductors
         resonators_widths = [2 * self.res_r + L_coupling for L_coupling in
                              self.L_coupling_list]
-        x1 = 2 * self.resonators_dx + resonators_widths[2] / 2 - \
-             2 * self.xmon_x_distance
-        x2 = x1 + self.xmon_x_distance - self.resonators_dx
-        x3 = resonators_widths[2] / 2
-        x4 = 3 * self.resonators_dx - (x1 + 3 * self.xmon_x_distance)
-        x4 = abs(x4)
-        print(x4)
-        # x4 = self.resonators_dx - resonators_widths[2] / 2 - \
-        # self.xmon_x_distance
+        L3_arr = [0.0]*8
+        L3_arr[0] = (
+            resonators_widths[0]/2
+        )
+        for i in range(1, self.NQUBITS):
+            L3_arr[i] = L3_arr[i-1] + self.xmon_x_distance - \
+                        self.resonators_dx
 
         res_tail_shape = "LRLRL"
         tail_turn_radiuses = self.res_r
@@ -508,10 +506,10 @@ class Design8Q(ChipDesign):
         self.L2_list[1] += 0
         self.L2_list[3] += 3 * self.Z_res.b
 
-        self.L3_list[0] = x1
-        self.L3_list[1] = x2
-        self.L3_list[2] = x3
-        self.L3_list[3] = x4
+        # self.L3_list[0] = x1
+        # self.L3_list[1] = x2
+        # self.L3_list[2] = x3
+        # self.L3_list[3] = x4
 
         self.L4_list[1] += 6 * self.Z_res.b
         self.L4_list[2] += 6 * self.Z_res.b
@@ -522,10 +520,11 @@ class Design8Q(ChipDesign):
         self.L2_list[5] += 0
         self.L2_list[7] += 3 * self.Z_res.b
 
-        self.L3_list[4] = x1
-        self.L3_list[5] = x2
-        self.L3_list[6] = x3
-        self.L3_list[7] = x4
+        # self.L3_list[4] = x5
+        # self.L3_list[5] = x2
+        # self.L3_list[6] = x3
+        # self.L3_list[7] = x4
+        self.L3_list = np.array(self.L3_list) + np.array(L3_arr)
 
         self.L4_list[5] += 6 * self.Z_res.b
         self.L4_list[6] += 6 * self.Z_res.b
@@ -540,7 +539,9 @@ class Design8Q(ChipDesign):
                                     [np.pi / 2, -np.pi / 2],
                                     [np.pi / 2, -np.pi / 2],
                                     [np.pi / 2, -np.pi / 2]
-                                ] * 2
+                                ]
+        tail_turn_angles_list = tail_turn_angles_list + list(reversed(
+            tail_turn_angles_list))
         tail_trans_in_list = [
                                  Trans.R270,
                                  Trans.R270,
@@ -564,23 +565,15 @@ class Design8Q(ChipDesign):
         # `xmon_x_distance`
         worm_x = []
         worm_y = []
-        for res_idx in range(int(self.NQUBITS/2)):
+        for res_idx in range(int(self.NQUBITS)):
             worm_x.append(
-                self.chip.box.center().x +
-                (
-                    (res_idx - self.NQUBITS / 2) + 1 / 2
-                ) * self.resonators_dx
+                self.contact_pads[-1].end.x + res_idx * self.resonators_dx
             )
             worm_y.append(
-                self.chip.box.center().y + sum(
-                    map(
-                        max,
-                        [self.L0_list, self.L2_list, self.L4_list]
-                    )
-                ) + self.xmon_res_d
+                self.contact_pads[-1].end.y - 4*self.l_scale
             )
-        worm_x = worm_x*2
-        worm_y = worm_y*2
+        worm_x = worm_x
+        worm_y = worm_y
 
         # create horizontal qubit line resonators twice
         # copy with idx=[4,5,6,7] will be transformed versions
@@ -615,56 +608,7 @@ class Design8Q(ChipDesign):
                     fork_gnd_gap=self.fork_gnd_gap
                 )
             )
-            res = self.resonators[-1]
 
-            # centerize QC structure on chip
-            xmon_center = res.end + DVector(0, -self.xmon_res_d)
-            trans1 = DCplxTrans(1, 0, False, -DVector(xmon_center))
-            chip_center = self.chip.box.center()
-            v_dx = DVector(self.xmon_x_distance, 0)
-            x_shift_mul = None
-            if res_idx < 4:
-                x_shift_mul = res_idx - 3.5
-            else:
-                x_shift_mul = res_idx - 3.5 - 4
-            trans2 = DCplxTrans(
-                1, 0, False, chip_center + x_shift_mul * v_dx
-            )
-            res.make_trans(trans2*trans1)
-
-            # swap resonators 4-7, 5-6 and mirror them at y-axis going
-            # through corresponding crosses
-            if res_idx >= 4:
-                res = self.resonators[-1]
-                # based on first 4 xmons locations
-                xmon_center = res.end + \
-                              DVector(
-                                  0,
-                                  -self.xmon_res_d
-                              )
-                # shift such that cross center is at x-axis
-                trans1 = DCplxTrans(1, 0, False, -DVector(xmon_center))
-                # mirror at x-axis then at y-axis
-                trans2 = DTrans(DTrans.M90) * DTrans(DTrans.M0)
-                # shift to proper x
-                trans3 = DCplxTrans(
-                    1, 0, False,
-                    (
-                            xmon_center.x +
-                            (7 - 2*(res_idx-4)) * self.xmon_x_distance
-                    ),
-                    xmon_center.y
-                )
-                trans_total = trans3 * trans2 * trans1
-
-                # performing trans of resonator
-                res.make_trans(trans_total)
-
-        # repair resonators order. They are to be iterated from
-        # the left-most to the right-most
-        self.resonators = self.resonators[:4] + list(
-            reversed(self.resonators[4:])
-        )
         # print([self.L0 - xmon_dy_Cg_coupling for xmon_dy_Cg_coupling in  self.xmon_dys_Cg_coupling])
         # print(self.L1_list)
         # print(self.L2_list)
@@ -694,10 +638,7 @@ class Design8Q(ChipDesign):
             )
         )
         for res_idx, (res, fork_y_span) in it_list:
-            if res_idx < 4:  # first 4 resonators
-                xmon_center = res.end + DVector(0, -self.xmon_res_d)
-            else:  # second 4 resonators
-                xmon_center = res.end + DVector(0, self.xmon_res_d)
+            xmon_center = res.end + DVector(0, -self.xmon_res_d)
             self.xmons.append(
                 XmonCross(
                     xmon_center,
