@@ -362,30 +362,30 @@ class Design8Q(ChipDesign):
         '''
         self.create_resonator_objects()
         self.draw_xmons_and_resonators()
-        # self.draw_readout_waveguide()
-        #
-        # self.draw_josephson_loops()
+        self.draw_readout_waveguide()
+
+        self.draw_josephson_loops()
+
+        self.draw_microwave_drvie_lines()
+        self.draw_flux_control_lines()
+        self.draw_coupling_res()
+
+        self.draw_test_structures()
+        self.draw_express_test_structures_pads()
+        self.draw_bandages()
+        self.draw_recess()
+        self.region_el.merge()
+        self.draw_el_protection()
         # #
-        # self.draw_microwave_drvie_lines()
-        # self.draw_flux_control_lines()
-        # self.draw_coupling_res()
-        #
-        # self.draw_test_structures()
-        # self.draw_express_test_structures_pads()
-        # self.draw_bandages()
-        # self.draw_recess()
-        # self.region_el.merge()
-        # self.draw_el_protection()
-        # #
-        # self.draw_photo_el_marks()
-        # self.draw_bridges()
+        self.draw_photo_el_marks()
+        self.draw_bridges()
         # self.draw_pinning_holes()
         # # v.0.3.0.8 p.12 - ensure that contact pads has no holes
         # for contact_pad in self.contact_pads:
         #     contact_pad.place(self.region_ph)
         # self.extend_photo_overetching()
         # self.inverse_destination(self.region_ph)
-        # self.draw_cut_marks()
+        self.draw_cut_marks()
         # # convert to gds acceptable polygons (without inner holes)
         # self.resolve_holes()
         # # convert to litograph readable format. Litograph can't handle
@@ -566,9 +566,10 @@ class Design8Q(ChipDesign):
         for res_idx in range(int(self.NQUBITS)):
             worm_x.append(
                 self.contact_pads[-1].end.x + res_idx * self.resonators_dx
+                + 8*self.l_scale
             )
             worm_y.append(
-                self.contact_pads[-1].end.y - 4*self.l_scale
+                self.contact_pads[-1].end.y - 8*self.l_scale
             )
 
 
@@ -701,58 +702,30 @@ class Design8Q(ChipDesign):
                 resonator))
 
         # 1st readout line
-        p1 = self.contact_pads[1].end
-        p_last = self.contact_pads[0].end
+        p1 = self.contact_pads[-1].end
+        p_last = self.contact_pads[-4].end
         # start of readout
-        p2 = p1 + DVector(2 * self.l_scale, 0)
+        p2 = p1 + DVector(0, -2 * self.l_scale)
         p3 = self.resonators[0].origin + \
              DVector(
                  -get_res_extension(self.resonators[0]) / 2 -
                  4 * self.ro_line_turn_radius,
                  self.to_line_list[0]
              )
-        p4 = self.resonators[3].origin + \
+        p4 = self.resonators[7].origin + \
              DVector(
-                 -get_res_extension(self.resonators[3]) / 2 +
-                 get_res_width(self.resonators[3]) +
+                 -get_res_extension(self.resonators[7]) / 2 +
+                 get_res_width(self.resonators[7]) +
                  4 * self.ro_line_turn_radius,
-                 self.to_line_list[3]
+                 self.to_line_list[7]
              )
-        p5 = p4 + DVector(0, 2*self.ro_line_turn_radius)
-        p6 = p_last + DVector(2 * self.l_scale, 0)
+        p5 = p_last + DVector(0, -2 * self.l_scale)
         self.cpwrl_ro_line1 = DPathCPW(
-            points=[p1, p2, p3, p4, p5, p6, p_last],
+            points=[p1, p2, p3, p4, p5, p_last],
             cpw_parameters=self.ro_Z,
             turn_radiuses=self.ro_line_turn_radius
         )
         self.cpwrl_ro_line1.place(self.region_ph)
-
-        # 2nd readout line
-        p1 = self.contact_pads[10].end
-        p_last = self.contact_pads[11].end
-        # start of readout
-        p2 = p1 + DVector(-2*self.l_scale, 0)
-        p4 = self.resonators[4].origin + \
-             DVector(
-                 get_res_extension(self.resonators[4])/2 -
-                 get_res_width(self.resonators[4]) -
-                 4 * self.ro_line_turn_radius,
-                 -self.to_line_list[4]
-             )
-        p3 = p4 + DVector(0, -2*self.ro_line_turn_radius)
-        p5 = self.resonators[7].origin + \
-             DVector(
-                 get_res_extension(self.resonators[7]) / 2 +
-                 4 * self.ro_line_turn_radius,
-                 -self.to_line_list[7]
-             )
-        p6 = p_last + DVector(-2*self.l_scale, 0)
-        self.cpwrl_ro_line2 = DPathCPW(
-            points=[p1, p2, p3, p4, p5, p6, p_last],
-            cpw_parameters=self.ro_Z,
-            turn_radiuses=self.ro_line_turn_radius
-        )
-        self.cpwrl_ro_line2.place(self.region_ph)
 
     def draw_josephson_loops(self):
         # place left squid
@@ -1034,8 +1007,8 @@ class Design8Q(ChipDesign):
 
     def draw_test_structures(self):
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
-        struct_centers = [DPoint(4.2e6, 14.5e6), DPoint(9.0e6, 14.5e6),
-                          DPoint(7.5e6, 11.5e6)]
+        struct_centers = [DPoint(2.4e6, 14.0e6), DPoint(10.7e6, 14.0e6),
+                          DPoint(8.2e6, 14.9e6)]
         self.test_squids_pads = []
         for struct_center in struct_centers:
             ## JJ test structures ##
@@ -1124,7 +1097,7 @@ class Design8Q(ChipDesign):
         test_dc_el2_centers = [
             DPoint(2.5e6, 11.5e6),
             DPoint(12.1e6, 13.6e6),
-            DPoint(7.0e6, 15.3e6)
+            DPoint(5.7e6, 14.9e6)
         ]
         for struct_center in test_dc_el2_centers:
             test_struct1 = TestStructurePadsSquare(struct_center)
@@ -1318,9 +1291,10 @@ class Design8Q(ChipDesign):
 
     def draw_photo_el_marks(self):
         marks_centers = [
-            DPoint(2.2e6, 14.1e6), DPoint(7.8e6, 10e6),
-            DPoint(12.e6, 14.9e6), DPoint(2.5e6, 3.3e6),
-            DPoint(9.0e6, 4.8e6), DPoint(14e6, 3.2e6)
+            DPoint(1.5e6, 14.5e6), DPoint(7.9e6, 8.4e6), DPoint(14.3e6,
+                                                               14.5e6),
+            DPoint(2.5e6, 3.3e6), DPoint(12.9e6, 10.5e6), DPoint(14e6,
+                                                                 3.3e6)
         ]
         for mark_center in marks_centers:
             self.marks.append(
@@ -2084,11 +2058,11 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
     design = Design8Q("testScript")
-    # design.draw()
-    # design.show()
+    design.draw()
+    design.show()
 
     ''' Resonators Q and f sim'''
-    simulate_resonators_f_and_Q()
+    # simulate_resonators_f_and_Q()
 
     ''' C_qr sim '''
     # simulate_Cqr()
