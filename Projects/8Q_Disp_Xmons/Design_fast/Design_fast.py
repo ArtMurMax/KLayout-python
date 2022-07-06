@@ -220,7 +220,7 @@ class Design8Q(ChipDesign):
         # horizontal coil line length
         self.L1_list = [
             1e3 * x for x in
-            [108.2117,91.9553,98.4836,86.2173]*2
+            [114.5219,95.1897,99.0318,83.7159, 88.8686,70.3649,74.0874,59.6982]
         ]
         # curvature radius of resonators CPW turns
         self.res_r = 60e3
@@ -362,7 +362,7 @@ class Design8Q(ChipDesign):
         '''
         self.create_resonator_objects()
         self.draw_xmons_and_resonators()
-        # self.draw_readout_waveguide()
+        self.draw_readout_waveguide()
         #
         # self.draw_josephson_loops()
         # #
@@ -420,8 +420,8 @@ class Design8Q(ChipDesign):
         TODO: This drawings sequence can be decoupled in the future.
         '''
         self.create_resonator_objects()
-        self.draw_readout_waveguide()
         self.draw_xmons_and_resonators(res_idx2Draw=res_idx2Draw)
+        self.draw_readout_waveguide()
 
     def draw_for_Cqr_simulation(self, res_idx):
         """
@@ -565,10 +565,10 @@ class Design8Q(ChipDesign):
         worm_y = []
         for res_idx in range(int(self.NQUBITS)):
             worm_x.append(
-                self.contact_pads[-1].end.x + res_idx * self.resonators_dx
+                self.contact_pads[-1].end.x + res_idx * self.resonators_dx + 8*self.l_scale
             )
             worm_y.append(
-                self.contact_pads[-1].end.y - 4*self.l_scale
+                self.contact_pads[-1].end.y - 8*self.l_scale
             )
 
 
@@ -701,58 +701,30 @@ class Design8Q(ChipDesign):
                 resonator))
 
         # 1st readout line
-        p1 = self.contact_pads[1].end
-        p_last = self.contact_pads[0].end
+        p1 = self.contact_pads[-1].end
+        p_last = self.contact_pads[-4].end
         # start of readout
-        p2 = p1 + DVector(2 * self.l_scale, 0)
+        p2 = p1 + DVector(0, -2 * self.l_scale)
         p3 = self.resonators[0].origin + \
              DVector(
                  -get_res_extension(self.resonators[0]) / 2 -
                  4 * self.ro_line_turn_radius,
                  self.to_line_list[0]
              )
-        p4 = self.resonators[3].origin + \
+        p4 = self.resonators[7].origin + \
              DVector(
-                 -get_res_extension(self.resonators[3]) / 2 +
-                 get_res_width(self.resonators[3]) +
+                 -get_res_extension(self.resonators[7]) / 2 +
+                 get_res_width(self.resonators[7]) +
                  4 * self.ro_line_turn_radius,
-                 self.to_line_list[3]
+                 self.to_line_list[7]
              )
-        p5 = p4 + DVector(0, 2*self.ro_line_turn_radius)
-        p6 = p_last + DVector(2 * self.l_scale, 0)
+        p5 = p_last + DVector(0, -2 * self.l_scale)
         self.cpwrl_ro_line1 = DPathCPW(
-            points=[p1, p2, p3, p4, p5, p6, p_last],
+            points=[p1, p2, p3, p4, p5, p_last],
             cpw_parameters=self.ro_Z,
             turn_radiuses=self.ro_line_turn_radius
         )
         self.cpwrl_ro_line1.place(self.region_ph)
-
-        # 2nd readout line
-        p1 = self.contact_pads[10].end
-        p_last = self.contact_pads[11].end
-        # start of readout
-        p2 = p1 + DVector(-2*self.l_scale, 0)
-        p4 = self.resonators[4].origin + \
-             DVector(
-                 get_res_extension(self.resonators[4])/2 -
-                 get_res_width(self.resonators[4]) -
-                 4 * self.ro_line_turn_radius,
-                 -self.to_line_list[4]
-             )
-        p3 = p4 + DVector(0, -2*self.ro_line_turn_radius)
-        p5 = self.resonators[7].origin + \
-             DVector(
-                 get_res_extension(self.resonators[7]) / 2 +
-                 4 * self.ro_line_turn_radius,
-                 -self.to_line_list[7]
-             )
-        p6 = p_last + DVector(-2*self.l_scale, 0)
-        self.cpwrl_ro_line2 = DPathCPW(
-            points=[p1, p2, p3, p4, p5, p6, p_last],
-            cpw_parameters=self.ro_Z,
-            turn_radiuses=self.ro_line_turn_radius
-        )
-        self.cpwrl_ro_line2.place(self.region_ph)
 
     def draw_josephson_loops(self):
         # place left squid
@@ -1511,13 +1483,15 @@ def simulate_resonators_f_and_Q():
     corase_only = False
     freqs_span_fine = 0.050
     # dl_list = [15e3, 0, -15e3]
-    estimated_freqs = np.linspace(7.2, 7.44, 4)
+    estimated_freqs = np.linspace(7.2, 7.76, 8)
     dl_list = [0e3]
     from itertools import product
-    for (resonator_idx,predef_freq), dl in list(product(
-            zip(range(4), estimated_freqs),
-            dl_list
+    for dl, (resonator_idx,predef_freq) in list(product(
+            dl_list,
+            zip(range(8), estimated_freqs),
     )):
+        if(resonator_idx < 4 ):
+            continue
         print()
         print("res №", resonator_idx)
         fine_resonance_success = False
@@ -1525,18 +1499,18 @@ def simulate_resonators_f_and_Q():
 
         design = Design8Q("testScript")
         design.L1_list[resonator_idx] += dl
-        print(f"res length: {design.L1_list[resonator_idx]:3.5} um")
+        # print(f"res length: {design.L1_list[resonator_idx]:3.5} um")
         design.draw_for_res_f_and_Q_sim(res_idx2Draw=resonator_idx)
 
         an_estimated_freq = \
             design.resonators[resonator_idx].get_approx_frequency(
                 refractive_index=np.sqrt(6.26423)
             )
-        print(f"formula estimated freq: {an_estimated_freq:3.5} GHz")
+        # print(f"formula estimated freq: {an_estimated_freq:3.5} GHz")
         estimated_freq = predef_freq
-        print("start drawing")
-        print(f"previous result estimated freq: {estimated_freq:3.5} GHz")
-        print(design.resonators[resonator_idx].length(exception="fork"))
+        # print("start drawing")
+        # print(f"previous result estimated freq: {estimated_freq:3.5} GHz")
+        # print(design.resonators[resonator_idx].length(exception="fork"))
 
         crop_box = (
                 design.resonators[resonator_idx].metal_region +
@@ -1563,8 +1537,9 @@ def simulate_resonators_f_and_Q():
         resolution_dy = np.gcd.reduce(arr.astype(int))
         # print(arr)
         # print(resolution_dy)
-        # resolution_dy = 4e3
+        # resolution_dy = 2e3
         resolution_dx = 2e3
+        # print("resolution: ", resolution_dx,"x",resolution_dy, " um")
 
         # cut part of the ground plane due to rectangular mesh in Sonnet
         crop_box.bottom = crop_box.bottom - int(
@@ -1629,7 +1604,7 @@ def simulate_resonators_f_and_Q():
             ml_terminal.send_polygons(design.cell, design.layer_ph)
             ml_terminal.set_ABS_sweep(estimated_freq - freqs_span / 2,
                                       estimated_freq + freqs_span / 2)
-            print(f"simulating...{resonator_idx}")
+            # print(f"simulating...{resonator_idx}")
             result_path = ml_terminal.start_simulation(wait=True)
             ml_terminal.release()
 
