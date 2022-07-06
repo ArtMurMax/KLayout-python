@@ -363,29 +363,29 @@ class Design8Q(ChipDesign):
         self.create_resonator_objects()
         self.draw_xmons_and_resonators()
         self.draw_readout_waveguide()
-        #
-        # self.draw_josephson_loops()
+
+        self.draw_josephson_loops()
+
+        self.draw_microwave_drvie_lines()
+        self.draw_flux_control_lines()
+        self.draw_coupling_res()
+
+        self.draw_test_structures()
+        self.draw_express_test_structures_pads()
+        self.draw_bandages()
+        self.draw_recess()
+        self.region_el.merge()
+        self.draw_el_protection()
         # #
-        # self.draw_microwave_drvie_lines()
-        # self.draw_flux_control_lines()
-        # self.draw_coupling_res()
-        #
-        # self.draw_test_structures()
-        # self.draw_express_test_structures_pads()
-        # self.draw_bandages()
-        # self.draw_recess()
-        # self.region_el.merge()
-        # self.draw_el_protection()
-        # #
-        # self.draw_photo_el_marks()
-        # self.draw_bridges()
+        self.draw_photo_el_marks()
+        self.draw_bridges()
         # self.draw_pinning_holes()
         # # v.0.3.0.8 p.12 - ensure that contact pads has no holes
         # for contact_pad in self.contact_pads:
         #     contact_pad.place(self.region_ph)
         # self.extend_photo_overetching()
         # self.inverse_destination(self.region_ph)
-        # self.draw_cut_marks()
+        self.draw_cut_marks()
         # # convert to gds acceptable polygons (without inner holes)
         # self.resolve_holes()
         # # convert to litograph readable format. Litograph can't handle
@@ -1006,8 +1006,8 @@ class Design8Q(ChipDesign):
 
     def draw_test_structures(self):
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
-        struct_centers = [DPoint(4.2e6, 14.5e6), DPoint(9.0e6, 14.5e6),
-                          DPoint(7.5e6, 11.5e6)]
+        struct_centers = [DPoint(2.4e6, 14.0e6), DPoint(10.7e6, 14.0e6),
+                          DPoint(8.2e6, 14.9e6)]
         self.test_squids_pads = []
         for struct_center in struct_centers:
             ## JJ test structures ##
@@ -1096,7 +1096,7 @@ class Design8Q(ChipDesign):
         test_dc_el2_centers = [
             DPoint(2.5e6, 11.5e6),
             DPoint(12.1e6, 13.6e6),
-            DPoint(7.0e6, 15.3e6)
+            DPoint(5.7e6, 14.9e6)
         ]
         for struct_center in test_dc_el2_centers:
             test_struct1 = TestStructurePadsSquare(struct_center)
@@ -1290,9 +1290,10 @@ class Design8Q(ChipDesign):
 
     def draw_photo_el_marks(self):
         marks_centers = [
-            DPoint(2.2e6, 14.1e6), DPoint(7.8e6, 10e6),
-            DPoint(12.e6, 14.9e6), DPoint(2.5e6, 3.3e6),
-            DPoint(9.0e6, 4.8e6), DPoint(14e6, 3.2e6)
+            DPoint(1.5e6, 14.5e6), DPoint(7.9e6, 8.4e6), DPoint(14.3e6,
+                                                               14.5e6),
+            DPoint(2.5e6, 3.3e6), DPoint(12.9e6, 10.5e6), DPoint(14e6,
+                                                                 3.3e6)
         ]
         for mark_center in marks_centers:
             self.marks.append(
@@ -2059,11 +2060,11 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
     design = Design8Q("testScript")
-    # design.draw()
-    # design.show()
+    design.draw()
+    design.show()
 
     ''' Resonators Q and f sim'''
-    simulate_resonators_f_and_Q()
+    # simulate_resonators_f_and_Q()
 
     ''' C_qr sim '''
     # simulate_Cqr()
