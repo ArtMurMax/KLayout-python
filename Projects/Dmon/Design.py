@@ -203,7 +203,8 @@ class Design5QTest(ChipDesign):
             1e3 * x for x in [310, 320, 320, 310, 300]
         ]
         # corresponding to resonanse freq is linspaced in interval [6,9) GHz
-        self.L0 = 1000e3
+        self.L0 = 986e3
+        self.L0_list = [self.L0]*8
         self.L1_list = [
             1e3 * x for x in [58.4471, 20.3557, 76.3942, 74.6009, 25.8126]
 
@@ -219,11 +220,8 @@ class Design5QTest(ChipDesign):
         self.to_line_list = [58e3] * len(self.L1_list)
         self.fork_metal_width = 6e3
         self.fork_gnd_gap = 18e3
-        self.xmon_fork_gnd_gap = 2e3
-
-        self.fork_metal_width_old = 10e3
-        self.fork_gnd_gap_old = 18e3
-        self.xmon_fork_gnd_gap_old = 14e3
+        self.xmon_res_d = 229e3
+        self.xmon_fork_gnd_gap = 14e3
         # resonator-fork parameters
         # for coarse C_qr evaluation
         self.fork_y_spans = [
@@ -256,19 +254,8 @@ class Design5QTest(ChipDesign):
 
         # xmon parameters
         self.xmon_x_distance: float = 545e3  # from simulation of g_12
-        # for fine C_qr evaluation
-        self.xmon_dys_Cg_coupling = \
-            [
-                self.fork_gnd_gap,
-                self.fork_gnd_gap_old,
-                self.fork_gnd_gap,
-                self.fork_gnd_gap_old,
-                self.fork_gnd_gap,
-                self.fork_gnd_gap_old,
-                self.fork_gnd_gap,
-                self.fork_gnd_gap
-            ]
         self.xmons: list[XmonCross] = []
+        self.xmons_corrected : list[XmonCross] = []
 
         self.cross_len_x = 180e3
         self.cross_width_x = 60e3
@@ -279,12 +266,8 @@ class Design5QTest(ChipDesign):
 
         # fork at the end of resonator parameters
         # ABOVE RO LINE
-        self.fork_x_span = self.cross_width_y + 2 * (
-                self.xmon_fork_gnd_gap + self.fork_metal_width)
-
-        # BELOW RO LINE
-        self.fork_x_span_old = self.cross_width_y + 2 * (
-                self.xmon_fork_gnd_gap_old + self.fork_metal_width_old)
+        self.fork_x_span = 60e3 + + 2 * \
+                           (self.xmon_fork_gnd_gap + self.fork_metal_width)
 
         # squids
         self.squids: List[AsymSquid] = []
@@ -519,8 +502,6 @@ class Design5QTest(ChipDesign):
 
         # list corrected for resonator-qubit coupling geomtry, so all transmons centers are placed
         # along single horizontal line
-        self.L0_list = [self.L0 - xmon_dy_Cg_coupling for
-                        xmon_dy_Cg_coupling in self.xmon_dys_Cg_coupling]
 
         self.L2_list[0] += 6 * self.Z_res.b
         self.L2_list[1] += 0
@@ -599,19 +580,18 @@ class Design5QTest(ChipDesign):
             worm_x = self.worm_x_list[res_idx]
             worm_y = self.chip.dy / 2 + to_line * (-1) ** (res_idx)
 
+            fork_x_span = self.fork_x_span
+            fork_metal_width = self.fork_metal_width
+            fork_gnd_gap = self.fork_gnd_gap
             if res_idx % 2 == 0:  # above RO line
                 trans = DTrans.M0
-                fork_x_span = self.fork_x_span
-                fork_metal_width = self.fork_metal_width
-                fork_gnd_gap = self.fork_gnd_gap
-            else:
-                fork_x_span = self.fork_x_span_old
-                fork_metal_width = self.fork_metal_width_old
-                fork_gnd_gap = self.fork_gnd_gap_old
+            else:  # below RO line
                 trans = DTrans.R0
             self.resonators.append(
                 EMResonatorTL3QbitWormRLTailXmonFork(
-                    self.Z_res, DPoint(worm_x, worm_y), L_coupling,
+                    Z0=self.Z_res,
+                    start=DPoint(worm_x, worm_y),
+                    L_coupling=L_coupling,
                     L0=L0,
                     L1=L1, r=self.r, N=n_coils,
                     tail_shape=res_tail_shape,
@@ -649,14 +629,14 @@ class Design5QTest(ChipDesign):
         )
         self.cpwrl_ro_line.place(self.region_ph)
 
-    def draw_xmons_and_resonators(self, res_idx=None):
+    def draw_xmons_and_resonators(self, res_idx2Draw=None):
         """
         Fills photolitography Region() instance with resonators
         and Xmons crosses structures.
 
         Parameters
         ----------
-        res_idx : int
+        res_idx2Draw : int
             draw only particular resonator (if passed)
             used in resonator simulations.
 
@@ -665,30 +645,18 @@ class Design5QTest(ChipDesign):
         -------
         None
         """
-        for current_res_idx, (
-                resonator, fork_y_span, xmon_dy_Cg_coupling) in \
-                enumerate(zip(self.resonators, self.fork_y_spans,
-                              self.xmon_dys_Cg_coupling)):
-            if current_res_idx % 2 == 0:
-                m = -1
-            else:
-                m = 1
-            xmon_center = \
-                (
-                        resonator.fork_x_cpw.start + resonator.fork_x_cpw.end
-                ) / 2 + \
-                m * DVector(
-                    0,
-                    -xmon_dy_Cg_coupling - resonator.fork_metal_width / 2
-                )
-            # changes start #
-            xmon_center += DPoint(
-                0,
-                -m * (
-                        self.cross_len_y + self.cross_width_x / 2 +
-                        self.cross_gnd_gap_y
-                )
+        it_list = list(
+            enumerate(
+                self.resonators
             )
+        )
+        for res_idx, res in it_list:
+            if res_idx % 2 == 0:
+                # above RO line
+                xmon_center = res.end + DVector(0, self.xmon_res_d)
+            else:
+                # below RO line
+                xmon_center = res.end + DVector(0, -self.xmon_res_d)
             self.xmons.append(
                 XmonCross(
                     xmon_center,
@@ -702,24 +670,29 @@ class Design5QTest(ChipDesign):
                     sideY_face_gnd_gap=self.cross_gnd_gap_y
                 )
             )
-            if (res_idx is None) or (res_idx == current_res_idx):
-                self.xmons[-1].place(self.region_ph)
-                resonator.place(self.region_ph)
-                xmonCross_corrected = XmonCross(
-                    xmon_center,
-                    sideX_length=self.cross_len_x,
-                    sideX_width=self.cross_width_x,
-                    sideX_gnd_gap=self.cross_gnd_gap_x,
-                    sideY_length=self.cross_len_y,
-                    sideY_width=self.cross_width_y,
-                    sideY_gnd_gap=max(
-                        0,
-                        self.fork_x_span - 2 * self.fork_metal_width -
-                        self.cross_width_y -
-                        max(self.cross_gnd_gap_y, self.fork_gnd_gap)
-                    ) / 2
-                )
-                xmonCross_corrected.place(self.region_ph)
+            if res_idx2Draw is None:
+                pass
+            else:
+                if res_idx != res_idx2Draw:
+                    continue
+            self.xmons[-1].place(self.region_ph)
+            res.place(self.region_ph)
+            xmonCross_corrected = XmonCross(
+                xmon_center,
+                sideX_length=self.cross_len_x,
+                sideX_width=self.cross_width_x,
+                sideX_gnd_gap=self.cross_gnd_gap_x,
+                sideY_length=self.cross_len_y,
+                sideY_width=self.cross_width_y,
+                sideY_gnd_gap=max(
+                    0,
+                    self.fork_x_span - 2 * self.fork_metal_width -
+                    self.cross_width_y -
+                    max(self.cross_gnd_gap_y, self.fork_gnd_gap)
+                ) / 2
+            )
+            self.xmons_corrected.append(xmonCross_corrected)
+            xmonCross_corrected.place(self.region_ph)
 
     def draw_josephson_loops(self):
         # place left squid

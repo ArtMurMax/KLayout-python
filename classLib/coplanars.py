@@ -106,6 +106,9 @@ class CPW(ElementBase):
     def length(self):
         return self.dr.abs()
 
+    def middle_pt(self):
+        return (self.end + self.start)/2
+
 
 class CPWArc(ElementBase):
     def __init__(self, z0=CPWParameters(width=20e3, gap=10e3),
@@ -715,7 +718,6 @@ class DPathCPW(ComplexBase):
         for p1, p2, p3 in zip(points, points[1:], points[2:]):
             a = (p2 - p1)
             b = (p3 - p2)
-            max_len = max(a.length(), b.length())
             # collinearity testing
             angle = a.vprod_sign(b) * np.abs(
                 np.arccos(a.sprod(b) / (a.length() * b.length()))
@@ -870,7 +872,8 @@ class DPathCPW(ComplexBase):
                     raise Warning(
                         "CPWDPath warning: segment length "
                         "is less than zero\n"
-                        f"idx_l = {idx_l}"
+                        f"idx_l = {idx_l}\tlength = "
+                        f"{self._segment_lengths[idx_l]}"
                     )
 
                 if self._cpw_parameters[i].smoothing:
