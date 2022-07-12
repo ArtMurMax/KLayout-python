@@ -113,13 +113,13 @@ SQUID_PARS = AsymSquidParams(
     band_ph_tol=1e3,
     squid_dx=14.2e3,
     squid_dy=10e3,
-    TC_dx=2.5e3*np.sqrt(2) + 1e3,
+    TC_dx=2.5e3 * np.sqrt(2) + 1e3,
     TC_dy=4e3,
     TCW_dy=6e3,
     TCW_dx=0.5e3,
     BCW_dy=0e3,
     BC_dy=4e3,
-    BC_dx=2.5e3*np.sqrt(2) + 1e3
+    BC_dx=2.5e3 * np.sqrt(2) + 1e3
 )
 
 VERT_ARR_SHIFT = DVector(-50e3, -150e3)
@@ -183,7 +183,7 @@ class Design8Q(ChipDesign):
         self.xmons: list[XmonCross] = []
         self.xmons_corrected: list[XmonCross] = []
 
-        self.cross_len_x = 3/2*180e3
+        self.cross_len_x = 3 / 2 * 180e3
         self.cross_width_x = 60e3
         self.cross_gnd_gap_x = 20e3
         self.cross_len_y = 155e3
@@ -221,7 +221,8 @@ class Design8Q(ChipDesign):
         # horizontal coil line length
         self.L1_list = [
             1e3 * x for x in
-            [114.5219,95.1897,99.0318,83.7159, 88.8686,70.3649,74.0874,59.6982]
+            [114.5219, 95.1897, 99.0318, 83.7159, 88.8686, 70.3649,
+             74.0874, 59.6982]
         ]
         # curvature radius of resonators CPW turns
         self.res_r = 60e3
@@ -254,8 +255,8 @@ class Design8Q(ChipDesign):
         self.coupling_resonator_dx = 20e3  # distance from cross metal
 
         # bandages
-        self.bandage_width = 2.5e3*np.sqrt(2)
-        self.bandage_height = 5e3*np.sqrt(2)
+        self.bandage_width = 2.5e3 * np.sqrt(2)
+        self.bandage_height = 5e3 * np.sqrt(2)
         self.bandage_r_outer = 2e3
         self.bandage_r_inner = 2e3
         self.bandage_curve_pts_n = 40
@@ -265,7 +266,7 @@ class Design8Q(ChipDesign):
         self.squids: List[AsymSquid] = []
         self.test_squids: List[AsymSquid] = []
         # vertical shift of every squid local origin coordinates
-        self.squid_vertical_shift = 2e3 # 2e3
+        self.squid_vertical_shift = 2e3  # 2e3
         # minimal distance between squid loop and photo layer
         self.squid_ph_clearance = 1.5e3
 
@@ -296,17 +297,18 @@ class Design8Q(ChipDesign):
 
         # curve that is used for intermediate parking points for
         # control line of qubits group №1
-        self._ic_alpha_start1 = (- 1 + 1/6) * np.pi  # ic === intermediate curve
-        self._ic_alpha_end1 = -1/2 * np.pi
+        self._ic_alpha_start1 = (
+                                            - 1 + 1 / 6) * np.pi  # ic === intermediate curve
+        self._ic_alpha_end1 = -1 / 2 * np.pi
         self._ic_alpha_list1 = np.linspace(self._ic_alpha_start1,
                                            self._ic_alpha_end1, 7)
-        self._ic_r1 = 3 / 2 * 3*self.xmon_x_distance
+        self._ic_r1 = 3 / 2 * 3 * self.xmon_x_distance
         self.ic_pts1 = []
 
         # curve that is used for intermediate parking points for
         # control line of qubits group №2
-        self._ic_alpha_start2 = 1/2 * np.pi
-        self._ic_alpha_end2 = 1/6 * np.pi
+        self._ic_alpha_start2 = 1 / 2 * np.pi
+        self._ic_alpha_end2 = 1 / 6 * np.pi
         self._ic_alpha_list2 = np.linspace(self._ic_alpha_start2,
                                            self._ic_alpha_end2, 7)
         self._ic_r2 = self._ic_r1
@@ -415,7 +417,7 @@ class Design8Q(ChipDesign):
         # # polygons with more than 200 vertices.
         # self.split_polygons_in_layers(max_pts=180)
 
-    def draw_for_res_f_and_Q_sim(self, res_idx2Draw):
+    def draw_for_res_f_and_Q_sim(self, res_idxs2Draw):
         """
         Function draw part of design that will be cropped and simulateed to obtain resonator`s frequency and Q-factor.
         Resonators are enumerated starting from 0.
@@ -443,7 +445,7 @@ class Design8Q(ChipDesign):
         TODO: This drawings sequence can be decoupled in the future.
         '''
         self.create_resonator_objects()
-        self.draw_xmons_and_resonators(res_idx2Draw=res_idx2Draw)
+        self.draw_xmons_and_resonators(res_idxs2Draw=res_idxs2Draw)
         self.draw_readout_waveguide()
 
     def draw_for_Cqr_simulation(self, res_idx):
@@ -513,12 +515,12 @@ class Design8Q(ChipDesign):
         # right-most center of central conductors
         resonators_widths = [2 * self.res_r + L_coupling for L_coupling in
                              self.L_coupling_list]
-        L3_arr = [0.0]*8
+        L3_arr = [0.0] * 8
         L3_arr[0] = (
-            resonators_widths[0]/2
+                resonators_widths[0] / 2
         )
         for i in range(1, self.NQUBITS):
-            L3_arr[i] = L3_arr[i-1] + self.xmon_x_distance - \
+            L3_arr[i] = L3_arr[i - 1] + self.xmon_x_distance - \
                         self.resonators_dx
 
         res_tail_shape = "LRLRL"
@@ -556,11 +558,11 @@ class Design8Q(ChipDesign):
                                      zip(self.L2_list, self.L3_list,
                                          self.L4_list)]
         tail_turn_angles_list = [
-                                    [np.pi / 2, -np.pi / 2],
-                                    [np.pi / 2, -np.pi / 2],
-                                    [np.pi / 2, -np.pi / 2],
-                                    [np.pi / 2, -np.pi / 2]
-                                ]
+            [np.pi / 2, -np.pi / 2],
+            [np.pi / 2, -np.pi / 2],
+            [np.pi / 2, -np.pi / 2],
+            [np.pi / 2, -np.pi / 2]
+        ]
         tail_turn_angles_list = tail_turn_angles_list + list(reversed(
             tail_turn_angles_list))
         tail_trans_in_list = [
@@ -588,7 +590,8 @@ class Design8Q(ChipDesign):
         worm_y = []  # calculated based on resonator dimensions
         for res_idx in range(int(self.NQUBITS)):
             worm_x.append(
-                self.chip_box.center().x + (res_idx-3.5)*self.resonators_dx
+                self.chip_box.center().x + (
+                            res_idx - 3.5) * self.resonators_dx
             )
 
         # create horizontal qubit line resonators twice
@@ -608,19 +611,19 @@ class Design8Q(ChipDesign):
             n_coils = params[8]
 
             res = EMResonatorTL3QbitWormRLTailXmonFork(
-                    self.Z_res, DPoint(worm_x[res_idx], 0),
-                    L_coupling,
-                    L0=L0,
-                    L1=L1, r=self.res_r, N=n_coils,
-                    tail_shape=res_tail_shape,
-                    tail_turn_radiuses=tail_turn_radiuses,
-                    tail_segment_lengths=tail_segment_lengths,
-                    tail_turn_angles=tail_turn_angles,
-                    tail_trans_in=tail_trans_in,
-                    fork_x_span=self.fork_x_span,
-                    fork_y_span=fork_y_span,
-                    fork_metal_width=self.fork_metal_width,
-                    fork_gnd_gap=self.fork_gnd_gap
+                self.Z_res, DPoint(worm_x[res_idx], 0),
+                L_coupling,
+                L0=L0,
+                L1=L1, r=self.res_r, N=n_coils,
+                tail_shape=res_tail_shape,
+                tail_turn_radiuses=tail_turn_radiuses,
+                tail_segment_lengths=tail_segment_lengths,
+                tail_turn_angles=tail_turn_angles,
+                tail_trans_in=tail_trans_in,
+                fork_x_span=self.fork_x_span,
+                fork_y_span=fork_y_span,
+                fork_metal_width=self.fork_metal_width,
+                fork_gnd_gap=self.fork_gnd_gap
             )
             self.resonators.append(res)
             worm_y.append(
@@ -635,7 +638,7 @@ class Design8Q(ChipDesign):
         # print(self.L3_list)
         # print(self.L4_list)
 
-    def draw_xmons_and_resonators(self, res_idx2Draw=None):
+    def draw_xmons_and_resonators(self, res_idxs2Draw: List[int] = None):
         """
         Fills photolitography Region() instance with resonators
         and crosses.
@@ -672,17 +675,17 @@ class Design8Q(ChipDesign):
                     sideY_face_gnd_gap=self.cross_gnd_gap_y
                 )
             )
-            if res_idx2Draw is None:
+            if res_idx >= 4:  # transform resonator
+                trans1 = DCplxTrans(1, 0, False, -DVector(xmon_center))
+                trans2 = DCplxTrans(1, 0, True, 0, 0)
+                trans3 = DCplxTrans(1, 0, False, DVector(xmon_center))
+                res_trans = trans3 * trans2 * trans1
+                res.make_trans(res_trans)
+            if res_idxs2Draw is None:
                 pass
             else:
-                if res_idx != res_idx2Draw:
+                if res_idx not in res_idxs2Draw:
                     continue
-            if res_idx >= 4:  # transform resonator
-                trans1 = DCplxTrans(1,0,False, -DVector(xmon_center))
-                trans2 = DCplxTrans(1,0, True, 0,0)
-                trans3 = DCplxTrans(1,0,False, DVector(xmon_center))
-                res_trans = trans3*trans2*trans1
-                res.make_trans(res_trans)
             self.xmons[-1].place(self.region_ph)
             res.place(self.region_ph)
             xmonCross_corrected = XmonCross(
@@ -747,36 +750,37 @@ class Design8Q(ChipDesign):
                  4 * self.ro_line_turn_radius,
                  self.to_line_list[3]
              )
-        p5 = p_last + DVector(2 * self.l_scale, 0)
+        p5 = p4 + DVector(0, 2 * self.l_scale)
+        p6 = p_last + DVector(2 * self.l_scale, 0)
         self.cpwrl_ro_line1 = DPathCPW(
-            points=[p1, p2, p3, p4, p5, p_last],
+            points=[p1, p2, p3, p4, p5, p6, p_last],
             cpw_parameters=self.ro_Z,
             turn_radiuses=self.ro_line_turn_radius
         )
         self.cpwrl_ro_line1.place(self.region_ph)
 
         # 2nd readout line
-        # 1st readout line
         p1 = self.contact_pads[10].end
         p_last = self.contact_pads[11].end
         # start of readout
         p2 = p1 + DVector(-2 * self.l_scale, 0)
-        p3 = self.resonators[4].start + \
+        p4 = self.resonators[4].start + \
              DVector(
                  -get_res_extension(self.resonators[4]) / 2 -
                  4 * self.ro_line_turn_radius,
                  -self.to_line_list[4]
              )
-        p4 = self.resonators[7].start + \
+        p3 = p4 + DVector(0, -2 * self.l_scale)
+        p5 = self.resonators[7].start + \
              DVector(
                  -get_res_extension(self.resonators[7]) / 2 +
                  get_res_width(self.resonators[7]) +
                  4 * self.ro_line_turn_radius,
                  -self.to_line_list[7]
              )
-        p5 = p_last + DVector(-2 * self.l_scale, 0)
+        p6 = p_last + DVector(-2 * self.l_scale, 0)
         self.cpwrl_ro_line1 = DPathCPW(
-            points=[p1, p2, p3, p4, p5, p_last],
+            points=[p1, p2, p3, p4, p5, p6, p_last],
             cpw_parameters=self.ro_Z,
             turn_radiuses=self.ro_line_turn_radius
         )
@@ -823,7 +827,7 @@ class Design8Q(ChipDesign):
             self.ctr_lines_y_ref1 = self.xmons[0].cpw_bempt.end.y - \
                                     self.ctrLine_2_qLine_d
             self.ctr_lines_y_ref2 = self.xmons[0].cpw_tempt.end.y + \
-                               self.ctrLine_2_qLine_d
+                                    self.ctrLine_2_qLine_d
             if len(self.ic_pts1) == 0:
                 ic_center1 = self.xmons[3].center
                 for alpha in self._ic_alpha_list1:
@@ -881,8 +885,8 @@ class Design8Q(ChipDesign):
                 p4.x,
                 self.xmons[q_idx].cpw_b.end.y + self.md_line_end_shift.y
             )
-            last_dv = (p5-p4)/(p5-p4).abs()
-            p6 = p5 + self.z_md_fl.b/2 * last_dv
+            last_dv = (p5 - p4) / (p5 - p4).abs()
+            p6 = p5 + self.z_md_fl.b / 2 * last_dv
             md_dpath = DPathCPW(
                 points=[p1, p2, p3, p4, p5, p6],
                 cpw_parameters=[self.z_md_fl] * 7 +
@@ -1090,7 +1094,7 @@ class Design8Q(ChipDesign):
         flux_line.place(self.region_ph)
 
         # tangent vector
-        last_line_dv_s = last_line_dv/last_line_dv.abs()
+        last_line_dv_s = last_line_dv / last_line_dv.abs()
         # normal vector (90deg counterclockwise rotated tangent vector)
         last_line_dv_n = DVector(-last_line_dv_s.y, last_line_dv_s.x)
 
@@ -1427,7 +1431,7 @@ class Design8Q(ChipDesign):
     def draw_photo_el_marks(self):
         marks_centers = [
             DPoint(1.5e6, 14.5e6), DPoint(7.9e6, 8.4e6), DPoint(14.3e6,
-                                                               14.5e6),
+                                                                14.5e6),
             DPoint(2.5e6, 3.3e6), DPoint(12.9e6, 10.5e6), DPoint(14e6,
                                                                  3.3e6)
         ]
@@ -1623,12 +1627,10 @@ def simulate_resonators_f_and_Q():
     estimated_freqs = np.linspace(7.2, 7.76, 8)
     dl_list = [0e3]
     from itertools import product
-    for dl, (resonator_idx,predef_freq) in list(product(
+    for dl, (resonator_idx, predef_freq) in list(product(
             dl_list,
             zip(range(8), estimated_freqs),
     )):
-        if(resonator_idx < 4 ):
-            continue
         print()
         print("res №", resonator_idx)
         fine_resonance_success = False
@@ -1882,6 +1884,217 @@ def simulate_resonators_f_and_Q():
                     os.path.join(results_dirpath, all_params["filename"])
                 )
             ### RESULT SAVING SECTION END ###
+
+def simulate_resonators_f_and_Q_together():
+    freqs_span_corase = 1  # GHz
+    corase_only = False
+    freqs_span_fine = 0.050
+    # dl_list = [15e3, 0, -15e3]
+    estimated_freq = 7.5
+    dl_list = [0e3]  # shift for every resonator
+    res_idxs = [0, 1, 2, 3]
+    fine_resonance_success = False
+    freqs_span = freqs_span_corase
+
+    design = Design8Q("testScript")
+    for res_idx, dl in zip(res_idxs, dl_list):
+        design.L1_list[res_idx] += dl
+
+    design.draw_for_res_f_and_Q_sim(res_idxs2Draw=res_idxs)
+
+    total_reg = Region()
+    for res_idx in res_idxs:
+        total_reg += design.resonators[res_idx].metal_region
+        total_reg += design.resonators[res_idx].empty_region
+        total_reg += design.xmons[res_idx].metal_region
+        total_reg += design.xmons[res_idx].empty_region
+    crop_box = total_reg.bbox()
+
+    # center of the readout CPW
+    crop_box.top += -design.Z_res.b / 2 + \
+                    max(map(abs, design.to_line_list)) + design.Z0.b / 2
+    box_extension = 100e3
+    crop_box.bottom -= box_extension
+    crop_box.top += box_extension
+    crop_box.left -= box_extension
+    crop_box.right += box_extension
+
+    ### MESH CALCULATION SECTION START ###
+    arr1 = np.round(np.array(
+        design.to_line_list) - design.Z0.b / 2 - design.Z_res.b / 2)
+    arr2 = np.array([box_extension, design.Z0.gap, design.Z0.width,
+                     design.Z_res.width, design.Z_res.gap])
+    arr = np.hstack((arr1, arr2))
+    resolution_dy = np.gcd.reduce(arr.astype(int))
+    # print(arr)
+    # print(resolution_dy)
+    # resolution_dy = 2e3
+    resolution_dx = 2e3
+    # print("resolution: ", resolution_dx,"x",resolution_dy, " um")
+
+    # cut part of the ground plane due to rectangular mesh in Sonnet
+    crop_box.bottom = crop_box.bottom - int(
+        crop_box.height() % resolution_dy)
+    # print(crop_box.top, " ", crop_box.bottom)
+    # print(crop_box.height() / resolution_dy)
+    ''' MESH CALCULATION SECTION END '''
+
+    design.crop(crop_box, region=design.region_ph)
+
+    design.sonnet_ports = [
+        DPoint(crop_box.left,
+               crop_box.top - box_extension - design.Z0.b / 2),
+        DPoint(crop_box.right,
+               crop_box.top - box_extension - design.Z0.b / 2)
+    ]
+
+    # transforming cropped box to the origin
+    dr = DPoint(0, 0) - crop_box.p1
+    design.transform_region(
+        design.region_ph,
+        DTrans(dr.x, dr.y),
+        trans_ports=True
+    )
+
+    # transfer design`s regions shapes to the corresponding layers in layout
+    design.show()
+    # show layout in UI window
+    design.lv.zoom_fit()
+
+    design.layout.write(
+        os.path.join(PROJECT_DIR,
+                     f"res_f_Q_{res_idxs}_{dl}_um.gds")
+    )
+
+    ''' SIMULATION SECTION START '''
+    ml_terminal = SonnetLab()
+    # print("starting connection...")
+    from sonnetSim.cMD import CMD
+
+    ml_terminal._send(CMD.SAY_HELLO)
+    ml_terminal.clear()
+    simBox = SimulationBox(
+        crop_box.width(), crop_box.height(),
+        crop_box.width() / resolution_dx,
+        crop_box.height() / resolution_dy
+    )
+
+    # if freqs_span == freqs_span_corase:
+    ml_terminal.set_boxProps(simBox)
+    # print("sending cell and layer")
+    from sonnetSim.pORT_TYPES import PORT_TYPES
+
+    ports = [
+        SonnetPort(design.sonnet_ports[0], PORT_TYPES.BOX_WALL),
+        SonnetPort(design.sonnet_ports[1], PORT_TYPES.BOX_WALL)
+    ]
+    ml_terminal.set_ports(ports)
+    ml_terminal.send_polygons(design.cell, design.layer_ph)
+    ml_terminal.set_ABS_sweep(estimated_freq - freqs_span / 2,
+                              estimated_freq + freqs_span / 2)
+    # print(f"simulating...{resonator_idx}")
+    result_path = ml_terminal.start_simulation(wait=True)
+    ml_terminal.release()
+    ''' SIMULATION SECTION START '''
+
+    ''' RESONANCE FINDING SECTION START '''
+    # """
+    # intended to be working ONLY IF:
+    # s12 is monotonically increasing or decreasing over the chosen frequency band.
+    # That generally holds true for circuits with single resonator.
+    # """
+    # with open(result_path.decode('ascii'), "r",
+    #           newline='') as file:
+    #     # exctracting s-parameters in csv format
+    #     # though we do not have csv module
+    #     rows = [row.split(',') for row in
+    #             list(file.readlines())[8:]]
+    #     freqs = [float(row[0]) for row in rows]  # rows in GHz
+    #     df = freqs[1] - freqs[0]  # frequency error
+    #     s12_list = [float(row[3]) + 1j * float(row[4]) for row in
+    #                 rows]
+    #     s12_abs_list = [abs(s12) for s12 in s12_list]
+    #     min_freq_idx, min_s21_abs = min(enumerate(s12_abs_list),
+    #                                     key=lambda x: x[1])
+    #     min_freq = freqs[min_freq_idx]
+    #     # min_freq_idx = len(s12_abs_list) / 2  # Note: FOR DEBUG
+    # print("min freq idx: ", min_freq_idx, "/", len(freqs))
+    # # processing the results
+    # if min_freq_idx == 0:
+    #     # local minimum is located to the left of current interval
+    #     # => shift interval to the left and try again
+    #     derivative = (s12_list[1] - s12_list[0]) / df
+    #     second_derivative = (s12_list[2] - 2 * s12_list[1] +
+    #                          s12_list[0]) / df ** 2
+    #     print('resonance located the left of the current interval')
+    #     # try adjacent interval to the left
+    #     estimated_freq -= freqs_span
+    # elif min_freq_idx == (len(freqs) - 1):
+    #     # local minimum is located to the right of current interval
+    #     # => shift interval to the right and try again
+    #     derivative = (s12_list[-1] - s12_list[-2]) / df
+    #     second_derivative = (s12_list[-1] - 2 * s12_list[-2] +
+    #                          s12_list[-3]) / df ** 2
+    #     print(
+    #         'resonance located the right of the current interval')
+    #     # try adjacent interval to the right
+    #     estimated_freq += freqs_span
+    # else:
+    #     # local minimum is within current interval
+    #     print(f"fr = {min_freq:3.5} GHz,  fr_err = {df:.5}")
+    #     estimated_freq = min_freq
+    #
+    # # unreachable code:
+    # # TODO: add approximation of the resonance if minimum is nonlocal during corase approximation
+    # # fr_approx = (2*derivative/second_derivative) + min_freq
+    # # B = -4*derivative**3/second_derivative**2
+    # # A = min_freq - 2*derivative**2/second_derivative
+    # # print(f"fr = {min_freq:3.3} GHz,  fr_err = not implemented(")
+    ''' RESONANCE FINDING SECTION END '''
+
+    ''' RESULT SAVING SECTION START '''
+    # # geometry parameters gathering
+    # # res_params = design.resonators[
+    # #     resonator_idx].get_geometry_params_dict(prefix="worm_")
+    # # Z0_params = design.Z0.get_geometry_params_dict(
+    # #     prefix="S21Line_")
+    # #
+    # # from collections import OrderedDict
+    # #
+    # # all_params = OrderedDict(
+    # #     itertools.chain(
+    # #         res_params.items(),
+    # #         Z0_params.items(),
+    # #         {
+    # #             "to_line, um": design.to_line_list[
+    # #                                resonator_idx] / 1e3,
+    # #             "filename": None,
+    # #             "resonator_idx": resonator_idx
+    # #         }.items()
+    # #     )
+    # # )
+    #
+    # # creating directory with simulation results
+    # results_dirname = "resonators_S21"
+    # results_dirpath = os.path.join(PROJECT_DIR, results_dirname)
+    # #
+    # # output_metaFile_path = os.path.join(
+    # #     results_dirpath,
+    # #     "resonator_waveguide_Q_freq_meta.csv"
+    # # )
+    # try:
+    #     # creating directory
+    #     os.mkdir(results_dirpath)
+    # except FileExistsError:
+    #     pass
+    # finally:
+    #     # copy result from sonnet folder and rename it accordingly
+    #     filename = "res_together" + "-".join(map(str,res_idxs)) + ".cvs"
+    #     shutil.copy(
+    #         result_path.decode("ascii"),
+    #         os.path.join(results_dirpath, filename)
+    #     )
+    ''' RESULT SAVING SECTION END '''
 
 
 def simulate_Cqr():
@@ -2196,14 +2409,17 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
     design = Design8Q("testScript")
-    design.draw()
-    design.show()
+    # design.draw()
+    # design.show()
+
+    ''' Simulation of C_{q1,q2} in fF '''
+    # simulate_Cqq(3, 4, resolution=(2e3, 2e3))
 
     ''' Resonators Q and f sim'''
     # simulate_resonators_f_and_Q()
 
+    ''' Resonators Q and f when placed together'''
+    simulate_resonators_f_and_Q_together()
+
     ''' C_qr sim '''
     # simulate_Cqr()
-
-    ''' Simulation of C_{q1,q2} in fF '''
-    # simulate_Cqq(3, 4, resolution=(2e3, 2e3))
