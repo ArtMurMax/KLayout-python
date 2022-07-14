@@ -375,6 +375,15 @@ class TmonT(ComplexBase):
         self.cpw_tempt = CPW(0, self.cpw_t.b / 2, p2, p3)
         self.primitives["cpw_tempt"] = self.cpw_tempt
 
+        """ bottom part of Tmon T (for backward compatibility) """
+        p1 = origin + DPoint(0, -self.sideX_width / 2)
+        p2 = p1
+        self.cpw_b = CPW(self.sideY_width, self.sideY_gnd_gap, p1, p2)
+        self.primitives["cpw_b"] = self.cpw_b
+        p3 = p2 + DPoint(0, -self.sideY_face_gnd_gap)
+        self.cpw_bempt = CPW(0, self.cpw_b.b / 2, p2, p3)
+        self.primitives["cpw_bempt"] = self.cpw_bempt
+
         self.connections = [origin]
 
     def _refresh_named_connections(self):
