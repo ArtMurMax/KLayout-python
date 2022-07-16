@@ -50,7 +50,7 @@ class CPW(ElementBase):
         self.end = end
         self.start = start
         self.dr = end - start
-        super().__init__(start, trans_in)
+        super().__init__(origin=start, trans_in=trans_in)
 
         self._geometry_parameters = OrderedDict(
             [

@@ -185,10 +185,10 @@ class Design8Q(ChipDesign):
 
         self.cross_len_x = 3 / 2 * 180e3
         self.cross_width_x = 40e3  # 60e3 II
-        self.cross_gnd_gap_x = 40e3  # 20e3 I
+        self.cross_gnd_gap_x = 20e3  # 20e3 I
         self.cross_len_y = 155e3
         self.cross_width_y = 40e3  # 60e3 II
-        self.cross_gnd_gap_y = 40e3  # 20e3 I
+        self.cross_gnd_gap_y = 20e3  # 20e3 I
 
         # readout line parameters
         self.ro_line_turn_radius: float = 100e3
@@ -248,11 +248,6 @@ class Design8Q(ChipDesign):
         self.fork_y_spans = [
             x * 1e3 for x in [35.044, 87.202, 42.834, 90.72] * 2
         ]
-
-        # coupling resonators
-        self.coupling_res_length = 2.5e6
-        self.coupling_cpw: CPW = None  # coupling resonator
-        self.coupling_resonator_dx = 20e3  # distance from cross metal
 
         # bandages
         self.bandage_width = 2.5e3 * np.sqrt(2)
@@ -662,19 +657,19 @@ class Design8Q(ChipDesign):
         )
         for res_idx, (res, fork_y_span) in it_list:
             xmon_center = res.end + DVector(0, -self.xmon_res_d)
-            self.xmons.append(
-                TmonT(
-                    xmon_center,
-                    sideX_length=self.cross_len_x,
-                    sideX_width=self.cross_width_x,
-                    sideX_gnd_gap=self.cross_gnd_gap_x,
-                    sideY_length=self.cross_len_y,
-                    sideY_width=self.cross_width_y,
-                    sideY_gnd_gap=self.cross_gnd_gap_y,
-                    sideX_face_gnd_gap=self.cross_gnd_gap_x,
-                    sideY_face_gnd_gap=self.cross_gnd_gap_y
-                )
+            xmonCross = TmonT(
+                xmon_center,
+                sideX_length=self.cross_len_x,
+                sideX_width=self.cross_width_x,
+                sideX_gnd_gap=self.cross_gnd_gap_x,
+                sideY_length=self.cross_len_y,
+                sideY_width=self.cross_width_y,
+                sideY_gnd_gap=self.cross_gnd_gap_y,
+                sideX_face_gnd_gap=self.cross_gnd_gap_x,
+                sideY_face_gnd_gap=self.cross_gnd_gap_y
             )
+
+            self.xmons.append(xmonCross)
             xmonCross_corrected = TmonT(
                 xmon_center,
                 sideX_length=self.cross_len_x,
@@ -709,6 +704,11 @@ class Design8Q(ChipDesign):
                 if res_idx not in res_idxs2Draw:
                     continue
 
+            # print(res_idx)
+            # print(self.cross_len_x)
+            # print(self.cross_width_x)
+            # print(self.cross_len_y)
+            # print()
             # place xmon
             self.xmons[-1].place(self.region_ph)
             # place resonator with fork. May corrupt xmon cross due to
@@ -2270,11 +2270,13 @@ def simulate_Cqr():
 
 def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
     resolution_dx, resolution_dy = resolution
-    metal_widths_list = [-10e3, -5e3, 0]
-    x_side_length_list = [5e3, 10e3, 15e3]
+    metal_widths_list = np.linspace(-20e3, 20e3, 21)
+    x_side_length_list = np.linspace(-50e3, 50e3, 26)
     from itertools import product
     for tmont_metal_width, x_side_length in product(metal_widths_list,
                                                     x_side_length_list):
+        if (tmont_metal_width >= -15790) or (x_side_length >= -45834):
+            continue
         ''' DRAWING SECTION START '''
         design = Design8Q("testScript")
         design.cross_width_y += tmont_metal_width
@@ -2283,10 +2285,12 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
         print("metal_width = ", design.cross_width_x)
         design.draw_chip()
         design.create_resonator_objects()
-        design.draw_xmons_and_resonators()
+        design.draw_xmons_and_resonators([q1_idx, q2_idx])
         design.show()
         design.layout.write(
-            os.path.join(PROJECT_DIR, f"Cqq_{q1_idx}_{q2_idx}.gds")
+            os.path.join(PROJECT_DIR, f"Cqq_{q1_idx}_{q2_idx}_"
+                                      f"{tmont_metal_width:.3f}_"
+                                      f"{x_side_length:.3f}.gds")
         )
 
         design.layout.clear_layer(design.layer_ph)
@@ -2296,6 +2300,13 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
         cross1.place(design.region_ph)
         cross2.place(design.region_ph)
 
+        # print(tmont_metal_width)
+        # print(x_side_length)
+        # print(list(cross1.get_geometry_params_dict().keys()))
+        # print(list(cross1.get_geometry_params_dict().values()))
+        # for key, val in cross1.get_geometry_params_dict().items():
+        #     print(key, " = ", val)
+        # print()
         # process edges of both objects to obtain the most distant edge centers
         # most distant edge centers will be chosen as ports points.
         # Hence, ports will be attached to edge pair with maximum distance.
@@ -2406,9 +2417,6 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
         geometry_params.update(
             design.xmons[q2_idx].get_geometry_params_dict(prefix="q2")
         )
-        design.layout.write(
-            os.path.join(PROJECT_DIR, f"Cqq_{q1_idx}_{q2_idx}.gds")
-        )
         output_filepath = os.path.join(PROJECT_DIR, "Xmon_Cqq_results.csv")
         if os.path.exists(output_filepath):
             # append data to file
@@ -2416,7 +2424,7 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
                 writer = csv.writer(csv_file)
                 writer.writerow(
                     [q1_idx, q2_idx, *list(geometry_params.values()),
-                     C12, C1]
+                     C1, C12]
                 )
         else:
             # create file, add header, append data
@@ -2424,10 +2432,11 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
                 writer = csv.writer(csv_file)
                 # create header of the file
                 writer.writerow(
-                    ["q1_idx", "q2_idx", "C12, fF", *list(
-                        geometry_params.keys()), "C1, fF"])
+                    ["q1_idx", "q2_idx", *list(
+                        geometry_params.keys()), "C1, fF", "C12, fF"])
                 writer.writerow(
-                    [q1_idx, q2_idx, C12, C1]
+                    [q1_idx, q2_idx, *list(geometry_params.values()),
+                     C1, C12]
                 )
         '''SAVING REUSLTS SECTION END'''
 
