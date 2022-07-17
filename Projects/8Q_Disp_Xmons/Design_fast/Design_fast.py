@@ -183,11 +183,11 @@ class Design8Q(ChipDesign):
         self.xmons: list[TmonT] = []
         self.xmons_corrected: list[TmonT] = []
 
-        self.cross_len_x = 3 / 2 * 180e3
-        self.cross_width_x = 40e3  # 60e3 II
-        self.cross_gnd_gap_x = 20e3  # 20e3 I
+        self.cross_len_x = 270e3
+        self.cross_width_x = 28.359e3  # 60e3 II
+        self.cross_gnd_gap_x = 40e3  # 20e3 I
         self.cross_len_y = 155e3
-        self.cross_width_y = 40e3  # 60e3 II
+        self.cross_width_y = 28.359e3  # 60e3 II
         self.cross_gnd_gap_y = 20e3  # 20e3 I
 
         # readout line parameters
@@ -2270,27 +2270,19 @@ def simulate_Cqr():
 
 def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
     resolution_dx, resolution_dy = resolution
-    metal_widths_list = np.linspace(-20e3, 20e3, 21)
-    x_side_length_list = np.linspace(-50e3, 50e3, 26)
-    from itertools import product
-    for sim_idx, (tmont_metal_width, x_side_length) in \
-            list(enumerate(product(metal_widths_list, x_side_length_list)))[492:]:
+    x_distance_dx_list = np.linspace(-38, 12, 6)
+    for x_distance in x_distance_dx_list:
         ''' DRAWING SECTION START '''
         design = Design8Q("testScript")
-        design.cross_width_y += tmont_metal_width
-        design.cross_width_x += tmont_metal_width
-        design.cross_len_x += x_side_length
-        print("sim_idx = ", sim_idx)
-        print("metal_width = ", design.cross_width_x)
-        print("x_side_length = ", design.cross_len_x)
+        design.xmon_x_distance += x_distance
+        print("metal_width = ", design.xmon_x_distance)
         design.draw_chip()
         design.create_resonator_objects()
         design.draw_xmons_and_resonators([q1_idx, q2_idx])
         design.show()
         design.layout.write(
             os.path.join(PROJECT_DIR, f"Cqq_{q1_idx}_{q2_idx}_"
-                                      f"{tmont_metal_width:.3f}_"
-                                      f"{x_side_length:.3f}.gds")
+                                      f"{x_distance:.3f}_.gds")
         )
 
         design.layout.clear_layer(design.layer_ph)
