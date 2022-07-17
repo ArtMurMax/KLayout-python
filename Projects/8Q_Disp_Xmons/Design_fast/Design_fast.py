@@ -2273,16 +2273,16 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
     metal_widths_list = np.linspace(-20e3, 20e3, 21)
     x_side_length_list = np.linspace(-50e3, 50e3, 26)
     from itertools import product
-    for tmont_metal_width, x_side_length in product(metal_widths_list,
-                                                    x_side_length_list):
-        if (tmont_metal_width >= -15790) or (x_side_length >= -45834):
-            continue
+    for sim_idx, (tmont_metal_width, x_side_length) in \
+            list(enumerate(product(metal_widths_list, x_side_length_list)))[492:]:
         ''' DRAWING SECTION START '''
         design = Design8Q("testScript")
         design.cross_width_y += tmont_metal_width
         design.cross_width_x += tmont_metal_width
         design.cross_len_x += x_side_length
+        print("sim_idx = ", sim_idx)
         print("metal_width = ", design.cross_width_x)
+        print("x_side_length = ", design.cross_len_x)
         design.draw_chip()
         design.create_resonator_objects()
         design.draw_xmons_and_resonators([q1_idx, q2_idx])
