@@ -175,7 +175,7 @@ class Design8Q(ChipDesign):
         )
         # xmon parameters
         self.NQUBITS = 8
-        self.xmon_x_distance: float = 700e3  # from simulation of g_12
+        self.xmon_x_distance: float = 670e3  # from simulation of g_12
         # distance between open end (excluding fork) of resonator
         # and cross polygons
         self.xmon_res_d = 229e3
@@ -184,10 +184,10 @@ class Design8Q(ChipDesign):
         self.xmons_corrected: list[TmonT] = []
 
         self.cross_len_x = 270e3
-        self.cross_width_x = 28.359e3  # 60e3 II
+        self.cross_width_x = 44.38e3  # 60e3 II
         self.cross_gnd_gap_x = 40e3  # 20e3 I
         self.cross_len_y = 155e3
-        self.cross_width_y = 28.359e3  # 60e3 II
+        self.cross_width_y = 44.38e3  # 60e3 II
         self.cross_gnd_gap_y = 20e3  # 20e3 I
 
         # readout line parameters
@@ -207,7 +207,7 @@ class Design8Q(ChipDesign):
         self.resonators: List[EMResonatorTL3QbitWormRLTailXmonFork] = []
         # distance between nearest resonators central conductors centers
         # constant step between resonators origin points along x-axis.
-        self.resonators_dx: float = 700e3
+        self.resonators_dx: float = 610e3
         # resonator parameters
         self.L_coupling_list: list[float] = [
             1e3 * x for x in [310, 320, 320, 310] * 2
@@ -2270,12 +2270,16 @@ def simulate_Cqr():
 
 def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
     resolution_dx, resolution_dy = resolution
-    x_distance_dx_list = np.linspace(-38, 12, 6)
+    # x_distance_dx_list = np.linspace(-20e3, 20e3, 21)
+    # metal_width_dx_list = np.linspace(-20e3, 20e3, 11)
+    x_distance_dx_list = [0]
     for x_distance in x_distance_dx_list:
         ''' DRAWING SECTION START '''
         design = Design8Q("testScript")
+        # design.cross_width_x += x_distance
+        # design.cross_width_y += x_distance
         design.xmon_x_distance += x_distance
-        print("metal_width = ", design.xmon_x_distance)
+        print("xmon_x_distance = ", design.xmon_x_distance)
         design.draw_chip()
         design.create_resonator_objects()
         design.draw_xmons_and_resonators([q1_idx, q2_idx])
@@ -2415,7 +2419,7 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
             with open(output_filepath, "a", newline='') as csv_file:
                 writer = csv.writer(csv_file)
                 writer.writerow(
-                    [q1_idx, q2_idx, *list(geometry_params.values()),
+                    [q1_idx, q2_idx, *list(geometry_params.values()), design.xmon_x_distance / 1e3,
                      C1, C12]
                 )
         else:
@@ -2424,10 +2428,10 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
                 writer = csv.writer(csv_file)
                 # create header of the file
                 writer.writerow(
-                    ["q1_idx", "q2_idx", *list(
-                        geometry_params.keys()), "C1, fF", "C12, fF"])
+                    ["q1_idx", "q2_idx", *list(geometry_params.keys()), "xmon_x_distance, um",
+                     "C1, fF", "C12, fF"])
                 writer.writerow(
-                    [q1_idx, q2_idx, *list(geometry_params.values()),
+                    [q1_idx, q2_idx, *list(geometry_params.values()),  design.xmon_x_distance/1e3,
                      C1, C12]
                 )
         '''SAVING REUSLTS SECTION END'''
@@ -2440,7 +2444,7 @@ if __name__ == "__main__":
     # design.show()
 
     ''' Simulation of C_{q1,q2} in fF '''
-    simulate_Cqq(3, 4, resolution=(4e3, 4e3))
+    simulate_Cqq(3, 4, resolution=(2e3, 2e3))
 
     ''' Resonators Q and f sim'''
     # simulate_resonators_f_and_Q()
