@@ -175,10 +175,10 @@ class Design8Q(ChipDesign):
         )
         # xmon parameters
         self.NQUBITS = 8
-        self.xmon_x_distance: float = 670e3  # from simulation of g_12
+        self.xmon_x_distance: float = 708e3  # from simulation of g_12
         # distance between open end (excluding fork) of resonator
         # and cross polygons
-        self.xmon_res_d = 229e3
+        self.xmon_res_d = 254e3
         self.xmon_dys_Cg_coupling = [14e3] * self.NQUBITS
         self.xmons: list[TmonT] = []
         self.xmons_corrected: list[TmonT] = []
@@ -187,8 +187,8 @@ class Design8Q(ChipDesign):
         self.cross_len_x = 270e3
         self.cross_width_x = 60e3  # from C11 sim
         self.cross_gnd_gap_x = 50e3  # 20e3 I
-        self.cross_len_y = 155e3
-        self.cross_width_y = 44e3  # from C11 sim
+        self.cross_len_y = 180e3
+        self.cross_width_y = 60e3  # from C11 sim
         self.cross_gnd_gap_y = 60e3  # 20e3 I
 
         # readout line parameters
@@ -208,7 +208,7 @@ class Design8Q(ChipDesign):
         self.resonators: List[EMResonatorTL3QbitWormRLTailXmonFork] = []
         # distance between nearest resonators central conductors centers
         # constant step between resonators origin points along x-axis.
-        self.resonators_dx: float = 610e3
+        self.resonators_dx: float = 708e3
         # resonator parameters
         self.L_coupling_list: list[float] = [
             1e3 * x for x in [310, 320, 320, 310] * 2
@@ -239,15 +239,15 @@ class Design8Q(ChipDesign):
         self.Z_res = CPWParameters(10e3, 6e3)
         self.to_line_list = [45e3] * len(self.L1_list)
         # fork at the end of resonator parameters
-        self.fork_metal_width = 10e3
-        self.fork_gnd_gap = 15e3
+        self.fork_metal_width = 15e3
+        self.fork_gnd_gap = 10e3
         self.xmon_fork_gnd_gap = 14e3
-        self.fork_x_span = 60e3 + + 2 * \
+        self.fork_x_span = self.cross_width_y + + 2 * \
                            (self.xmon_fork_gnd_gap + self.fork_metal_width)
         # resonator-fork parameters
         # from simulation of g_qr
         self.fork_y_spans = [
-            x * 1e3 for x in [35.044, 87.202, 42.834, 90.72] * 2
+            x * 1e3 for x in [11.896, 64.925, 19.497, 70.235, 18.023, 67.585, 25.915, 70.74]
         ]
 
         # bandages
@@ -472,7 +472,7 @@ class Design8Q(ChipDesign):
         TODO: This drawings sequence can be decoupled in the future.
         '''
         self.create_resonator_objects()
-        self.draw_xmons_and_resonators(res_idx=res_idx)
+        self.draw_xmons_and_resonators(res_idxs2Draw=[res_idx])
 
     def _transfer_regs2cell(self):
         # this too methods assumes that all previous drawing
@@ -2068,22 +2068,24 @@ def simulate_resonators_f_and_Q_together():
     ''' RESULT SAVING SECTION END '''
 
 
-def simulate_Cqr():
-    resolution_dx = 1e3
-    resolution_dy = 1e3
+def simulate_Cqr(resolution=(4e3,4e3)):
+    resolution_dx = resolution[0]
+    resolution_dy = resolution[1]
     dl_list = [10e3, 0, -10e3]
     # dl_list = [0e3]
     from itertools import product
 
     for dl, res_idx in list(
             product(
-                dl_list, range(5)
+                dl_list, range(8)
             )
     ):
         ### DRAWING SECTION START ###
         design = Design8Q("testScript")
         design.fork_y_spans = [fork_y_span + dl for fork_y_span in
                                design.fork_y_spans]
+        # exclude coils from simulation (sometimes port is placed onto coil (TODO: fix)
+        design.N_coils = [1, 1, 1, 1] * 2
         design.draw_for_Cqr_simulation(res_idx=res_idx)
 
         worm = design.resonators[res_idx]
@@ -2206,7 +2208,7 @@ def simulate_Cqr():
             os.path.join(PROJECT_DIR, f"Cqr_{res_idx}_{dl}_um.gds")
         )
         output_filepath = os.path.join(PROJECT_DIR,
-                                       "../Dmon/Xmon_resonator_Cqr_results.csv")
+                                       "Xmon_resonator_Cqr_results.csv")
         if os.path.exists(output_filepath):
             # append data to file
             with open(output_filepath, "a", newline='') as csv_file:
@@ -2575,8 +2577,8 @@ def simulate_md_Cg(q_idx, resolution=(5e3,5e3)):
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
     design = Design8Q("testScript")
-    design.draw()
-    design.show()
+    # design.draw()
+    # design.show()
 
     ''' Simulation of C_{q1,q2} in fF '''
     # simulate_Cqq(3, 4, resolution=(2e3, 2e3))
@@ -2588,4 +2590,4 @@ if __name__ == "__main__":
     # simulate_resonators_f_and_Q_together()
 
     ''' C_qr sim '''
-    # simulate_Cqr()
+    simulate_Cqr(resolution=(4e3,4e3))
