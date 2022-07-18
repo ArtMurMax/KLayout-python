@@ -125,7 +125,6 @@ VERT_ARR_SHIFT = DVector(-50e3, -150e3)
 
 
 class Design8Q(ChipDesign):
-
     def __init__(self, cell_name):
         super().__init__(cell_name)
         self.__version = "8Q_0.0.0.1"
@@ -186,11 +185,11 @@ class Design8Q(ChipDesign):
 
         # C11 = 107
         self.cross_len_x = 270e3
-        self.cross_width_x = 60e3
-        self.cross_gnd_gap_x = 40e3
+        self.cross_width_x = 60e3  # from C11 sim
+        self.cross_gnd_gap_x = 50e3  # 20e3 I
         self.cross_len_y = 155e3
-        self.cross_width_y = 60e3
-        self.cross_gnd_gap_y = 20e3
+        self.cross_width_y = 44e3  # from C11 sim
+        self.cross_gnd_gap_y = 60e3  # 20e3 I
 
         # readout line parameters
         self.ro_line_turn_radius: float = 100e3
