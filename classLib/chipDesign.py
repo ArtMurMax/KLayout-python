@@ -4,7 +4,8 @@ from pya import Region, DPoint, Cell, Vector, Trans, DSimplePolygon
 from classLib._PROG_SETTINGS import PROGRAM
 
 from collections import OrderedDict
-
+import numpy as np
+from numbers import Number
 from typing import Union
 
 
@@ -60,6 +61,8 @@ class ChipDesign:
         # setting layout view  
         self.lv.select_cell(self.cell.cell_index(), 0)
         self.lv.add_missing_layers()
+
+        self.__version = "not implemented"
 
         # additinal variables for convinience
         self.origin = DPoint(0, 0)
@@ -200,3 +203,28 @@ class ChipDesign:
         slo.gds2_write_timestamps = True
         slo.select_all_layers()
         self.lv.save_as(self.cell.cell_index(), filename, slo)
+
+    # get all geometry parameters as dictionary (todo exists)
+    def get_geometry_parameters(self):
+        # TODO: add docstring and case with attributes that are not
+        #  geometry parameters themselves but
+        #  contain geometry parameters. e.g. `self.chip
+        pars_dict = self.__dict__
+        geometry_dict = {}  # dictionary containing geometry parameters
+
+        # choose only numbers or array(iterables) with numbers
+        for key, val in pars_dict.items():
+            numeric = False
+            if isinstance(val, (list, np.ndarray)):
+                for entry in val:
+                    if isinstance(entry, Number):
+                        numeric = True
+                        break
+                    else:
+                        break
+                if numeric is True:
+                    geometry_dict[key] = val
+            elif isinstance(val, Number):
+                geometry_dict[key] = val
+        geometry_dict["design_version"] = self.__version
+        return geometry_dict
