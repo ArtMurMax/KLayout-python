@@ -175,7 +175,7 @@ class Design8Q(ChipDesign):
         )
         # xmon parameters
         self.NQUBITS = 8
-        self.xmon_x_distance: float = 670e3  # from simulation of g_12
+        self.xmon_x_distance: float = 708e3  # from simulation of g_12
         # distance between open end (excluding fork) of resonator
         # and cross polygons
         self.xmon_res_d = 229e3
@@ -184,11 +184,11 @@ class Design8Q(ChipDesign):
         self.xmons_corrected: list[TmonT] = []
 
         self.cross_len_x = 270e3
-        self.cross_width_x = 44.38e3  # 60e3 II
-        self.cross_gnd_gap_x = 40e3  # 20e3 I
+        self.cross_width_x = 60e3  # from C11 sim
+        self.cross_gnd_gap_x = 50e3  # 20e3 I
         self.cross_len_y = 155e3
-        self.cross_width_y = 44.38e3  # 60e3 II
-        self.cross_gnd_gap_y = 20e3  # 20e3 I
+        self.cross_width_y = 44e3  # from C11 sim
+        self.cross_gnd_gap_y = 60e3  # 20e3 I
 
         # readout line parameters
         self.ro_line_turn_radius: float = 100e3
@@ -207,7 +207,7 @@ class Design8Q(ChipDesign):
         self.resonators: List[EMResonatorTL3QbitWormRLTailXmonFork] = []
         # distance between nearest resonators central conductors centers
         # constant step between resonators origin points along x-axis.
-        self.resonators_dx: float = 610e3
+        self.resonators_dx: float = 700e3
         # resonator parameters
         self.L_coupling_list: list[float] = [
             1e3 * x for x in [310, 320, 320, 310] * 2
@@ -2270,15 +2270,16 @@ def simulate_Cqr():
 
 def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
     resolution_dx, resolution_dy = resolution
-    # x_distance_dx_list = np.linspace(-20e3, 20e3, 21)
+    # x_distance_dx_list = np.linspace(0e3, 120e3, 7)
     # metal_width_dx_list = np.linspace(-20e3, 20e3, 11)
     x_distance_dx_list = [0]
-    for x_distance in x_distance_dx_list:
+    # `param_val` can represent both `metal_width_d` and `x_distance_dx`
+    for param_val in x_distance_dx_list:
         ''' DRAWING SECTION START '''
         design = Design8Q("testScript")
-        # design.cross_width_x += x_distance
-        # design.cross_width_y += x_distance
-        design.xmon_x_distance += x_distance
+        # design.cross_width_x += param_val
+        # design.cross_width_y += param_val
+        design.xmon_x_distance += param_val
         print("xmon_x_distance = ", design.xmon_x_distance)
         design.draw_chip()
         design.create_resonator_objects()
@@ -2286,7 +2287,7 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
         design.show()
         design.layout.write(
             os.path.join(PROJECT_DIR, f"Cqq_{q1_idx}_{q2_idx}_"
-                                      f"{x_distance:.3f}_.gds")
+                                      f"{param_val:.3f}_.gds")
         )
 
         design.layout.clear_layer(design.layer_ph)
