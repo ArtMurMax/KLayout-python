@@ -2396,189 +2396,194 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
 
 
 # TODO: pattern copied
-def simulate_md_Cg(q_idx, resolution=(5e3,5e3)):
+def simulate_md_Cg(resolution=(5e3, 5e3), res_idxs2Draw=[0]):
     resolution_dx, resolution_dy = resolution
-    # x_distance_dx_list = np.linspace(-20e3, 20e3, 21)
-    # metal_width_dx_list = np.linspace(-20e3, 20e3, 11)
-    x_distance_dx_list = [0]
-    for x_distance in x_distance_dx_list:
-        ''' DRAWING SECTION START '''
-        design = Design8Q("testScript")
-        break
-        print(design.get_geometry_parameters())
-        # design.cross_width_x += x_distance
-        # design.cross_width_y += x_distance
-        design.xmon_x_distance += x_distance
-        print("xmon_x_distance = ", design.xmon_x_distance)
-        design.draw_chip()
-        design.create_resonator_objects()
-        design.draw_xmons_and_resonators([q1_idx, q2_idx])
-        design.show()
-        design.layout.write(
-            os.path.join(PROJECT_DIR, f"Cqq_{q1_idx}_{q2_idx}_"
-                                      f"{x_distance:.3f}_.gds")
+
+    design = Design8Q("testScript")
+    design.draw_chip()
+    design.create_resonator_objects()
+    design.draw_xmons_and_resonators(res_idxs2Draw=res_idxs2Draw)
+    design.draw_readout_waveguide()
+    design.draw_josephson_loops()
+    design.draw_microwave_drvie_lines()
+    design.draw_flux_control_lines()
+    design.draw_recess()
+    
+    design.layout.write(
+        os.path.join(
+            PROJECT_DIR,
+            f"C_md_{'_'.join(map(str(res_idxs2Draw)).gds)}"
         )
+    )
 
-        design.layout.clear_layer(design.layer_ph)
+    design.layout.clear_layer(design.layer_ph)
 
-        cross1, cross2 = design.xmons[q1_idx], design.xmons[q2_idx]
-        design.draw_chip()
-        cross1.place(design.region_ph)
-        cross2.place(design.region_ph)
+    # draw requested qubit crossess
+    crosses = []
+    md_lines = []
+    for res_idx in res_idxs2Draw:
+        crosses.append(design.xmons[res_idx])
+        md_lines.append(design.cpw_md_lines[res_idx])
 
-        # print(tmont_metal_width)
-        # print(x_side_length)
-        # print(list(cross1.get_geometry_params_dict().keys()))
-        # print(list(cross1.get_geometry_params_dict().values()))
-        # for key, val in cross1.get_geometry_params_dict().items():
-        #     print(key, " = ", val)
-        # print()
-        # process edges of both objects to obtain the most distant edge centers
-        # most distant edge centers will be chosen as ports points.
-        # Hence, ports will be attached to edge pair with maximum distance.
-        from itertools import product
-        edgeCenter_cr1_best, edgeCenter_cr2_best = None, None
-        max_distance = 0
-        edge_centers_it = product(
-            cross1.metal_region.edges().centers(0, 0).each(),
-            cross2.metal_region.edges().centers(0, 0).each()
-        )
-        edge_centers_it = map(
-            lambda edge_tuple: (edge_tuple[0].p1, edge_tuple[1].p1),
-            edge_centers_it
-        )
-        for edgeCenter_cr1, edgeCenter_cr2 in edge_centers_it:
-            centers_d = edgeCenter_cr1.distance(edgeCenter_cr2)
-            if centers_d > max_distance:
-                edgeCenter_cr1_best, edgeCenter_cr2_best = \
-                    edgeCenter_cr1, edgeCenter_cr2
-                max_distance = centers_d
-            else:
-                continue
+        crosses[-1].place(design.region_ph)
+        md_lines[-1].place(design.region_ph)
 
-        design.sonnet_ports.append(edgeCenter_cr1_best)
-        design.sonnet_ports.append(edgeCenter_cr2_best)
-
-        crop_box = (cross1.metal_region + cross2.metal_region).bbox()
-        crop_box.left -= 3 * (
-                    cross1.sideX_length + cross2.sideX_length) / 2
-        crop_box.bottom -= 3 * (
-                    cross1.sideY_length + cross2.sideY_length) / 2
-        crop_box.right += 3 * (
-                    cross1.sideX_length + cross2.sideX_length) / 2
-        crop_box.top += 3 * (cross1.sideY_length + cross2.sideY_length) / 2
-        design.crop(crop_box)
-        dr = DPoint(0, 0) - crop_box.p1
-
-        design.transform_region(design.region_ph, DTrans(dr.x, dr.y),
-                                trans_ports=True)
-
-        design.show()
-        design.lv.zoom_fit()
-        '''DRAWING SECTION END'''
-
-        '''SIMULATION SECTION START'''
-        ml_terminal = SonnetLab()
-        # print("starting connection...")
-        from sonnetSim.cMD import CMD
-
-        ml_terminal._send(CMD.SAY_HELLO)
-        ml_terminal.clear()
-        simBox = SimulationBox(
-            crop_box.width(),
-            crop_box.height(),
-            crop_box.width() / resolution_dx,
-            crop_box.height() / resolution_dy
-        )
-        ml_terminal.set_boxProps(simBox)
-        # print("sending cell and layer")
-        from sonnetSim.pORT_TYPES import PORT_TYPES
-
-        ports = [
-            SonnetPort(design.sonnet_ports[0], PORT_TYPES.AUTOGROUNDED),
-            SonnetPort(design.sonnet_ports[1], PORT_TYPES.AUTOGROUNDED)
-        ]
-        # for sp in ports:
-        #     print(sp.point)
-        ml_terminal.set_ports(ports)
-
-        ml_terminal.send_polygons(design.cell, design.layer_ph)
-        ml_terminal.set_linspace_sweep(0.01, 0.01, 1)
-        print("simulating...")
-        result_path = ml_terminal.start_simulation(wait=True)
-        ml_terminal.release()
-
-        ### SIMULATION SECTION END ###
-
-        ### CALCULATE CAPACITANCE SECTION START ###
-        C12 = None
-        with open(result_path.decode("ascii"), "r") as csv_file:
-            data_rows = list(csv.reader(csv_file))
-            ports_imps_row = data_rows[6]
-            R = float(ports_imps_row[0].split(' ')[1])
-            data_row = data_rows[8]
-            freq0 = float(data_row[0])
-
-            s = [[0, 0], [0, 0]]  # s-matrix
-            # print(data_row)
-            for i in range(0, 2):
-                for j in range(0, 2):
-                    s[i][j] = complex(float(data_row[1 + 2 * (i * 2 + j)]),
-                                      float(data_row[
-                                                1 + 2 * (i * 2 + j) + 1]))
-            import math
-
-            y11 = 1 / R * (1 - s[0][0]) / (1 + s[0][0])
-            C1 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y11).imag)
-            # formula taken from
-            # https://en.wikipedia.org/wiki/Admittance_parameters#Two_port
-            delta = (1 + s[0][0]) * (1 + s[1][1]) - s[0][1] * s[1][0]
-            y21 = -2 * s[1][0] / delta * 1 / R
-            C12 = 1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y21).imag)
-
-        print("C_12 = ", C12)
-        print("C1 = ", C1)
-        print()
-        '''CALCULATE CAPACITANCE SECTION END'''
-
-        '''SAVING REUSLTS SECTION START'''
-        geometry_params = design.xmons[q1_idx].get_geometry_params_dict(
-            prefix="q1")
-        geometry_params.update(
-            design.xmons[q2_idx].get_geometry_params_dict(prefix="q2")
-        )
-        output_filepath = os.path.join(PROJECT_DIR, "Xmon_Cqq_results.csv")
-        if os.path.exists(output_filepath):
-            # append data to file
-            with open(output_filepath, "a", newline='') as csv_file:
-                writer = csv.writer(csv_file)
-                writer.writerow(
-                    [q1_idx, q2_idx, *list(geometry_params.values()),
-                     design.xmon_x_distance / 1e3,
-                     C1, C12]
-                )
+    # print(tmont_metal_width)
+    # print(x_side_length)
+    # print(list(cross1.get_geometry_params_dict().keys()))
+    # print(list(cross1.get_geometry_params_dict().values()))
+    # for key, val in cross1.get_geometry_params_dict().items():
+    #     print(key, " = ", val)
+    # print()
+    # process edges of both objects to obtain the most distant edge centers
+    # most distant edge centers will be chosen as ports points.
+    # Hence, ports will be attached to edge pair with maximum distance.
+    from itertools import product
+    edgeCenter_cr1_best, edgeCenter_cr2_best = None, None
+    max_distance = 0
+    edge_centers_it = product(
+        *[cross.metal_region.edges().centers(0, 0).each() for cross in
+          crosses]
+    )
+    edge_centers_it = map(
+        lambda edge_tuple: (edge_tuple[0].p1, edge_tuple[1].p1),
+        edge_centers_it
+    )
+    for edgeCenter_cr1, edgeCenter_cr2 in edge_centers_it:
+        centers_d = edgeCenter_cr1.distance(edgeCenter_cr2)
+        if centers_d > max_distance:
+            edgeCenter_cr1_best, edgeCenter_cr2_best = \
+                edgeCenter_cr1, edgeCenter_cr2
+            max_distance = centers_d
         else:
-            # create file, add header, append data
-            with open(output_filepath, "w", newline='') as csv_file:
-                writer = csv.writer(csv_file)
-                # create header of the file
-                writer.writerow(
-                    ["q1_idx", "q2_idx", *list(geometry_params.keys()),
-                     "xmon_x_distance, um",
-                     "C1, fF", "C12, fF"])
-                writer.writerow(
-                    [q1_idx, q2_idx, *list(geometry_params.values()),
-                     design.xmon_x_distance / 1e3,
-                     C1, C12]
-                )
-        '''SAVING REUSLTS SECTION END'''
+            continue
+
+    design.sonnet_ports.append(edgeCenter_cr1_best)
+    design.sonnet_ports.append(edgeCenter_cr2_best)
+
+    if len(res_idxs2Draw) == 2:
+        p1 = crosses[0].center - DVector(252.5e3, 500e3)
+        p2 = crosses[1].center + DVector(252.5e3, 200e3)
+        crop_box = pya.Box().from_dbox(pya.DBox(p1, p2))
+    elif len(res_idxs2Draw) == 1:
+        dx = crosses[0].center.x - design.cpw_fl_lines[res_idxs2Draw[
+            0]].end.x
+        p1 = crosses[0].center - DVector(dx, 200e3)
+        p2 = crosses[0].center + DVector(250e3 - dx % 10e3, 200e3)
+        crop_box = pya.Box().from_dbox(pya.DBox(p1, p2))
+        # crop target Xmon and it's cpump line
+
+    design.crop(crop_box)
+    dr = DPoint(0, 0) - crop_box.p1
+    design.transform_region(design.region_ph, DTrans(dr.x, dr.y),
+                            trans_ports=True)
+
+    design.show()
+    design.lv.zoom_fit()
+    '''DRAWING SECTION END'''
+
+    '''SIMULATION SECTION START'''
+    ml_terminal = SonnetLab()
+    # print("starting connection...")
+    from sonnetSim.cMD import CMD
+
+    ml_terminal._send(CMD.SAY_HELLO)
+    ml_terminal.clear()
+    simBox = SimulationBox(
+        crop_box.width(),
+        crop_box.height(),
+        crop_box.width() / resolution_dx,
+        crop_box.height() / resolution_dy
+    )
+    ml_terminal.set_boxProps(simBox)
+    # print("sending cell and layer")
+    from sonnetSim.pORT_TYPES import PORT_TYPES
+
+    ports = [
+        SonnetPort(design.sonnet_ports[0], PORT_TYPES.AUTOGROUNDED),
+        SonnetPort(design.sonnet_ports[1], PORT_TYPES.AUTOGROUNDED)
+    ]
+    # for sp in ports:
+    #     print(sp.point)
+    ml_terminal.set_ports(ports)
+
+    ml_terminal.send_polygons(design.cell, design.layer_ph)
+    ml_terminal.set_linspace_sweep(0.01, 0.01, 1)
+    print("simulating...")
+    result_path = ml_terminal.start_simulation(wait=True)
+    ml_terminal.release()
+
+    ### SIMULATION SECTION END ###
+
+    ### CALCULATE CAPACITANCE SECTION START ###
+    C12 = None
+    with open(result_path.decode("ascii"), "r") as csv_file:
+        data_rows = list(csv.reader(csv_file))
+        ports_imps_row = data_rows[6]
+        R = float(ports_imps_row[0].split(' ')[1])
+        data_row = data_rows[8]
+        freq0 = float(data_row[0])
+
+        s = [[0, 0], [0, 0]]  # s-matrix
+        # print(data_row)
+        for i in range(0, 2):
+            for j in range(0, 2):
+                s[i][j] = complex(float(data_row[1 + 2 * (i * 2 + j)]),
+                                  float(data_row[
+                                            1 + 2 * (i * 2 + j) + 1]))
+        import math
+
+        y11 = 1 / R * (1 - s[0][0]) / (1 + s[0][0])
+        C1 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y11).imag)
+        # formula taken from
+        # https://en.wikipedia.org/wiki/Admittance_parameters#Two_port
+        delta = (1 + s[0][0]) * (1 + s[1][1]) - s[0][1] * s[1][0]
+        y21 = -2 * s[1][0] / delta * 1 / R
+        C12 = 1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y21).imag)
+
+    print("C_12 = ", C12)
+    print("C1 = ", C1)
+    print()
+    '''CALCULATE CAPACITANCE SECTION END'''
+
+    '''SAVING REUSLTS SECTION START'''
+    geometry_params = design.xmons[q1_idx].get_geometry_params_dict(
+        prefix="q1")
+    geometry_params.update(
+        design.xmons[q2_idx].get_geometry_params_dict(prefix="q2")
+    )
+    output_filepath = os.path.join(PROJECT_DIR, "Xmon_Cqq_results.csv")
+    if os.path.exists(output_filepath):
+        # append data to file
+        with open(output_filepath, "a", newline='') as csv_file:
+            writer = csv.writer(csv_file)
+            writer.writerow(
+                [q1_idx, q2_idx, *list(geometry_params.values()),
+                 design.xmon_x_distance / 1e3,
+                 C1, C12]
+            )
+    else:
+        # create file, add header, append data
+        with open(output_filepath, "w", newline='') as csv_file:
+            writer = csv.writer(csv_file)
+            # create header of the file
+            writer.writerow(
+                ["q1_idx", "q2_idx", *list(geometry_params.keys()),
+                 "xmon_x_distance, um",
+                 "C1, fF", "C12, fF"])
+            writer.writerow(
+                [q1_idx, q2_idx, *list(geometry_params.values()),
+                 design.xmon_x_distance / 1e3,
+                 C1, C12]
+            )
+    '''SAVING REUSLTS SECTION END'''
 
 
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
     design = Design8Q("testScript")
-    # design.draw()
-    # design.show()
+    design.draw()
+    design.show()
 
     ''' Simulation of C_{q1,q2} in fF '''
     # simulate_Cqq(3, 4, resolution=(2e3, 2e3))
@@ -2590,4 +2595,10 @@ if __name__ == "__main__":
     # simulate_resonators_f_and_Q_together()
 
     ''' C_qr sim '''
-    simulate_Cqr(resolution=(4e3,4e3))
+    # simulate_Cqr(resolution=(4e3,4e3))
+
+    ''' MD line C_qd for md0 and md 7 '''
+    simulate_md_Cg(res_idxs2Draw=[0], resolution=(4e3,4e3))
+
+    ''' MD line C_qd for md1,..., md6 '''
+    simulate_md_Cg(res_idxs2Draw=[1,2], resolution=(4e3,4e3))
