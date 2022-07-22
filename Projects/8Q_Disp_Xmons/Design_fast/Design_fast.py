@@ -128,6 +128,7 @@ class Design8Q(ChipDesign):
     def __init__(self, cell_name):
         super().__init__(cell_name)
         self.__version = "8Q_0.0.0.1"
+        print(self.__version)
         dc_bandage_layer_i = pya.LayerInfo(3,
                                            0)  # for DC contact deposition
         self.dc_bandage_reg = Region()
@@ -175,7 +176,7 @@ class Design8Q(ChipDesign):
         )
         # xmon parameters
         self.NQUBITS = 8
-        self.xmon_x_distance: float = 708e3  # from simulation of g_12
+        self.xmon_x_distance: float = 728e3  # from simulation of g_12
         # distance between open end (excluding fork) of resonator
         # and cross polygons
         self.xmon_res_d = 254e3
@@ -186,10 +187,12 @@ class Design8Q(ChipDesign):
         # C11 = 107
         self.cross_len_x = 270e3
         self.cross_width_x = 60e3  # from C11 sim
-        self.cross_gnd_gap_x = 50e3  # 20e3 I
+        self.cross_gnd_gap_x_list = [30e3]*self.NQUBITS
         self.cross_len_y = 180e3
         self.cross_width_y = 60e3  # from C11 sim
-        self.cross_gnd_gap_y = 60e3  # 20e3 I
+        self.cross_gnd_gap_y_list = [
+            1e3*x for x in [27.732, 39.212, 28.989, 39.477, 28.717, 39.252, 28.764, 39.636]
+        ]
 
         # readout line parameters
         self.ro_line_turn_radius: float = 100e3
@@ -208,7 +211,7 @@ class Design8Q(ChipDesign):
         self.resonators: List[EMResonatorTL3QbitWormRLTailXmonFork] = []
         # distance between nearest resonators central conductors centers
         # constant step between resonators origin points along x-axis.
-        self.resonators_dx: float = 708e3
+        self.resonators_dx: float = 728e3
         # resonator parameters
         self.L_coupling_list: list[float] = [
             1e3 * x for x in [310, 320, 320, 310] * 2
@@ -246,9 +249,8 @@ class Design8Q(ChipDesign):
                            (self.xmon_fork_gnd_gap + self.fork_metal_width)
         # resonator-fork parameters
         # from simulation of g_qr
-        self.fork_y_spans = [
-            x * 1e3 for x in
-            [11.896, 64.925, 19.497, 70.235, 18.023, 67.585, 25.915, 70.74]
+        self.fork_y_span_list = [
+            x * 1e3 for x in [7.52, 72.95, 15.5, 75.29, 25.38, 80.29, 31.45, 84.41]
         ]
 
         # bandages
@@ -294,8 +296,7 @@ class Design8Q(ChipDesign):
 
         # curve that is used for intermediate parking points for
         # control line of qubits group №1
-        self._ic_alpha_start1 = (
-                                        - 1 + 1 / 6) * np.pi  # ic === intermediate curve
+        self._ic_alpha_start1 = (- 1 + 1 / 6) * np.pi  # ic === intermediate curve
         self._ic_alpha_end1 = -1 / 2 * np.pi
         self._ic_alpha_list1 = np.linspace(self._ic_alpha_start1,
                                            self._ic_alpha_end1, 7)
@@ -573,7 +574,7 @@ class Design8Q(ChipDesign):
         pars = list(
             zip(
                 self.L1_list, self.to_line_list, self.L_coupling_list,
-                self.fork_y_spans,
+                self.fork_y_span_list,
                 tail_segment_lengths_list, tail_turn_angles_list,
                 tail_trans_in_list,
                 self.L0_list, self.N_coils
@@ -654,7 +655,7 @@ class Design8Q(ChipDesign):
         # draw first 4 Xmons
         it_list = list(
             enumerate(
-                zip(self.resonators, self.fork_y_spans)
+                zip(self.resonators, self.fork_y_span_list)
             )
         )
         for res_idx, (res, fork_y_span) in it_list:
@@ -663,12 +664,12 @@ class Design8Q(ChipDesign):
                 xmon_center,
                 sideX_length=self.cross_len_x,
                 sideX_width=self.cross_width_x,
-                sideX_gnd_gap=self.cross_gnd_gap_x,
+                sideX_gnd_gap=self.cross_gnd_gap_x_list[res_idx],
                 sideY_length=self.cross_len_y,
                 sideY_width=self.cross_width_y,
-                sideY_gnd_gap=self.cross_gnd_gap_y,
-                sideX_face_gnd_gap=self.cross_gnd_gap_x,
-                sideY_face_gnd_gap=self.cross_gnd_gap_y
+                sideY_gnd_gap=self.cross_gnd_gap_y_list[res_idx],
+                sideX_face_gnd_gap=self.cross_gnd_gap_x_list[res_idx],
+                sideY_face_gnd_gap=self.cross_gnd_gap_y_list[res_idx]
             )
 
             self.xmons.append(xmonCross)
@@ -676,14 +677,14 @@ class Design8Q(ChipDesign):
                 xmon_center,
                 sideX_length=self.cross_len_x,
                 sideX_width=self.cross_width_x,
-                sideX_gnd_gap=self.cross_gnd_gap_x,
+                sideX_gnd_gap=self.cross_gnd_gap_x_list[res_idx],
                 sideY_length=self.cross_len_y,
                 sideY_width=self.cross_width_y,
                 sideY_gnd_gap=max(
                     0,
                     self.fork_x_span - 2 * self.fork_metal_width -
                     self.cross_width_y -
-                    max(self.cross_gnd_gap_y, self.fork_gnd_gap)
+                    max(self.cross_gnd_gap_y_list[res_idx], self.fork_gnd_gap)
                 ) / 2
             )
             self.xmons_corrected.append(xmonCross_corrected)
@@ -2070,11 +2071,13 @@ def simulate_resonators_f_and_Q_together():
     ''' RESULT SAVING SECTION END '''
 
 
-def simulate_Cqr(resolution=(4e3, 4e3)):
+def simulate_Cqr(resolution=(4e3,4e3)):
+    # TODO: 1. make 2d geometry parameters mesh, for simultaneous finding of C_qr and C_q
+    #  2. make 3d geometry optimization inside kLayout for simultaneous finding of C_qr, C_q and C_qq
     resolution_dx = resolution[0]
     resolution_dy = resolution[1]
-    dl_list = [10e3, 0, -10e3]
-    # dl_list = [0e3]
+    # dl_list = [-5e3, 0, 5e3]
+    dl_list = [0e3]
     from itertools import product
 
     for dl, res_idx in list(
@@ -2084,10 +2087,15 @@ def simulate_Cqr(resolution=(4e3, 4e3)):
     ):
         ### DRAWING SECTION START ###
         design = Design8Q("testScript")
-        design.fork_y_spans = [fork_y_span + dl for fork_y_span in
-                               design.fork_y_spans]
+
+        # adjusting `self.fork_y_spans` for C_qr
+        # design.fork_y_span_list = [fork_y_span + d_val for fork_y_span in design.fork_y_span_list]
+
+        # adjusting `cross_gnd_gap_x` and same for y, to gain proper E_C
+        design.cross_gnd_gap_y_list = [gnd_gap_y+dl for gnd_gap_y in design.cross_gnd_gap_y_list]
+
         # exclude coils from simulation (sometimes port is placed onto coil (TODO: fix)
-        design.N_coils = [1, 1, 1, 1] * 2
+        design.N_coils = [1]*design.NQUBITS
         design.draw_for_Cqr_simulation(res_idx=res_idx)
 
         worm = design.resonators[res_idx]
@@ -2112,8 +2120,8 @@ def simulate_Cqr(resolution=(4e3, 4e3)):
         dv = DVector(box_side_x / 2, box_side_y / 2)
 
         crop_box = pya.Box().from_dbox(pya.Box(
-            xmonCross.center + dv,
-            xmonCross.center + (-1) * dv
+            xmonCross.center + 2*dv,
+            xmonCross.center + (-1) * 2*dv
         ))
         design.crop(crop_box)
         dr = DPoint(0, 0) - crop_box.p1
@@ -2186,7 +2194,7 @@ def simulate_Cqr(resolution=(4e3, 4e3)):
             freq0 = float(data_row[0])
 
             s = [[0, 0], [0, 0]]  # s-matrix
-            # print(data_row)
+            # print(data_row)`
             for i in range(0, 2):
                 for j in range(0, 2):
                     s[i][j] = complex(float(data_row[1 + 2 * (i * 2 + j)]),
@@ -2201,8 +2209,9 @@ def simulate_Cqr(resolution=(4e3, 4e3)):
             y21 = -2 * s[1][0] / delta * 1 / R
             C12 = 1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y21).imag)
 
-        print(design.fork_y_spans[res_idx] / 1e3,
-              design.xmon_dys_Cg_coupling[res_idx] / 1e3, C12, C1)
+        print("fork_y_span = ", design.fork_y_span_list[res_idx] / 1e3)
+        print("C1 = ", C1)
+        print("C12 = ", C12)
         ### CALCULATE C_QR CAPACITANCE SECTION START ###
 
         ### SAVING REUSLTS SECTION START ###
@@ -2216,7 +2225,7 @@ def simulate_Cqr(resolution=(4e3, 4e3)):
             with open(output_filepath, "a", newline='') as csv_file:
                 writer = csv.writer(csv_file)
                 writer.writerow(
-                    [res_idx, design.fork_y_spans[res_idx] / 1e3, C12, C1]
+                    [res_idx, *list(design.get_geometry_parameters().values()), C12, C1]
                 )
         else:
             # create file, add header, append data
@@ -2224,9 +2233,9 @@ def simulate_Cqr(resolution=(4e3, 4e3)):
                 writer = csv.writer(csv_file)
                 # create header of the file
                 writer.writerow(
-                    ["res_idx", "fork_y_span, um", "C12, fF", "C1, fF"])
+                    ["res_idx", *list(design.get_geometry_parameters().keys()), "C12, fF", "C1, fF"])
                 writer.writerow(
-                    [res_idx, design.fork_y_spans[res_idx] / 1e3, C12, C1]
+                    [res_idx, *list(design.get_geometry_parameters().values()), C12, C1]
                 )
 
         ### SAVING REUSLTS SECTION END ###
@@ -2234,15 +2243,14 @@ def simulate_Cqr(resolution=(4e3, 4e3)):
 
 def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
     resolution_dx, resolution_dy = resolution
-    # x_distance_dx_list = np.linspace(-20e3, 20e3, 21)
-    # metal_width_dx_list = np.linspace(-20e3, 20e3, 11)
+    # x_distance_dx_list = np.linspace(-20e3, 20e3, 11)
     x_distance_dx_list = [0]
     for x_distance in x_distance_dx_list:
         ''' DRAWING SECTION START '''
         design = Design8Q("testScript")
-        # design.cross_width_x += x_distance
-        # design.cross_width_y += x_distance
+        design.N_coils = [1] * design.NQUBITS
         design.xmon_x_distance += x_distance
+        design.resonators_dx += x_distance
         print("xmon_x_distance = ", design.xmon_x_distance)
         design.draw_chip()
         design.create_resonator_objects()
@@ -2255,10 +2263,16 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
 
         design.layout.clear_layer(design.layer_ph)
 
+        res1, res2 = design.resonators[q1_idx], design.resonators[q2_idx]
         cross1, cross2 = design.xmons[q1_idx], design.xmons[q2_idx]
+        cross_corrected1, cross_corrected2 = design.xmons_corrected[q1_idx], design.xmons_corrected[q2_idx]
         design.draw_chip()
         cross1.place(design.region_ph)
         cross2.place(design.region_ph)
+        # resonator polygons will be adjacent to grounded simulation box
+        # thus they will be assumed to be grounded properly (in order to include correction for C11 from C_qr)
+        res1.place(design.region_ph)
+        res2.place(design.region_ph)
 
         # print(tmont_metal_width)
         # print(x_side_length)
@@ -2294,13 +2308,10 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
         design.sonnet_ports.append(edgeCenter_cr2_best)
 
         crop_box = (cross1.metal_region + cross2.metal_region).bbox()
-        crop_box.left -= 3 * (
-                cross1.sideX_length + cross2.sideX_length) / 2
-        crop_box.bottom -= 3 * (
-                cross1.sideY_length + cross2.sideY_length) / 2
-        crop_box.right += 3 * (
-                cross1.sideX_length + cross2.sideX_length) / 2
-        crop_box.top += 3 * (cross1.sideY_length + cross2.sideY_length) / 2
+        crop_box.left -= 4 * (cross1.sideX_length + cross2.sideX_length) / 2
+        crop_box.bottom -= 4 * (cross1.sideY_length + cross2.sideY_length) / 2
+        crop_box.right += 4 * (cross1.sideX_length + cross2.sideX_length) / 2
+        crop_box.top += 4 * (cross1.sideY_length + cross2.sideY_length) / 2
         design.crop(crop_box)
         dr = DPoint(0, 0) - crop_box.p1
 
@@ -2358,8 +2369,7 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
             for i in range(0, 2):
                 for j in range(0, 2):
                     s[i][j] = complex(float(data_row[1 + 2 * (i * 2 + j)]),
-                                      float(data_row[
-                                                1 + 2 * (i * 2 + j) + 1]))
+                                      float(data_row[1 + 2 * (i * 2 + j) + 1]))
             import math
 
             y11 = 1 / R * (1 - s[0][0]) / (1 + s[0][0])
@@ -2634,6 +2644,9 @@ if __name__ == "__main__":
     design = Design8Q("testScript")
     # design.draw()
     # design.show()
+
+    ''' C_qr sim '''
+    # simulate_Cqr(resolution=(2e3, 2e3))
 
     ''' Simulation of C_{q1,q2} in fF '''
     # simulate_Cqq(3, 4, resolution=(2e3, 2e3))

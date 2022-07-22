@@ -214,16 +214,13 @@ class ChipDesign:
 
         # choose only numbers or array(iterables) with numbers
         for key, val in pars_dict.items():
-            numeric = False
             if isinstance(val, (list, np.ndarray)):
-                for entry in val:
-                    if isinstance(entry, Number):
-                        numeric = True
-                        break
+                for i, it_entry in enumerate(val):
+                    if isinstance(it_entry, Number):
+                        it_entry_key = key + "_" + str(i)  # for readability of pandas.DataFrame
+                        geometry_dict[it_entry_key] = it_entry
                     else:
                         break
-                if numeric is True:
-                    geometry_dict[key] = val
             elif isinstance(val, Number):
                 geometry_dict[key] = val
         geometry_dict["design_version"] = self.__version
