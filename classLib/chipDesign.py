@@ -112,13 +112,13 @@ class ChipDesign:
     # Erases everything outside the box
     def crop(self, box, region=None):
         if region is None:
-            self.__erase_in_region(self.region_ph, box)
-            self.__erase_in_region(self.region_el, box)
+            self.__crop_box_in_region(self.region_ph, box)
+            self.__crop_box_in_region(self.region_el, box)
         else:
-            self.__erase_in_region(region, box)
+            self.__crop_box_in_region(region, box)
 
     # Erases everything outside the box in width layer
-    def __erase_in_region(self, region, box):
+    def __crop_box_in_region(self, region, box):
         box_reg = Region(box)
         region &= box_reg
 
