@@ -128,7 +128,7 @@ class Design8Q(ChipDesign):
     def __init__(self, cell_name):
         super().__init__(cell_name)
         self.__version = "8Q_0.0.0.1"
-        print(self.__version)
+        # print(self.__version)
         dc_bandage_layer_i = pya.LayerInfo(3,
                                            0)  # for DC contact deposition
         self.dc_bandage_reg = Region()
@@ -156,9 +156,11 @@ class Design8Q(ChipDesign):
         self.chip = CHIP_16p5x16p5_20pads
         self.chip_box: pya.DBox = self.chip.box
         # Z = 49.5656 E_eff = 6.30782 (E = 11.45)
-        self.z_md_fl: CPWParameters = CPWParameters(10e3, 5.7e3)
+        self.z_fl1: CPWParameters = CPWParameters(10e3, 5.7e3)
+        self.z_md1: CPWParameters = CPWParameters(10e3, 5.7e3)
         # Z = 50.136  E_eff = 6.28826 (E = 11.45)
-        self.z_md_fl2: CPWParameters = CPWParameters(10e3, 5.7e3)
+        self.z_fl2: CPWParameters = CPWParameters(10e3, 5.7e3)
+        self.z_md2: CPWParameters = CPWParameters(3e3, 4e3)
         # flux line widths at the end of flux line
         self.flux2ground_left_width = 2e3
         self.flux2ground_right_width = 4e3
@@ -168,7 +170,7 @@ class Design8Q(ChipDesign):
         self.ro_Z: CPWParameters = self.chip.chip_Z
         # contact pads obejct array
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
-            [self.z_md_fl] * 16 + [self.ro_Z] * 4,
+            [self.ro_Z]*2 + [self.z_md1, self.z_fl1] * 4 + [self.ro_Z] * 2 + [self.z_md1, self.z_fl1] * 4,
             back_metal_gap=200e3,
             back_metal_width=0e3,
             pad_length=700e3,
@@ -283,14 +285,14 @@ class Design8Q(ChipDesign):
 
         # microwave and flux drive lines parameters
         self.ctr_lines_turn_radius = 100e3
-        self.ctrLine_2_qLine_d = 300e3
+        self.ctrLine_2_qLine_d = 600e3
         self.ctr_lines_y_ref: float = None  # nm
 
         self.flLine_squidLeg_gap = 5e3
         self.flux_lines_x_shifts: List[float] = \
             [
                 -SQUID_PARS.squid_dx / 2 - SQUID_PARS.SQLBT_dx / 2 -
-                self.z_md_fl2.width / 2 +
+                self.z_fl2.width / 2 +
                 SQUID_PARS.BC_dx / 2 + SQUID_PARS.band_ph_tol
             ] * len(self.L1_list)
 
@@ -315,10 +317,16 @@ class Design8Q(ChipDesign):
         # shift from middle of cross bottom finder
         # where md line should end
         # for qubits 0-3
-        self.md_line_end_shift = DVector(-80e3, -100e3)
+        self.md_line_end_shift = DVector(-80e3, -120e3)
         # distance from end of md control line (metal)
         # to cross (metal) for qubits 0 and 7
-        self.md07_x_dist = 53e3
+        self.md07_x_dist = 90e3
+
+        # length of the smoothing part between normal thick and end-thin cpw for md line
+        self.md_line_cpw12_smoothhing = 10e3
+
+        # length ofa thin part of the microwave drive line end
+        self.md_line_cpw2_len = 200e3
 
         self.cpwrl_md0: DPathCPW = None
         self.cpwrl_fl0: DPathCPW = None
@@ -837,9 +845,9 @@ class Design8Q(ChipDesign):
                                "drawn themselves yet. Fill `self.xmons` "
                                "list with appropriate data structures")
         else:
-            self.ctr_lines_y_ref1 = self.xmons[0].cpw_bempt.end.y - \
+            self.ctr_lines_y_ref1 = self.xmons[0].center.y - \
                                     self.ctrLine_2_qLine_d
-            self.ctr_lines_y_ref2 = self.xmons[0].cpw_tempt.end.y + \
+            self.ctr_lines_y_ref2 = self.xmons[-1].center.y + \
                                     self.ctrLine_2_qLine_d
             if len(self.ic_pts1) == 0:
                 ic_center1 = self.xmons[3].center
@@ -863,16 +871,12 @@ class Design8Q(ChipDesign):
         # place caplanar line 0md
         p1 = self.contact_pads[2].end
         p2 = self.xmons[0].cpw_lempt.end + DVector(-self.md07_x_dist, 0)
-        p3 = p2 + DVector(self.z_md_fl.b / 2, 0)
         self.cpwrl_md0 = DPathCPW(
-            points=[p1, p2, p3],
-            cpw_parameters=[self.z_md_fl] +
-                           [CPWParameters(width=0,
-                                          gap=self.z_md_fl.b / 2)],
+            points=[p1, p2],
+            cpw_parameters=[self.z_md1],
             turn_radiuses=r_turn
         )
         self.cpw_md_lines.append(self.cpwrl_md0)
-        self.cpwrl_md0.place(self.region_ph)
 
         # place md1-md3
         for q_idx, (cp_idx, ccurve_pt) in enumerate(
@@ -898,18 +902,13 @@ class Design8Q(ChipDesign):
                 p4.x,
                 self.xmons[q_idx].cpw_b.end.y + self.md_line_end_shift.y
             )
-            last_dv = (p5 - p4) / (p5 - p4).abs()
-            p6 = p5 + self.z_md_fl.b / 2 * last_dv
             md_dpath = DPathCPW(
-                points=[p1, p2, p3, p4, p5, p6],
-                cpw_parameters=[self.z_md_fl] * 7 +
-                               [CPWParameters(width=0,
-                                              gap=self.z_md_fl.b / 2)],
+                points=[p1, p2, p3, p4, p5],
+                cpw_parameters=[self.z_md1] * 7,
                 turn_radiuses=r_turn
             )
             self.__setattr__("cpwrl_md_" + str(q_idx), md_dpath)
             self.cpw_md_lines.append(md_dpath)
-            md_dpath.place(self.region_ph)
 
         ''' for qubits group №2 '''
         # place md4-md7
@@ -936,32 +935,119 @@ class Design8Q(ChipDesign):
                 p4.x,
                 self.xmons[q_idx].cpw_b.end.y - self.md_line_end_shift.y
             )
-            last_dv = (p5 - p4) / (p5 - p4).abs()
-            p6 = p5 + self.z_md_fl.b / 2 * last_dv
             md_dpath = DPathCPW(
-                points=[p1, p2, p3, p4, p5, p6],
-                cpw_parameters=[self.z_md_fl] * 7 +
-                               [CPWParameters(width=0,
-                                              gap=self.z_md_fl.b / 2)],
+                points=[p1, p2, p3, p4, p5],
+                cpw_parameters=[self.z_md1] * 7,
                 turn_radiuses=r_turn
             )
             self.__setattr__("cpwrl_md_" + str(q_idx), md_dpath)
             self.cpw_md_lines.append(md_dpath)
-            md_dpath.place(self.region_ph)
 
         # place caplanar line 7md
         p1 = self.contact_pads[12].end
         p2 = self.xmons[-1].cpw_rempt.end + DVector(self.md07_x_dist, 0)
-        p3 = p2 + DVector(-self.z_md_fl.b / 2, 0)
         self.cpwrl_md7 = DPathCPW(
-            points=[p1, p2, p3],
-            cpw_parameters=[self.z_md_fl] +
-                           [CPWParameters(width=0,
-                                          gap=self.z_md_fl.b / 2)],
+            points=[p1, p2],
+            cpw_parameters=[self.z_md1],
             turn_radiuses=r_turn
         )
         self.cpw_md_lines.append(self.cpwrl_md7)
-        self.cpwrl_md7.place(self.region_ph)
+        for cpw_md_line in self.cpw_md_lines:
+            self.modify_md_line_end_and_place(
+                cpw_md_line, mod_length=self.md_line_cpw2_len, smoothing=self.md_line_cpw12_smoothhing
+            )
+
+    def modify_md_line_end_and_place(self, md_line: DPathCPW, mod_length=100e3, smoothing=20e3):
+        """
+        Changes coplanar for `mod_length` length from the end of `md_line`.
+        Transition region length along the `md_line` is controlled by passing `smoothing` value.
+
+        Notes
+        -------
+        Unhandled behaviour if transition (smoothing) region overlaps with any number of `CPWArc`s.
+
+        Parameters
+        ----------
+        md_line : DPathCPW
+            line object to modify
+        mod_length : float
+            length counting from the end of line to be modified
+        smoothing : float
+            length of smoothing for CPW2CPW transition between normal-thick and end-thin parts
+
+        Returns
+        -------
+        None
+        """
+        # make flux line wider to have a less chance to misalign
+        # bandage-eBeam-photo layers at the qubit bandage region.
+        last_lines = {}
+        total_length = 0
+        for key, primitive in reversed(list(md_line.primitives.items())):
+            total_length += primitive.length()
+            last_lines[key] = (primitive)
+            if total_length > mod_length:
+                break
+
+        # iterate from the end of the line
+        for key, primitive in list(last_lines.items())[:-1]:
+            primitive.width = self.z_md2.width
+            primitive.gap = self.z_md2.gap
+
+        transition_line = list(last_lines.values())[-1]
+        length_to_mod_left = mod_length - sum([primitive.length() for primitive in list(last_lines.values())[:-1]])
+        # divide line into 3 sections with proportions `alpha_i`
+        beta_2 = smoothing
+        beta_3 = length_to_mod_left
+        beta_1 = transition_line.length() - (beta_2 + beta_3)
+        transition_line_dv = transition_line.end - transition_line.start
+        # tangent vector
+        transition_line_dv_s = transition_line_dv / transition_line_dv.abs()
+        p1 = transition_line.start
+        p2 = p1 + beta_1 * transition_line_dv_s
+        p3 = p2 + beta_2 * transition_line_dv_s
+        p4 = p3 + beta_3 * transition_line_dv_s
+        cpw_transition_line1 = CPW(
+            start=p1,
+            end=p2,
+            cpw_params=self.z_md1
+        )
+        cpw_transition = CPW2CPW(
+            Z0=self.z_md1,
+            Z1=self.z_md2,
+            start=p2, end=p3
+        )
+        cpw_transition_line2 = CPW(
+            start=p3 - 2*transition_line_dv_s,  # rounding error correction
+            end=p4,
+            cpw_params=self.z_md2
+        )
+
+        transition_line_name = list(last_lines.keys())[-1]
+        new_primitives = {}
+        for key, primitive in md_line.primitives.items():
+            if key != transition_line_name:
+                new_primitives[key] = primitive
+            elif key == transition_line_name:
+                new_primitives[transition_line_name + "_1"] = cpw_transition_line1
+                new_primitives[transition_line_name + "_2"] = cpw_transition
+                new_primitives[transition_line_name + "_3"] = cpw_transition_line2
+
+        md_line.primitives = new_primitives
+        md_line._refresh_named_connections()
+        md_line.place(self.region_ph)
+
+        # make open-circuit end for md line end
+        cpw_end = list(last_lines.values())[0]
+        end_dv = cpw_end.end - cpw_end.start
+        end_dv_s = end_dv/end_dv.abs()
+        p1 = cpw_end.end
+        p2 = p1 + cpw_transition_line2.b / 2 * end_dv_s
+        md_open_end = CPW(
+            start=p1, end=p2,
+            width=0, gap=cpw_transition_line2.b/2
+        )
+        md_open_end.place(self.region_ph)
 
     def draw_flux_control_lines(self):
         self._help_routing_ctr_lines()
@@ -998,7 +1084,7 @@ class Design8Q(ChipDesign):
 
             fl_dpath = DPathCPW(
                 points=[p1, p2, p3, p4, p5],
-                cpw_parameters=self.z_md_fl,
+                cpw_parameters=self.z_fl1,
                 turn_radiuses=r_turn
             )
             self.__setattr__("cpwrl_fl" + str(q_idx), fl_dpath)
@@ -1035,7 +1121,7 @@ class Design8Q(ChipDesign):
 
             fl_dpath = DPathCPW(
                 points=[p1, p2, p3, p4, p5],
-                cpw_parameters=self.z_md_fl,
+                cpw_parameters=self.z_fl1,
                 turn_radiuses=r_turn
             )
             self.__setattr__("cpwrl_fl" + str(q_idx), fl_dpath)
@@ -1056,7 +1142,7 @@ class Design8Q(ChipDesign):
         # )
         # self.cpwrl_fl7 = DPathCPW(
         #     points=[p1, p2, p3, p4, p5],
-        #     cpw_parameters=self.z_md_fl,
+        #     cpw_parameters=self.z_fl1,
         #     turn_radiuses=r_turn
         # )
         # self.cpw_fl_lines.append(self.cpwrl_fl7)
@@ -1076,6 +1162,7 @@ class Design8Q(ChipDesign):
         alpha_2 = 0.3
         alpha_3 = 1 - (alpha_1 + alpha_2)
         last_line_dv = last_line.end - last_line.start
+        last_line_dv_s = last_line_dv/last_line_dv.abs()
         p1 = last_line.start
         p2 = p1 + alpha_1 * last_line_dv
         p3 = p2 + alpha_2 * last_line_dv
@@ -1083,19 +1170,19 @@ class Design8Q(ChipDesign):
         cpw_normal = CPW(
             start=p1,
             end=p2,
-            width=self.z_md_fl.width,
-            gap=self.z_md_fl.gap
+            width=self.z_fl1.width,
+            gap=self.z_fl1.gap
         )
         cpw_transition = CPW2CPW(
-            Z0=self.z_md_fl,
-            Z1=self.z_md_fl2,
+            Z0=self.z_fl1,
+            Z1=self.z_fl2,
             start=p2, end=p3
         )
         cpw_thick = CPW(
-            start=p3 + DVector(0, -2),  # rounding error correction
+            start=p3 - 2*last_line_dv_s,  # rounding error correction
             end=p4,
-            width=self.z_md_fl2.width,
-            gap=self.z_md_fl2.gap
+            width=self.z_fl2.width,
+            gap=self.z_fl2.gap
         )
 
         del flux_line.primitives[last_line_name]
@@ -2418,6 +2505,7 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
 def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
     resolution_dx, resolution_dy = resolution
     dl_list = [-10e3, 0, 10e3]
+    dl_list = np.linspace(-20e3,20e3, 11)
     dl_list = [0]
     for dl in dl_list:
         design = Design8Q("testScript")
@@ -2548,102 +2636,102 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
         design.lv.zoom_fit()
         '''DRAWING SECTION END'''
 
-        # '''SIMULATION SECTION START'''
-        # ml_terminal = SonnetLab()
-        # # print("starting connection...")
-        # from sonnetSim.cMD import CMD
-        #
-        # ml_terminal._send(CMD.SAY_HELLO)
-        # ml_terminal.clear()
-        # simBox = SimulationBox(
-        #     crop_box.width(),
-        #     crop_box.height(),
-        #     crop_box.width() / resolution_dx,
-        #     crop_box.height() / resolution_dy
-        # )
-        # ml_terminal.set_boxProps(simBox)
-        # # print("sending cell and layer")
-        # from sonnetSim.pORT_TYPES import PORT_TYPES
-        #
-        # ports = [
-        #     SonnetPort(design.sonnet_ports[0], PORT_TYPES.AUTOGROUNDED),
-        #     SonnetPort(design.sonnet_ports[1], PORT_TYPES.AUTOGROUNDED)
-        # ]
-        # # for sp in ports:
-        # #     print(sp.point)
-        # ml_terminal.set_ports(ports)
-        #
-        # ml_terminal.send_polygons(design.cell, design.layer_ph)
-        # ml_terminal.set_linspace_sweep(0.01, 0.01, 1)
-        # print("simulating...")
-        # result_path = ml_terminal.start_simulation(wait=True)
-        # ml_terminal.release()
-        #
-        # ### SIMULATION SECTION END ###
-        #
-        # ### CALCULATE CAPACITANCE SECTION START ###
-        # C12 = None
-        # with open(result_path.decode("ascii"), "r") as csv_file:
-        #     data_rows = list(csv.reader(csv_file))
-        #     ports_imps_row = data_rows[6]
-        #     R = float(ports_imps_row[0].split(' ')[1])
-        #     data_row = data_rows[8]
-        #     freq0 = float(data_row[0])
-        #
-        #     s = [[0, 0], [0, 0]]  # s-matrix
-        #     # print(data_row)
-        #     for i in range(0, 2):
-        #         for j in range(0, 2):
-        #             s[i][j] = complex(float(data_row[1 + 2 * (i * 2 + j)]),
-        #                               float(data_row[
-        #                                         1 + 2 * (i * 2 + j) + 1]))
-        #     import math
-        #
-        #     y11 = 1 / R * (1 - s[0][0]) / (1 + s[0][0])
-        #     C1 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y11).imag)
-        #     # formula taken from
-        #     # https://en.wikipedia.org/wiki/Admittance_parameters#Two_port
-        #     delta = (1 + s[0][0]) * (1 + s[1][1]) - s[0][1] * s[1][0]
-        #     y21 = -2 * s[1][0] / delta * 1 / R
-        #     C12 = 1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y21).imag)
-        #
-        # print("C_12 = ", C12)
-        # print("C1 = ", C1)
-        # print()
-        # '''CALCULATE CAPACITANCE SECTION END'''
-        #
-        # '''SAVING REUSLTS SECTION START'''
-        # geometry_params = design.get_geometry_parameters()
-        # output_filepath = os.path.join(PROJECT_DIR, "Xmon_Cqq_results.csv")
-        # if os.path.exists(output_filepath):
-        #     # append data to file
-        #     with open(output_filepath, "a", newline='') as csv_file:
-        #         writer = csv.writer(csv_file)
-        #         writer.writerow(
-        #             [q_idx, md_idx, *list(geometry_params.values()),
-        #              C1, C12]
-        #         )
-        # else:
-        #     # create file, add header, append data
-        #     with open(output_filepath, "w", newline='') as csv_file:
-        #         writer = csv.writer(csv_file)
-        #         # create header of the file
-        #         writer.writerow(
-        #             ["q_idx", "md_idx", *list(geometry_params.keys()),
-        #              "C1, fF", "C12, fF"])
-        #         writer.writerow(
-        #             [q_idx, md_idx, *list(geometry_params.values()),
-        #              design.xmon_x_distance / 1e3,
-        #              C1, C12]
-        #         )
-        # '''SAVING REUSLTS SECTION END'''
+        '''SIMULATION SECTION START'''
+        ml_terminal = SonnetLab()
+        # print("starting connection...")
+        from sonnetSim.cMD import CMD
+
+        ml_terminal._send(CMD.SAY_HELLO)
+        ml_terminal.clear()
+        simBox = SimulationBox(
+            crop_box.width(),
+            crop_box.height(),
+            crop_box.width() / resolution_dx,
+            crop_box.height() / resolution_dy
+        )
+        ml_terminal.set_boxProps(simBox)
+        # print("sending cell and layer")
+        from sonnetSim.pORT_TYPES import PORT_TYPES
+
+        ports = [
+            SonnetPort(design.sonnet_ports[0], PORT_TYPES.AUTOGROUNDED),
+            SonnetPort(design.sonnet_ports[1], PORT_TYPES.AUTOGROUNDED)
+        ]
+        # for sp in ports:
+        #     print(sp.point)
+        ml_terminal.set_ports(ports)
+
+        ml_terminal.send_polygons(design.cell, design.layer_ph)
+        ml_terminal.set_linspace_sweep(0.01, 0.01, 1)
+        print("simulating...")
+        result_path = ml_terminal.start_simulation(wait=True)
+        ml_terminal.release()
+
+        ### SIMULATION SECTION END ###
+
+        ### CALCULATE CAPACITANCE SECTION START ###
+        C12 = None
+        with open(result_path.decode("ascii"), "r") as csv_file:
+            data_rows = list(csv.reader(csv_file))
+            ports_imps_row = data_rows[6]
+            R = float(ports_imps_row[0].split(' ')[1])
+            data_row = data_rows[8]
+            freq0 = float(data_row[0])
+
+            s = [[0, 0], [0, 0]]  # s-matrix
+            # print(data_row)
+            for i in range(0, 2):
+                for j in range(0, 2):
+                    s[i][j] = complex(float(data_row[1 + 2 * (i * 2 + j)]),
+                                      float(data_row[
+                                                1 + 2 * (i * 2 + j) + 1]))
+            import math
+
+            y11 = 1 / R * (1 - s[0][0]) / (1 + s[0][0])
+            C1 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y11).imag)
+            # formula taken from
+            # https://en.wikipedia.org/wiki/Admittance_parameters#Two_port
+            delta = (1 + s[0][0]) * (1 + s[1][1]) - s[0][1] * s[1][0]
+            y21 = -2 * s[1][0] / delta * 1 / R
+            C12 = 1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y21).imag)
+
+        print("C_12 = ", C12)
+        print("C1 = ", C1)
+        print()
+        '''CALCULATE CAPACITANCE SECTION END'''
+
+        '''SAVING REUSLTS SECTION START'''
+        geometry_params = design.get_geometry_parameters()
+        output_filepath = os.path.join(PROJECT_DIR, f"Xmon_md_{md_idx}_Cmd.csv")
+        if os.path.exists(output_filepath):
+            # append data to file
+            with open(output_filepath, "a", newline='') as csv_file:
+                writer = csv.writer(csv_file)
+                writer.writerow(
+                    [q_idx, md_idx, *list(geometry_params.values()),
+                     C1, C12]
+                )
+        else:
+            # create file, add header, append data
+            with open(output_filepath, "w", newline='') as csv_file:
+                writer = csv.writer(csv_file)
+                # create header of the file
+                writer.writerow(
+                    ["q_idx", "md_idx", *list(geometry_params.keys()),
+                     "C1, fF", "C12, fF"])
+                writer.writerow(
+                    [q_idx, md_idx, *list(geometry_params.values()),
+                     design.xmon_x_distance / 1e3,
+                     C1, C12]
+                )
+        '''SAVING REUSLTS SECTION END'''
 
 
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
     design = Design8Q("testScript")
-    # design.draw()
-    # design.show()
+    design.draw()
+    design.show()
 
     ''' C_qr sim '''
     # simulate_Cqr(resolution=(2e3, 2e3))
@@ -2661,7 +2749,9 @@ if __name__ == "__main__":
     # simulate_Cqr(resolution=(4e3,4e3))
 
     ''' MD line C_qd for md0 and md 7 '''
-    simulate_md_Cg(md_idx=1, q_idx=1, resolution=(2e3, 2e3))
+    # simulate_md_Cg(md_idx=1, q_idx=1, resolution=(2e3, 2e3))
 
     ''' MD line C_qd for md1,..., md6 '''
-    # simulate_md_Cg(res_idxs2Draw=[1,2], resolution=(4e3,4e3))
+    # for q_idx in range(2):
+    #     for md_idx in range(2):
+    #         simulate_md_Cg(q_idx=q_idx, md_idx=md_idx, resolution=(1e3, 1e3))

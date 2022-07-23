@@ -698,9 +698,9 @@ class DPathCPW(ComplexBase):
         14.08.2021 (Shamil).
         """
         # TODO: remove shape strings
-        if len(points) < 3:
-            raise Warning("DPathCPW received < 3 points. Use `CPW` class "
-                          "or increase anchor points number ")
+        # if len(points) < 3:
+        #     raise Warning("DPathCPW received < 3 points. Use `CPW` class "
+        #                   "or increase anchor points number ")
         self.points: List[DPoint] = points
         # force conversion since "DVector" has no method "distance()"
         for i, point in enumerate(self.points):

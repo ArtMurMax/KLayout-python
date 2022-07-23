@@ -72,6 +72,9 @@ class ChipDesign:
         self.design_pars = OrderedDict()
         self.sonnet_ports: list[DPoint] = []
 
+    def get_version(self):
+        return self.__version
+
     # Call other methods drawing parts of the design from here
     def draw(self, design_params=None):
         """
@@ -223,5 +226,5 @@ class ChipDesign:
                         break
             elif isinstance(val, Number):
                 geometry_dict[key] = val
-        geometry_dict["design_version"] = self.__version
+        geometry_dict["design_version"] = self.get_version()
         return geometry_dict
