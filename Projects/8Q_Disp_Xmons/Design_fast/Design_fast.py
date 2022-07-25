@@ -160,7 +160,7 @@ class Design8Q(ChipDesign):
         self.z_md1: CPWParameters = CPWParameters(10e3, 5.7e3)
         # Z = 50.136  E_eff = 6.28826 (E = 11.45)
         self.z_fl2: CPWParameters = CPWParameters(10e3, 5.7e3)
-        self.z_md2: CPWParameters = CPWParameters(3e3, 4e3)
+        self.z_md2: CPWParameters = CPWParameters(4e3, 4e3)
         # flux line widths at the end of flux line
         self.flux2ground_left_width = 2e3
         self.flux2ground_right_width = 4e3
@@ -170,7 +170,7 @@ class Design8Q(ChipDesign):
         self.ro_Z: CPWParameters = self.chip.chip_Z
         # contact pads obejct array
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
-            [self.ro_Z]*2 + [self.z_md1, self.z_fl1] * 4 + [self.ro_Z] * 2 + [self.z_md1, self.z_fl1] * 4,
+            [self.ro_Z] * 2 + [self.z_md1, self.z_fl1] * 4 + [self.ro_Z] * 2 + [self.z_md1, self.z_fl1] * 4,
             back_metal_gap=200e3,
             back_metal_width=0e3,
             pad_length=700e3,
@@ -178,7 +178,7 @@ class Design8Q(ChipDesign):
         )
         # xmon parameters
         self.NQUBITS = 8
-        self.xmon_x_distance: float = 728e3  # from simulation of g_12
+        self.xmon_x_distance: float = 733e3  # from simulation of g_12
         # distance between open end (excluding fork) of resonator
         # and cross polygons
         self.xmon_res_d = 254e3
@@ -188,13 +188,15 @@ class Design8Q(ChipDesign):
 
         # C11 = 107
         self.cross_len_x = 270e3
-        self.cross_width_x = 60e3  # from C11 sim
-        self.cross_gnd_gap_x_list = [30e3]*self.NQUBITS
+        self.cross_width_x = 45e3  # from C11 sim
+        self.cross_gnd_gap_x_list = [60e3] * self.NQUBITS
+        self.cross_gnd_gap_face_x = 35e3
         self.cross_len_y = 180e3
-        self.cross_width_y = 60e3  # from C11 sim
+        self.cross_width_y = 45e3  # from C11 sim
         self.cross_gnd_gap_y_list = [
-            1e3*x for x in [27.732, 39.212, 28.989, 39.477, 28.717, 39.252, 28.764, 39.636]
+            1e3 * x for x in [27.732, 39.212, 28.989, 39.477, 28.717, 39.252, 28.764, 39.636]
         ]
+        self.cross_gnd_gap_face_y = 30e3
 
         # readout line parameters
         self.ro_line_turn_radius: float = 100e3
@@ -213,7 +215,7 @@ class Design8Q(ChipDesign):
         self.resonators: List[EMResonatorTL3QbitWormRLTailXmonFork] = []
         # distance between nearest resonators central conductors centers
         # constant step between resonators origin points along x-axis.
-        self.resonators_dx: float = 728e3
+        self.resonators_dx: float = self.xmon_x_distance
         # resonator parameters
         self.L_coupling_list: list[float] = [
             1e3 * x for x in [310, 320, 320, 310] * 2
@@ -285,7 +287,7 @@ class Design8Q(ChipDesign):
 
         # microwave and flux drive lines parameters
         self.ctr_lines_turn_radius = 100e3
-        self.ctrLine_2_qLine_d = 600e3
+        self.ctrLine_2_qLine_d = 800e3
         self.ctr_lines_y_ref: float = None  # nm
 
         self.flLine_squidLeg_gap = 5e3
@@ -326,7 +328,7 @@ class Design8Q(ChipDesign):
         self.md_line_cpw12_smoothhing = 10e3
 
         # length ofa thin part of the microwave drive line end
-        self.md_line_cpw2_len = 200e3
+        self.md_line_cpw2_len = 550e3
 
         self.cpwrl_md0: DPathCPW = None
         self.cpwrl_fl0: DPathCPW = None
@@ -676,8 +678,8 @@ class Design8Q(ChipDesign):
                 sideY_length=self.cross_len_y,
                 sideY_width=self.cross_width_y,
                 sideY_gnd_gap=self.cross_gnd_gap_y_list[res_idx],
-                sideX_face_gnd_gap=self.cross_gnd_gap_x_list[res_idx],
-                sideY_face_gnd_gap=self.cross_gnd_gap_y_list[res_idx]
+                sideX_face_gnd_gap=self.cross_gnd_gap_face_x,
+                sideY_face_gnd_gap=self.cross_gnd_gap_face_y
             )
 
             self.xmons.append(xmonCross)
@@ -686,6 +688,7 @@ class Design8Q(ChipDesign):
                 sideX_length=self.cross_len_x,
                 sideX_width=self.cross_width_x,
                 sideX_gnd_gap=self.cross_gnd_gap_x_list[res_idx],
+                sideX_face_gnd_gap=self.cross_gnd_gap_face_x,
                 sideY_length=self.cross_len_y,
                 sideY_width=self.cross_width_y,
                 sideY_gnd_gap=max(
@@ -990,6 +993,7 @@ class Design8Q(ChipDesign):
                 break
 
         # iterate from the end of the line
+        # TODO: this is not working, objects already drawn in their corresponding coordinate system
         for key, primitive in list(last_lines.items())[:-1]:
             primitive.width = self.z_md2.width
             primitive.gap = self.z_md2.gap
@@ -1018,7 +1022,7 @@ class Design8Q(ChipDesign):
             start=p2, end=p3
         )
         cpw_transition_line2 = CPW(
-            start=p3 - 2*transition_line_dv_s,  # rounding error correction
+            start=p3 - 2 * transition_line_dv_s,  # rounding error correction
             end=p4,
             cpw_params=self.z_md2
         )
@@ -1033,21 +1037,21 @@ class Design8Q(ChipDesign):
                 new_primitives[transition_line_name + "_2"] = cpw_transition
                 new_primitives[transition_line_name + "_3"] = cpw_transition_line2
 
-        md_line.primitives = new_primitives
-        md_line._refresh_named_connections()
-        md_line.place(self.region_ph)
-
         # make open-circuit end for md line end
         cpw_end = list(last_lines.values())[0]
         end_dv = cpw_end.end - cpw_end.start
-        end_dv_s = end_dv/end_dv.abs()
+        end_dv_s = end_dv / end_dv.abs()
         p1 = cpw_end.end
-        p2 = p1 + cpw_transition_line2.b / 2 * end_dv_s
+        p2 = p1 + cpw_end.b / 2 * end_dv_s
         md_open_end = CPW(
             start=p1, end=p2,
-            width=0, gap=cpw_transition_line2.b/2
+            width=0, gap=cpw_transition_line2.b / 2
         )
-        md_open_end.place(self.region_ph)
+        new_primitives["md_open_end"] = md_open_end
+        md_line.primitives = new_primitives
+        md_line.connections[1] = list(md_line.primitives.values())[-1].end
+        md_line._refresh_named_connections()
+        md_line.place(self.region_ph)
 
     def draw_flux_control_lines(self):
         self._help_routing_ctr_lines()
@@ -1162,7 +1166,7 @@ class Design8Q(ChipDesign):
         alpha_2 = 0.3
         alpha_3 = 1 - (alpha_1 + alpha_2)
         last_line_dv = last_line.end - last_line.start
-        last_line_dv_s = last_line_dv/last_line_dv.abs()
+        last_line_dv_s = last_line_dv / last_line_dv.abs()
         p1 = last_line.start
         p2 = p1 + alpha_1 * last_line_dv
         p3 = p2 + alpha_2 * last_line_dv
@@ -1179,7 +1183,7 @@ class Design8Q(ChipDesign):
             start=p2, end=p3
         )
         cpw_thick = CPW(
-            start=p3 - 2*last_line_dv_s,  # rounding error correction
+            start=p3 - 2 * last_line_dv_s,  # rounding error correction
             end=p4,
             width=self.z_fl2.width,
             gap=self.z_fl2.gap
@@ -1189,9 +1193,6 @@ class Design8Q(ChipDesign):
         flux_line.primitives[last_line_name + "_1"] = cpw_normal
         flux_line.primitives[last_line_name + "_2"] = cpw_transition
         flux_line.primitives[last_line_name + "_3"] = cpw_thick
-        flux_line._refresh_named_connections()
-
-        flux_line.place(self.region_ph)
 
         # tangent vector
         last_line_dv_s = last_line_dv / last_line_dv.abs()
@@ -1207,7 +1208,7 @@ class Design8Q(ChipDesign):
             start=p1, end=p2,
             width=self.flux2ground_right_width, gap=0
         )
-        inductance_cpw.place(self.region_ph)
+        flux_line.primitives["fl_end_ind_right"] = inductance_cpw
 
         # connect central conductor to ground to the left (view from
         # flux line start towards squid)
@@ -1218,7 +1219,10 @@ class Design8Q(ChipDesign):
             start=p1, end=p2,
             width=self.flux2ground_left_width, gap=0
         )
-        flux_gnd_cpw.place(self.region_ph)
+        flux_line.primitives["fl_end_ind_left"] = flux_gnd_cpw
+        flux_line.connections[1] = list(flux_line.primitives.values())[-3].end
+        flux_line._refresh_named_connections()
+        flux_line.place(self.region_ph)
 
     def draw_coupling_res(self):
         # TODO: draw appropriate coupling
@@ -1723,9 +1727,9 @@ def simulate_resonators_f_and_Q():
     freqs_span_corase = 1  # GHz
     corase_only = False
     freqs_span_fine = 0.050
-    # dl_list = [15e3, 0, -15e3]
+    dl_list = [15e3, 0, -15e3]
     estimated_freqs = np.linspace(7.2, 7.76, 8)
-    dl_list = [0e3]
+    # dl_list = [0e3]
     from itertools import product
     for dl, (resonator_idx, predef_freq) in list(product(
             dl_list,
@@ -1739,7 +1743,7 @@ def simulate_resonators_f_and_Q():
         design = Design8Q("testScript")
         design.L1_list[resonator_idx] += dl
         # print(f"res length: {design.L1_list[resonator_idx]:3.5} um")
-        design.draw_for_res_f_and_Q_sim(res_idx2Draw=resonator_idx)
+        design.draw_for_res_f_and_Q_sim(res_idxs2Draw=[resonator_idx])
 
         an_estimated_freq = \
             design.resonators[resonator_idx].get_approx_frequency(
@@ -2158,12 +2162,12 @@ def simulate_resonators_f_and_Q_together():
     ''' RESULT SAVING SECTION END '''
 
 
-def simulate_Cqr(resolution=(4e3,4e3)):
+def simulate_Cqr(resolution=(4e3, 4e3), mode="Cqr"):
     # TODO: 1. make 2d geometry parameters mesh, for simultaneous finding of C_qr and C_q
     #  2. make 3d geometry optimization inside kLayout for simultaneous finding of C_qr, C_q and C_qq
     resolution_dx = resolution[0]
     resolution_dy = resolution[1]
-    # dl_list = [-5e3, 0, 5e3]
+    dl_list = np.linspace(-20e3, 20e3, 6)
     dl_list = [0e3]
     from itertools import product
 
@@ -2175,14 +2179,17 @@ def simulate_Cqr(resolution=(4e3,4e3)):
         ### DRAWING SECTION START ###
         design = Design8Q("testScript")
 
-        # adjusting `self.fork_y_spans` for C_qr
-        # design.fork_y_span_list = [fork_y_span + d_val for fork_y_span in design.fork_y_span_list]
-
-        # adjusting `cross_gnd_gap_x` and same for y, to gain proper E_C
-        design.cross_gnd_gap_y_list = [gnd_gap_y+dl for gnd_gap_y in design.cross_gnd_gap_y_list]
+            # adjusting `self.fork_y_spans` for C_qr
+        if mode == "Cqr":
+            design.fork_y_span_list = [fork_y_span + dl for fork_y_span in design.fork_y_span_list]
+            save_fname = "Cqr_Cqr_results.csv"
+        elif mode == "Cq":
+            # adjusting `cross_gnd_gap_x` and same for y, to gain proper E_C
+            design.cross_gnd_gap_y_list = [gnd_gap_y + dl for gnd_gap_y in design.cross_gnd_gap_y_list]
+            save_fname = "Cqr_Cq_results.csv"
 
         # exclude coils from simulation (sometimes port is placed onto coil (TODO: fix)
-        design.N_coils = [1]*design.NQUBITS
+        design.N_coils = [1] * design.NQUBITS
         design.draw_for_Cqr_simulation(res_idx=res_idx)
 
         worm = design.resonators[res_idx]
@@ -2207,8 +2214,8 @@ def simulate_Cqr(resolution=(4e3,4e3)):
         dv = DVector(box_side_x / 2, box_side_y / 2)
 
         crop_box = pya.Box().from_dbox(pya.Box(
-            xmonCross.center + 2*dv,
-            xmonCross.center + (-1) * 2*dv
+            xmonCross.center + dv,
+            xmonCross.center + (-1) * dv
         ))
         design.crop(crop_box)
         dr = DPoint(0, 0) - crop_box.p1
@@ -2228,7 +2235,7 @@ def simulate_Cqr(resolution=(4e3,4e3)):
                     max_distance = d
                     port_pt = edge_center
         design.sonnet_ports.append(port_pt)
-        design.sonnet_ports.append(xmonCross.cpw_b.end)
+        design.sonnet_ports.append(xmonCross.cpw_l.end)
 
         design.transform_region(design.region_ph, DTrans(dr.x, dr.y),
                                 trans_ports=True)
@@ -2284,21 +2291,23 @@ def simulate_Cqr(resolution=(4e3,4e3)):
             # print(data_row)`
             for i in range(0, 2):
                 for j in range(0, 2):
-                    s[i][j] = complex(float(data_row[1 + 2 * (i * 2 + j)]),
-                                      float(data_row[
-                                                1 + 2 * (i * 2 + j) + 1]))
+                    s[i][j] = complex(
+                        float(data_row[1 + 2 * (i * 2 + j)]),
+                        float(data_row[1 + 2 * (i * 2 + j) + 1]))
             import math
-
-            y11 = 1 / R * (1 - s[0][0]) / (1 + s[0][0])
-            C1 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y11).imag)
-            # formula taken from https://en.wikipedia.org/wiki/Admittance_parameters#Two_port
             delta = (1 + s[0][0]) * (1 + s[1][1]) - s[0][1] * s[1][0]
+            y11 = 1 / R * ((1 - s[0][0]) * (1 + s[1][1]) + s[0][1] * s[1][0]) / delta
+            y22 = 1 / R * ((1 - s[1][1]) * (1 + s[0][0]) + s[0][1] * s[1][0]) / delta
+            C1 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y11).imag)
+            C2 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y22).imag)
+            # formula taken from https://en.wikipedia.org/wiki/Admittance_parameters#Two_port
             y21 = -2 * s[1][0] / delta * 1 / R
             C12 = 1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y21).imag)
 
         print("fork_y_span = ", design.fork_y_span_list[res_idx] / 1e3)
         print("C1 = ", C1)
         print("C12 = ", C12)
+        print("C2 = ", C2)
         ### CALCULATE C_QR CAPACITANCE SECTION START ###
 
         ### SAVING REUSLTS SECTION START ###
@@ -2306,7 +2315,7 @@ def simulate_Cqr(resolution=(4e3,4e3)):
             os.path.join(PROJECT_DIR, f"Cqr_{res_idx}_{dl}_um.gds")
         )
         output_filepath = os.path.join(PROJECT_DIR,
-                                       "Xmon_resonator_Cqr_results.csv")
+                                       save_fname)
         if os.path.exists(output_filepath):
             # append data to file
             with open(output_filepath, "a", newline='') as csv_file:
@@ -2330,8 +2339,8 @@ def simulate_Cqr(resolution=(4e3,4e3)):
 
 def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
     resolution_dx, resolution_dy = resolution
-    # x_distance_dx_list = np.linspace(-20e3, 20e3, 11)
-    x_distance_dx_list = [0]
+    x_distance_dx_list = [-5e3, 0, 5e3]
+    # x_distance_dx_list = [0]
     for x_distance in x_distance_dx_list:
         ''' DRAWING SECTION START '''
         design = Design8Q("testScript")
@@ -2459,16 +2468,18 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
                                       float(data_row[1 + 2 * (i * 2 + j) + 1]))
             import math
 
-            y11 = 1 / R * (1 - s[0][0]) / (1 + s[0][0])
-            C1 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y11).imag)
-            # formula taken from
-            # https://en.wikipedia.org/wiki/Admittance_parameters#Two_port
             delta = (1 + s[0][0]) * (1 + s[1][1]) - s[0][1] * s[1][0]
+            y11 = 1 / R * ((1 - s[0][0]) * (1 + s[1][1]) + s[0][1] * s[1][0]) / delta
+            y22 = 1 / R * ((1 - s[1][1]) * (1 + s[0][0]) + s[0][1] * s[1][0]) / delta
+            C1 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y11).imag)
+            C2 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y22).imag)
+            # formula taken from https://en.wikipedia.org/wiki/Admittance_parameters#Two_port
             y21 = -2 * s[1][0] / delta * 1 / R
             C12 = 1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y21).imag)
 
         print("C_12 = ", C12)
         print("C1 = ", C1)
+        print("C2 = ", C2)
         print()
         '''CALCULATE CAPACITANCE SECTION END'''
 
@@ -2504,9 +2515,8 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
 # TODO: pattern copied
 def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
     resolution_dx, resolution_dy = resolution
-    dl_list = [-10e3, 0, 10e3]
-    dl_list = np.linspace(-20e3,20e3, 11)
-    dl_list = [0]
+    # dl_list = [-10e3, 0, 10e3]
+    dl_list = np.linspace(-20e3, 20e3, 11)
     for dl in dl_list:
         design = Design8Q("testScript")
         if md_idx == 0 or md_idx == 7:
@@ -2542,12 +2552,12 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
         for res_idx in range(min(q_idx, md_idx), max(q_idx, md_idx) + 1):
             crosses.append(design.xmons[res_idx])
             md_lines.append(design.cpw_md_lines[res_idx])
-            fl_lines.append(design.cpw_fl_lines[res_idx])
-            resonators.append(design.resonators[res_idx])
+            # fl_lines.append(design.cpw_fl_lines[res_idx])
+            # resonators.append(design.resonators[res_idx])
             crosses[-1].place(design.region_ph)
             md_lines[-1].place(design.region_ph)
-            fl_lines[-1].place(design.region_ph)
-            resonators[-1].place(design.region_ph)
+            # fl_lines[-1].place(design.region_ph)
+            # resonators[-1].place(design.region_ph)
 
         # target xmon and md line
         t_xmon = design.xmons[q_idx]
@@ -2611,16 +2621,8 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 
         # find point on cross edges centers that is the furthest from md
         # line port point
-        cross_port_pt = None
-        d = 0
-        for cr_edge_cpt in xmon_edges.each():
-            cr_edge_cpt = cr_edge_cpt.p1
-            new_d = cr_edge_cpt.distance(md_port_pt)
-            if new_d > d:
-                d = new_d
-                cross_port_pt = cr_edge_cpt
-
-        design.sonnet_ports = [md_port_pt, cross_port_pt]
+        cross_port_pt = t_xmon.cpw_r.end
+        design.sonnet_ports = [cross_port_pt, md_port_pt]
         ''' SONNET PORTS POSITIONS CALCULATION SECTION END '''
 
         design.crop(crop_box)
@@ -2687,16 +2689,18 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
                                                 1 + 2 * (i * 2 + j) + 1]))
             import math
 
-            y11 = 1 / R * (1 - s[0][0]) / (1 + s[0][0])
-            C1 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y11).imag)
-            # formula taken from
-            # https://en.wikipedia.org/wiki/Admittance_parameters#Two_port
             delta = (1 + s[0][0]) * (1 + s[1][1]) - s[0][1] * s[1][0]
+            y11 = 1 / R * ((1 - s[0][0]) * (1 + s[1][1]) + s[0][1] * s[1][0]) / delta
+            y22 = 1 / R * ((1 - s[1][1]) * (1 + s[0][0]) + s[0][1] * s[1][0]) / delta
+            C1 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y11).imag)
+            C2 = -1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y22).imag)
+            # formula taken from https://en.wikipedia.org/wiki/Admittance_parameters#Two_port
             y21 = -2 * s[1][0] / delta * 1 / R
             C12 = 1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y21).imag)
 
         print("C_12 = ", C12)
         print("C1 = ", C1)
+        print("C2 = ", C2)
         print()
         '''CALCULATE CAPACITANCE SECTION END'''
 
@@ -2709,7 +2713,7 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
                 writer = csv.writer(csv_file)
                 writer.writerow(
                     [q_idx, md_idx, *list(geometry_params.values()),
-                     C1, C12]
+                     C1, C12, C2]
                 )
         else:
             # create file, add header, append data
@@ -2718,11 +2722,11 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
                 # create header of the file
                 writer.writerow(
                     ["q_idx", "md_idx", *list(geometry_params.keys()),
-                     "C1, fF", "C12, fF"])
+                     "C1, fF", "C12, fF", "C2, fF"])
                 writer.writerow(
                     [q_idx, md_idx, *list(geometry_params.values()),
                      design.xmon_x_distance / 1e3,
-                     C1, C12]
+                     C1, C12, C2]
                 )
         '''SAVING REUSLTS SECTION END'''
 
@@ -2730,28 +2734,23 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
     design = Design8Q("testScript")
-    design.draw()
-    design.show()
+    # design.draw()
+    # design.show()
 
     ''' C_qr sim '''
-    # simulate_Cqr(resolution=(2e3, 2e3))
+    simulate_Cqr(resolution=(2e3, 2e3), mode="Cq")
+    # simulate_Cqr(resolution=(2e3, 2e3), mode="Cqr")
 
     ''' Simulation of C_{q1,q2} in fF '''
-    # simulate_Cqq(3, 4, resolution=(2e3, 2e3))
+    # simulate_Cqq(2, 3, resolution=(2e3, 2e3))
+
+    ''' MD line C_qd for md1,..., md6 '''
+    # for md_idx in [1]:
+    #     for q_idx in range(2):
+    #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(2e3, 2e3))
 
     ''' Resonators Q and f sim'''
     # simulate_resonators_f_and_Q()
 
     ''' Resonators Q and f when placed together'''
     # simulate_resonators_f_and_Q_together()
-
-    ''' C_qr sim '''
-    # simulate_Cqr(resolution=(4e3,4e3))
-
-    ''' MD line C_qd for md0 and md 7 '''
-    # simulate_md_Cg(md_idx=1, q_idx=1, resolution=(2e3, 2e3))
-
-    ''' MD line C_qd for md1,..., md6 '''
-    # for q_idx in range(2):
-    #     for md_idx in range(2):
-    #         simulate_md_Cg(q_idx=q_idx, md_idx=md_idx, resolution=(1e3, 1e3))
