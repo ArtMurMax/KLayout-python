@@ -318,10 +318,12 @@ class Design8Q(ChipDesign):
         # shift from middle of cross bottom finder
         # where md line should end
         # for qubits 0-3
-        self.md_line_end_shift = DVector(-80e3, -140e3)
+        self.md_line_end_shift_x = -80e3
+        self.md_line_end_shift_y = -129559
+        self.md_line_end_shift = DVector(self.md_line_end_shift_x, self.md_line_end_shift_y)
         # distance from end of md control line (metal)
         # to cross (metal) for qubits 0 and 7
-        self.md07_x_dist = 90e3
+        self.md07_x_dist = 28686
 
         # length of the smoothing part between normal thick and end-thin cpw for md line
         self.md_line_cpw12_smoothhing = 10e3
@@ -2508,14 +2510,15 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
 # TODO: pattern copied
 def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
     resolution_dx, resolution_dy = resolution
-    # dl_list = np.linspace(-20e3, 20e3, 3)
-    dl_list = [0]
+    dl_list = np.linspace(-20e3, 20e3, 5)
+    # dl_list = [0]
     for dl in dl_list:
         design = Design8Q("testScript")
         if md_idx == 0 or md_idx == 7:
             design.md07_x_dist += dl
         elif 0 < md_idx < 7:
             design.md_line_end_shift.y += dl
+            design.md_line_end_shift_y += dl
 
         design.draw_chip()
         design.create_resonator_objects()
@@ -2726,19 +2729,19 @@ if __name__ == "__main__":
     # design.show()
 
     ''' C_qr sim '''
-    # simulate_Cqr(resolution=(1e3, 1e3), mode="Cq")
-    # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr")
+    simulate_Cqr(resolution=(1e3, 1e3), mode="Cq")
+    simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr")
 
     ''' Simulation of C_{q1,q2} in fF '''
-    # simulate_Cqq(2, 3, resolution=(1e3, 1e3))
+    simulate_Cqq(2, 3, resolution=(1e3, 1e3))
 
     ''' MD line C_qd for md1,..., md6 '''
     for md_idx in [0,1]:
         for q_idx in range(2):
-            simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(2e3, 2e3))
+            simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(1e3, 1e3))
 
     ''' Resonators Q and f sim'''
-    # simulate_resonators_f_and_Q(resolution=(2e3,2e3))
+    simulate_resonators_f_and_Q(resolution=(2e3,2e3))
 
     ''' Resonators Q and f when placed together'''
     # simulate_resonators_f_and_Q_together()
