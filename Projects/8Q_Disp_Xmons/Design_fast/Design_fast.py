@@ -202,6 +202,9 @@ class Design8Q(ChipDesign):
         self.ro_line_turn_radius: float = 100e3
         self.ro_line_dy: float = 1600e3
         self.cpwrl_ro_line1: DPathCPW = None
+        # primitive indexes of `self.cpwrl_ro_line1` that will be covered
+        # with airbridges in `draw_bridges`
+        self.cpwrl_ro_line1_idxs2bridgify: list[int] = []
         self.cpwrl_ro_line2: DPathCPW = None
         # primitive indexes of `self.cpwrl_ro_line2` that will be covered
         # with airbridges in `draw_bridges`
@@ -341,10 +344,12 @@ class Design8Q(ChipDesign):
         # shift from middle of cross bottom finder
         # where md line should end
         # for qubits 0-3
-        self.md_line_end_shift = DVector(-80e3, -140e3)
+        self.md_line_end_shift_x = -80e3
+        self.md_line_end_shift_y = -129559
+        self.md_line_end_shift = DVector(self.md_line_end_shift_x, self.md_line_end_shift_y)
         # distance from end of md control line (metal)
         # to cross (metal) for qubits 0 and 7
-        self.md07_x_dist = 90e3
+        self.md07_x_dist = 28686
 
         # length of the smoothing part between normal thick and end-thin cpw for md line
         self.md_line_cpw12_smoothhing = 10e3
@@ -438,14 +443,14 @@ class Design8Q(ChipDesign):
         # # v.0.3.0.8 p.12 - ensure that contact pads has no holes
         for contact_pad in self.contact_pads:
             contact_pad.place(self.region_ph)
-        # self.draw_cut_marks()
-        # self.extend_photo_overetching()
-        # self.inverse_destination(self.region_ph)
+        self.draw_cut_marks()
+        self.extend_photo_overetching()
+        self.inverse_destination(self.region_ph)
         # convert to gds acceptable polygons (without inner holes)
-        # self.resolve_holes()
+        self.resolve_holes()
         # convert to litograph readable format. Litograph can't handle
         # polygons with more than 200 vertices.
-        # self.split_polygons_in_layers(max_pts=180)
+        self.split_polygons_in_layers(max_pts=180)
 
     def draw_for_res_f_and_Q_sim(self, res_idxs2Draw):
         """
@@ -1721,7 +1726,7 @@ class Design8Q(ChipDesign):
         )
         filled_reg = fill_holes(reg_to_fill, d=40e3, width=15e3,
                                 height=15e3)
-        
+
         self.region_ph = filled_reg + other_polys_reg
 
     def extend_photo_overetching(self):
@@ -2572,6 +2577,7 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
             design.md07_x_dist += dl
         elif 0 < md_idx < 7:
             design.md_line_end_shift.y += dl
+            design.md_line_end_shift_y += dl
 
         design.draw_chip()
         design.create_resonator_objects()
@@ -2791,7 +2797,7 @@ if __name__ == "__main__":
     ''' MD line C_qd for md1,..., md6 '''
     # for md_idx in [0,1]:
     #     for q_idx in range(2):
-    #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(2e3, 2e3))
+    #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(1e3, 1e3))
 
     ''' Resonators Q and f sim'''
     # simulate_resonators_f_and_Q(resolution=(2e3,2e3))
