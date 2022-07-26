@@ -106,7 +106,7 @@ class CPW(ElementBase):
     def length(self):
         return self.dr.abs()
 
-    def middle_pt(self):
+    def center(self):
         return (self.end + self.start)/2
 
 

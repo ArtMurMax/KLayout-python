@@ -56,11 +56,11 @@ PROJECT_DIR = os.path.dirname(__file__)
 
 class TestStructurePadsSquare(ComplexBase):
     def __init__(self, center, trans_in=None, square_a=200e3,
-                 gnd_gap=20e3, squares_gap=20e3):
+                 gnd_gap=20e3, pads_gap=20e3):
         self.center = center
         self.rectangle_a = square_a
         self.gnd_gap = gnd_gap
-        self.rectangles_gap = squares_gap
+        self.pads_gap = pads_gap
 
         self.empty_rectangle: Rectangle = None
         self.top_rec: Rectangle = None
@@ -73,7 +73,7 @@ class TestStructurePadsSquare(ComplexBase):
         ## empty rectangle ##
         empty_width = self.rectangle_a + 2 * self.gnd_gap
         empty_height = 2 * self.rectangle_a + 2 * self.gnd_gap + \
-                       self.rectangles_gap
+                       self.pads_gap
         # bottom-left point of rectangle
         bl_point = center - DPoint(empty_width / 2, empty_height / 2)
         self.empty_rectangle = Rectangle(
@@ -85,7 +85,7 @@ class TestStructurePadsSquare(ComplexBase):
         ## top rectangle ##
         # bottom-left point of rectangle
         bl_point = center + DPoint(-self.rectangle_a / 2,
-                                   self.rectangles_gap / 2)
+                                   self.pads_gap / 2)
         self.top_rec = Rectangle(
             bl_point, self.rectangle_a, self.rectangle_a
         )
@@ -95,7 +95,7 @@ class TestStructurePadsSquare(ComplexBase):
         # bottom-left point of rectangle
         bl_point = center + DPoint(
             -self.rectangle_a / 2,
-            - self.rectangles_gap / 2 - self.rectangle_a
+            - self.pads_gap / 2 - self.rectangle_a
         )
         self.bot_rec = Rectangle(
             bl_point, self.rectangle_a, self.rectangle_a
@@ -113,11 +113,11 @@ SQUID_PARS = AsymSquidParams(
     squid_dx=14.2e3,
     squid_dy=10e3,
     TC_dx=2.5e3 * np.sqrt(2) + 1e3,
-    TC_dy=4e3,
+    TC_dy=5e3*np.sqrt(2)/2 + 1e3,
     TCW_dy=6e3,
     TCW_dx=0.5e3,
     BCW_dy=0e3,
-    BC_dy=4e3,
+    BC_dy=5e3*np.sqrt(2)/2 + 1e3,
     BC_dx=2.5e3 * np.sqrt(2) + 1e3
 )
 
@@ -189,7 +189,7 @@ class Design8Q(ChipDesign):
         # C11 = 107
         self.cross_len_x = 270e3
         self.cross_width_x = 45e3  # from C11 sim
-        self.cross_gnd_gap_x_list = [60e3] * self.NQUBITS
+        self.cross_gnd_gap_x_list = np.array([60e3] * self.NQUBITS)
         self.cross_gnd_gap_face_x = 35e3
         self.cross_len_y = 180e3
         self.cross_width_y = 45e3  # from C11 sim
@@ -267,8 +267,34 @@ class Design8Q(ChipDesign):
         # squids
         self.squids: List[AsymSquid] = []
         self.test_squids: List[AsymSquid] = []
+
+        ''' SQUID POSITIONING AND PARAMETERS SECTION STARAT '''
         # vertical shift of every squid local origin coordinates
-        self.squid_vertical_shift = 2e3  # 2e3
+        # this line puts squid center on the
+        # "outer capacitor plate's edge" of the Tmon shunting capacitance.
+        self.squid_vertical_shifts_list = \
+            -np.array(self.cross_gnd_gap_x_list/2)
+        _shift_into_substrate = 1.5e3
+        # next step is to make additional shift such that top of the
+        # BC polygon is located at the former squid center position with
+        # additional 1.5 um shift in direction of substrate
+        _shift_to_BC_center = SQUID_PARS.shadow_gap/2 + \
+                             SQUID_PARS.SQLBT_dy + SQUID_PARS.SQB_dy + \
+                             SQUID_PARS.BCW_dy + _shift_into_substrate
+        self.squid_vertical_shifts_list += _shift_to_BC_center
+        # self.squid_vertical_shifts_list[4:] -= _shift_to_BC_center
+
+        # now make `SQUID_PARS.TCW.dy` such that bottom of TC
+        # sticks out into subtrate by 1.5 um
+        SQUID_PARS.TCW_dy = self.cross_gnd_gap_x_list[0] - \
+                            (_shift_into_substrate +
+                             SQUID_PARS.BCW_dy + SQUID_PARS.SQLBT_dy +
+                             SQUID_PARS.shadow_gap +
+                             SQUID_PARS.SQLTJJ_dy +
+                             SQUID_PARS.SQLTT_dy + SQUID_PARS.SQT_dy
+                             + _shift_into_substrate)
+        ''' SQUID POSITIONING AND PARAMETERS SECTION END '''
+
         # minimal distance between squid loop and photo layer
         self.squid_ph_clearance = 1.5e3
 
@@ -363,7 +389,7 @@ class Design8Q(ChipDesign):
         self.l_scale = max(3 * self.ro_Z.b, self.ro_line_turn_radius)
 
         # test structures
-        self.test_squids_pads: TestStructurePadsSquare = []
+        self.test_squids_pads: List[TestStructurePadsSquare] = []
         ### ADDITIONAL VARIABLES SECTION END ###
 
     def draw(self, design_parameters=None):
@@ -402,27 +428,27 @@ class Design8Q(ChipDesign):
         self.draw_flux_control_lines()
         # self.draw_coupling_res()
 
-        # self.draw_test_structures()
-        # self.draw_express_test_structures_pads()
+        self.draw_test_structures()
+        self.draw_express_test_structures_pads()
         self.draw_bandages()
         self.draw_recess()
-        # self.region_el.merge()
-        # self.draw_el_protection()
+        self.region_el.merge()
+        self.draw_el_protection()
         # #
-        # self.draw_photo_el_marks()
-        # self.draw_bridges()
-        # self.draw_pinning_holes()
+        self.draw_photo_el_marks()
+        self.draw_bridges()
+        self.draw_pinning_holes()
         # # v.0.3.0.8 p.12 - ensure that contact pads has no holes
-        # for contact_pad in self.contact_pads:
-        #     contact_pad.place(self.region_ph)
-        # self.draw_cut_marks()
-        # self.extend_photo_overetching()
-        # self.inverse_destination(self.region_ph)
-        # # convert to gds acceptable polygons (without inner holes)
-        # self.resolve_holes()
-        # # convert to litograph readable format. Litograph can't handle
-        # # polygons with more than 200 vertices.
-        # self.split_polygons_in_layers(max_pts=180)
+        for contact_pad in self.contact_pads:
+            contact_pad.place(self.region_ph)
+        self.draw_cut_marks()
+        self.extend_photo_overetching()
+        self.inverse_destination(self.region_ph)
+        # convert to gds acceptable polygons (without inner holes)
+        self.resolve_holes()
+        # convert to litograph readable format. Litograph can't handle
+        # polygons with more than 200 vertices.
+        self.split_polygons_in_layers(max_pts=180)
 
     def draw_for_res_f_and_Q_sim(self, res_idxs2Draw):
         """
@@ -820,16 +846,18 @@ class Design8Q(ChipDesign):
 
         for xmon_idx, xmon in enumerate(self.xmons):
             if xmon_idx < 4:  # 1st group
-                squid_center = xmon.cpw_bempt.middle_pt() + \
-                               DVector(0, -self.squid_vertical_shift)
+                squid_center = xmon.cpw_bempt.center() + \
+                               DVector(0, self.squid_vertical_shifts_list[xmon_idx])
                 squid = AsymSquid(
                     squid_center, pars_local
                 )
                 self.squids.append(squid)
                 squid.place(self.region_el)
             elif xmon_idx >= 4:  # 2nd group
-                squid_center = xmon.cpw_bempt.middle_pt() + \
-                               DVector(0, self.squid_vertical_shift)
+                squid_center = xmon.cpw_bempt.center() + \
+                               DVector(0,
+                                       -self.squid_vertical_shifts_list[
+                                           xmon_idx])
                 squid = AsymSquid(
                     squid_center, pars_local,
                     trans_in=Trans.R180
@@ -1249,9 +1277,8 @@ class Design8Q(ChipDesign):
         self.cpw_empty2.place(self.region_ph)
 
     def draw_test_structures(self):
-        # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
-        struct_centers = [DPoint(2.4e6, 14.0e6), DPoint(10.7e6, 14.0e6),
-                          DPoint(8.2e6, 14.9e6)]
+        struct_centers = [DPoint(4e6, 9.0e6), DPoint(12.0e6, 9.0e6),
+                          DPoint(12.0e6, 7.1e6)]
         for struct_center in struct_centers:
             ## JJ test structures ##
             dx = SQUID_PARS.SQB_dx / 2 - SQUID_PARS.SQLBT_dx / 2
@@ -1261,7 +1288,8 @@ class Design8Q(ChipDesign):
                 struct_center,
                 # gnd gap in test structure is now equal to
                 # the same of first xmon cross, where polygon is placed
-                squares_gap=self.xmons[0].sideY_face_gnd_gap
+                gnd_gap=20e3,
+                pads_gap=self.xmons[0].sideX_gnd_gap
             )
             self.test_squids_pads.append(test_struct1)
             test_struct1.place(self.region_ph)
@@ -1280,15 +1308,19 @@ class Design8Q(ChipDesign):
 
             squid_center = test_struct1.center
             test_jj = AsymSquid(
-                squid_center + DVector(0, self.squid_vertical_shift),
+                squid_center + DVector(0,
+                                       self.squid_vertical_shifts_list[0]),
                 pars_local
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
 
-            # test structure with low critical current
+            # test structure with low critical current (#2)
             test_struct2 = TestStructurePadsSquare(
-                struct_center + DPoint(0.3e6, 0))
+                struct_center + DPoint(0.3e6, 0),
+                gnd_gap=20e3,
+                pads_gap=self.xmons[0].sideX_gnd_gap
+            )
             self.test_squids_pads.append(test_struct2)
             test_struct2.place(self.region_ph)
 
@@ -1306,13 +1338,14 @@ class Design8Q(ChipDesign):
 
             squid_center = test_struct2.center
             test_jj = AsymSquid(
-                squid_center + DVector(0, self.squid_vertical_shift),
+                squid_center + DVector(0,
+                                       self.squid_vertical_shifts_list[0]),
                 pars_local
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
 
-            # test structure for bridge DC contact
+            # test structure for bridge DC contact (#3)
             test_struct3 = TestStructurePadsSquare(
                 struct_center + DPoint(0.6e6, 0))
             test_struct3.place(self.region_ph)
@@ -1337,9 +1370,9 @@ class Design8Q(ChipDesign):
 
         # bandages test structures
         test_dc_el2_centers = [
-            DPoint(2.5e6, 11.5e6),
-            DPoint(12.1e6, 13.6e6),
-            DPoint(5.7e6, 14.9e6)
+            DPoint(3.3e6, 9.0e6),
+            DPoint(13.3e6, 9.0e6),
+            DPoint(13.3e6, 7.1e6)
         ]
         for struct_center in test_dc_el2_centers:
             test_struct1 = TestStructurePadsSquare(struct_center)
@@ -1354,22 +1387,23 @@ class Design8Q(ChipDesign):
             self.region_ph -= text_reg
 
             rec_width = 10e3
-            rec_height = test_struct1.rectangles_gap + 2 * rec_width
+            rec_height = test_struct1.pads_gap + 2 * rec_width
             p1 = struct_center - DVector(rec_width / 2, rec_height / 2)
             dc_rec = Rectangle(p1, rec_width, rec_height)
             dc_rec.place(self.dc_bandage_reg)
 
     def draw_express_test_structures_pads(self):
         for squid, test_pad in zip(
-                self.test_squids[:-2],
-                self.test_squids_pads[:-2]
+                self.test_squids,
+                self.test_squids_pads
         ):
+            thick_pad_dx = 2 * test_pad.gnd_gap
             if squid.squid_params.SQRBJJ_dy == 0:
-                # only left JJ is present
-
-                # test pad expanded to the left
-                p1 = DPoint(squid.SQRTT.start.x, test_pad.center.y)
-                p2 = p1 + DVector(10e3, 0)
+                ## only left JJ is present ##
+                # test pad expanded to the right
+                p1 = squid.TCW.center()
+                thin_pad_dx = test_pad.top_rec.p2.x - p1.x - thick_pad_dx
+                p2 = p1 + DVector(thin_pad_dx, 0)
                 etc1 = CPW(
                     start=p1, end=p2,
                     width=1e3,
@@ -1377,17 +1411,19 @@ class Design8Q(ChipDesign):
                 )
                 etc1.place(self.region_el)
 
-                p3 = DPoint(test_pad.top_rec.p2.x, p2.y)
+                p3 = DPoint(p2.x, test_pad.center.y)
+                p4 = DPoint(test_pad.top_rec.p2.x, p3.y)
                 etc2 = CPW(
-                    start=p2, end=p3,
-                    width=test_pad.gnd_gap - 4e3,
+                    start=p3, end=p4,
+                    width=test_pad.pads_gap - 4e3,
                     gap=0
                 )
                 etc2.place(self.region_el)
 
                 # test pad expanded to the left
-                p1 = squid.BCW0.end
-                p2 = p1 - DVector(10e3, 0)
+                p1 = squid.SQLBT.center()
+                thin_pad_dx = p1.x - test_pad.top_rec.p1.x - thick_pad_dx
+                p2 = p1 - DVector(thin_pad_dx, 0)
                 etc3 = CPW(
                     start=p1, end=p2,
                     width=1e3,  # TODO: hardcoded value
@@ -1399,16 +1435,17 @@ class Design8Q(ChipDesign):
                 p4 = DPoint(test_pad.top_rec.p1.x, test_pad.center.y)
                 etc4 = CPW(
                     start=p3, end=p4,
-                    width=test_pad.gnd_gap - 4e3,
+                    width=test_pad.pads_gap - 4e3,
                     gap=0
                 )
                 etc4.place(self.region_el)
 
             elif squid.squid_params.SQLBJJ_dy == 0:
-                # only right leg is present
-                p1 = DPoint(squid.SQLTT.start.x, test_pad.center.y)
-                p2 = p1 + DVector(-10e3, 0)
+                ## only right leg is present ##
                 # test pad expanded to the left
+                p1 = squid.TCW.center()
+                thin_pad_dx = p1.x - test_pad.top_rec.p1.x - thick_pad_dx
+                p2 = p1 + DVector(-thin_pad_dx, 0)
                 etc1 = CPW(
                     start=p1, end=p2,
                     width=1e3,
@@ -1416,17 +1453,19 @@ class Design8Q(ChipDesign):
                 )
                 etc1.place(self.region_el)
 
-                p3 = DPoint(test_pad.top_rec.p1.x, p2.y)
+                p3 = DPoint(p2.x, test_pad.center.y)
+                p4 = DPoint(test_pad.top_rec.p1.x, p3.y)
                 etc2 = CPW(
-                    start=p2, end=p3,
-                    width=test_pad.gnd_gap - 4e3,
+                    start=p3, end=p4,
+                    width=test_pad.pads_gap - 4e3,
                     gap=0
                 )
                 etc2.place(self.region_el)
 
                 # test pad expanded to the right
-                p1 = squid.BCW0.end
-                p2 = p1 + DVector(10e3, 0)
+                p1 = squid.SQRBT.center()
+                thin_pad_dx = test_pad.top_rec.p2.x - p1.x - thick_pad_dx
+                p2 = p1 + DVector(thin_pad_dx, 0)
                 etc3 = CPW(
                     start=p1, end=p2,
                     width=1e3,  # TODO: hardcoded value
@@ -1438,7 +1477,7 @@ class Design8Q(ChipDesign):
                 p4 = DPoint(test_pad.top_rec.p2.x, test_pad.center.y)
                 etc4 = CPW(
                     start=p3, end=p4,
-                    width=test_pad.gnd_gap - 4e3,
+                    width=test_pad.pads_gap - 4e3,
                     gap=0
                 )
                 etc4.place(self.region_el)
@@ -1460,18 +1499,24 @@ class Design8Q(ChipDesign):
             # `self.dc_cont_clearance` represents minimum distance
             # from dc contact pad`s perimeter to the perimeter of the
             # e-beam and photo-deposed metal perimeter.
-            self.bandages_regs_list += self.draw_squid_bandage(squid)
+            self.bandages_regs_list += self.draw_squid_bandage(
+                squid,
+                shift2sq_center=0
+            )
             # collect all bottom contacts
 
     def draw_squid_bandage(self, test_jj: AsymSquid = None,
-                           shift_to_center=0):
+                           shift2sq_center=0):
+        # squid direction from bottom to top
+        squid_BT_dv = test_jj.TC.start - test_jj.TC.end
+        squid_BT_dv_s = squid_BT_dv/squid_BT_dv.abs()  # normalized
+
         bandages_regs_list: List[Region] = []
 
-        center_dv = DVector(0, 0.25 * self.bandage_height)
         # top bandage
         top_bandage_reg = self._get_bandage_reg(
             center=test_jj.TC.start,
-            shift=-center_dv
+            shift=-shift2sq_center * squid_BT_dv_s
         )
         bandages_regs_list.append(top_bandage_reg)
         self.dc_bandage_reg += top_bandage_reg
@@ -1481,7 +1526,7 @@ class Design8Q(ChipDesign):
             BC = getattr(test_jj, "BC" + str(i))
             bot_bandage_reg = self._get_bandage_reg(
                 center=BC.end,
-                shift=center_dv
+                shift=shift2sq_center * squid_BT_dv_s
             )
             bandages_regs_list.append(bot_bandage_reg)
             self.dc_bandage_reg += bot_bandage_reg
@@ -1509,12 +1554,14 @@ class Design8Q(ChipDesign):
 
     def draw_recess(self):
         for squid in itertools.chain(self.squids, self.test_squids):
-            recess_reg = squid.TC.metal_region.dup().size(-1.5e3)
+            # top recess
+            recess_reg = squid.TC.metal_region.dup().size(-1e3)
             self.region_ph -= recess_reg
 
+            # bottom recess(es)
             for i, _ in enumerate(squid.squid_params.bot_wire_x):
                 BC = getattr(squid, "BC" + str(i))
-                recess_reg = BC.metal_region.dup().size(-1.5e3)
+                recess_reg = BC.metal_region.dup().size(-1e3)
                 self.region_ph -= recess_reg
 
     def draw_el_protection(self):
@@ -1533,10 +1580,10 @@ class Design8Q(ChipDesign):
 
     def draw_photo_el_marks(self):
         marks_centers = [
-            DPoint(1.5e6, 14.5e6), DPoint(7.9e6, 8.4e6), DPoint(14.3e6,
-                                                                14.5e6),
-            DPoint(2.5e6, 3.3e6), DPoint(12.9e6, 10.5e6), DPoint(14e6,
-                                                                 3.3e6)
+            DPoint(2.5e6, 11.5e6), DPoint(7.5e6, 11.5e6),
+            DPoint(14.5e6, 11.5e6),
+            DPoint(2.5e6, 5.0e6), DPoint(12.5e6, 5.5e6),
+            DPoint(9.5e6, 5.0e6)
         ]
         for mark_center in marks_centers:
             self.marks.append(
@@ -2722,8 +2769,8 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
     design = Design8Q("testScript")
-    # design.draw()
-    # design.show()
+    design.draw()
+    design.show()
 
     ''' C_qr sim '''
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cq")
@@ -2733,9 +2780,9 @@ if __name__ == "__main__":
     # simulate_Cqq(2, 3, resolution=(1e3, 1e3))
 
     ''' MD line C_qd for md1,..., md6 '''
-    for md_idx in [0,1]:
-        for q_idx in range(2):
-            simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(2e3, 2e3))
+    # for md_idx in [0,1]:
+    #     for q_idx in range(2):
+    #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(2e3, 2e3))
 
     ''' Resonators Q and f sim'''
     # simulate_resonators_f_and_Q(resolution=(2e3,2e3))
