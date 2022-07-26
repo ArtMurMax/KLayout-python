@@ -178,7 +178,7 @@ class Design8Q(ChipDesign):
         )
         # xmon parameters
         self.NQUBITS = 8
-        self.xmon_x_distance: float = 733e3  # from simulation of g_12
+        self.xmon_x_distance: float = 722e3  # from simulation of g_12
         # distance between open end (excluding fork) of resonator
         # and cross polygons
         self.xmon_res_d = 254e3
@@ -194,7 +194,7 @@ class Design8Q(ChipDesign):
         self.cross_len_y = 180e3
         self.cross_width_y = 45e3  # from C11 sim
         self.cross_gnd_gap_y_list = [
-            1e3 * x for x in [27.732, 39.212, 28.989, 39.477, 28.717, 39.252, 28.764, 39.636]
+            1e3 * x for x in [26.955, 48.462, 27.669, 49.494, 28.311, 53.563, 29.764, 55.887]
         ]
         self.cross_gnd_gap_face_y = 30e3
 
@@ -229,8 +229,7 @@ class Design8Q(ChipDesign):
         # horizontal coil line length
         self.L1_list = [
             1e3 * x for x in
-            [114.5219, 95.1897, 99.0318, 83.7159, 88.8686, 70.3649,
-             74.0874, 59.6982]
+            [114.5219, 95.1897, 99.0318, 83.7159, 88.8686, 70.3649,74.0874, 59.6982]
         ]
         # curvature radius of resonators CPW turns
         self.res_r = 60e3
@@ -254,7 +253,7 @@ class Design8Q(ChipDesign):
         # resonator-fork parameters
         # from simulation of g_qr
         self.fork_y_span_list = [
-            x * 1e3 for x in [7.52, 72.95, 15.5, 75.29, 25.38, 80.29, 31.45, 84.41]
+            x * 1e3 for x in [33.18, 91.43, 39.36, 95.31, 44.34, 96.58, 49.92, 99.59]
         ]
 
         # bandages
@@ -319,7 +318,7 @@ class Design8Q(ChipDesign):
         # shift from middle of cross bottom finder
         # where md line should end
         # for qubits 0-3
-        self.md_line_end_shift = DVector(-80e3, -120e3)
+        self.md_line_end_shift = DVector(-80e3, -140e3)
         # distance from end of md control line (metal)
         # to cross (metal) for qubits 0 and 7
         self.md07_x_dist = 90e3
@@ -1723,7 +1722,9 @@ class Design8Q(ChipDesign):
         return res_length
 
 
-def simulate_resonators_f_and_Q():
+def simulate_resonators_f_and_Q(resolution=(4e3,4e3)):
+    resolution_dx = resolution[0]
+    resolution_dy = resolution[1]
     freqs_span_corase = 1  # GHz
     corase_only = False
     freqs_span_fine = 0.050
@@ -1777,14 +1778,6 @@ def simulate_resonators_f_and_Q():
         arr2 = np.array([box_extension, design.Z0.gap, design.Z0.width,
                          design.Z_res.width, design.Z_res.gap])
         arr = np.hstack((arr1, arr2))
-        resolution_dy = np.gcd.reduce(arr.astype(int))
-        # print(arr)
-        # print(resolution_dy)
-        # resolution_dy = 2e3
-        resolution_dx = 2e3
-        # print("resolution: ", resolution_dx,"x",resolution_dy, " um")
-
-        # cut part of the ground plane due to rectangular mesh in Sonnet
         crop_box.bottom = crop_box.bottom - int(
             crop_box.height() % resolution_dy)
         # print(crop_box.top, " ", crop_box.bottom)
@@ -2167,8 +2160,8 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cqr"):
     #  2. make 3d geometry optimization inside kLayout for simultaneous finding of C_qr, C_q and C_qq
     resolution_dx = resolution[0]
     resolution_dy = resolution[1]
-    dl_list = np.linspace(-20e3, 20e3, 6)
-    dl_list = [0e3]
+    dl_list = np.linspace(-10e3, 10e3, 3)
+    # dl_list = [0e3]
     from itertools import product
 
     for dl, res_idx in list(
@@ -2515,8 +2508,8 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
 # TODO: pattern copied
 def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
     resolution_dx, resolution_dy = resolution
-    # dl_list = [-10e3, 0, 10e3]
-    dl_list = np.linspace(-20e3, 20e3, 11)
+    # dl_list = np.linspace(-20e3, 20e3, 3)
+    dl_list = [0]
     for dl in dl_list:
         design = Design8Q("testScript")
         if md_idx == 0 or md_idx == 7:
@@ -2531,15 +2524,6 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
         design.draw_josephson_loops()
         design.draw_microwave_drvie_lines()
         design.draw_flux_control_lines()
-        design.draw_recess()
-        design.show()
-
-        design.layout.write(
-            os.path.join(
-                PROJECT_DIR,
-                f"C_md_{md_idx}_q_{q_idx}.gds"
-            )
-        )
 
         design.layout.clear_layer(design.layer_ph)
         design.region_ph.clear()
@@ -2597,7 +2581,6 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
             )
         )
         crop_box_reg = Region(crop_box)
-
         ''' CROP BOX CALCULATION SECTION END '''
 
         ''' SONNET PORTS POSITIONS CALCULATION SECTION START '''
@@ -2636,6 +2619,12 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 
         design.show()
         design.lv.zoom_fit()
+        design.layout.write(
+            os.path.join(
+                PROJECT_DIR,
+                f"C_md_{md_idx}_q_{q_idx}_{dl}.gds"
+            )
+        )
         '''DRAWING SECTION END'''
 
         '''SIMULATION SECTION START'''
@@ -2725,7 +2714,6 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
                      "C1, fF", "C12, fF", "C2, fF"])
                 writer.writerow(
                     [q_idx, md_idx, *list(geometry_params.values()),
-                     design.xmon_x_distance / 1e3,
                      C1, C12, C2]
                 )
         '''SAVING REUSLTS SECTION END'''
@@ -2738,19 +2726,19 @@ if __name__ == "__main__":
     # design.show()
 
     ''' C_qr sim '''
-    simulate_Cqr(resolution=(2e3, 2e3), mode="Cq")
-    # simulate_Cqr(resolution=(2e3, 2e3), mode="Cqr")
+    # simulate_Cqr(resolution=(1e3, 1e3), mode="Cq")
+    # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr")
 
     ''' Simulation of C_{q1,q2} in fF '''
-    # simulate_Cqq(2, 3, resolution=(2e3, 2e3))
+    # simulate_Cqq(2, 3, resolution=(1e3, 1e3))
 
     ''' MD line C_qd for md1,..., md6 '''
-    # for md_idx in [1]:
-    #     for q_idx in range(2):
-    #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(2e3, 2e3))
+    for md_idx in [0,1]:
+        for q_idx in range(2):
+            simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(2e3, 2e3))
 
     ''' Resonators Q and f sim'''
-    # simulate_resonators_f_and_Q()
+    # simulate_resonators_f_and_Q(resolution=(2e3,2e3))
 
     ''' Resonators Q and f when placed together'''
     # simulate_resonators_f_and_Q_together()
