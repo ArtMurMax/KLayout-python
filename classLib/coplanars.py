@@ -932,8 +932,8 @@ class DPathCPW(ComplexBase):
         )
 
     def _refresh_named_connections(self):
-        self.start = list(self.primitives.values())[0].start
-        self.end = list(self.primitives.values())[-1].end
+        self.start = self.connections[0]
+        self.end = self.connections[1]
 
     def _refresh_named_angles(self):
         self.alpha_start = self.angle_connections[0]

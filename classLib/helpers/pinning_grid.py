@@ -40,21 +40,23 @@ def fill_holes(obj, dx=40e3, dy=40e3, width=32e3, height=32e3, d=150e3):
 
     Returns
     -------
-    None
+    Region
     """
     def fill_poly(poly):
         bbox = poly.bbox()
         poly_reg = Region(poly)
         t_reg = Region()
 
-        # Draw boundary around holes in the polygon
+        # Draw boundary region of width `2*d` along the
+        # inner holes of the polygon
         for hole_i in range(0, poly.holes()):
             points = [p for p in poly.each_point_hole(hole_i)]
             points.append(points[0])
             boundary = Path(points, 2 * d)
             poly_reg -= Region(boundary)
 
-        # Draw boundary around the outer edge of the polygon
+        # Draw boundary region of width `2*d` along the
+        # outer edge of the polygon
         points = [p for p in poly.each_point_hull()]
         points.append(points[0])
         boundary = Path(points, 2 * d)
@@ -70,13 +72,16 @@ def fill_holes(obj, dx=40e3, dy=40e3, width=32e3, height=32e3, d=150e3):
                 t_reg.insert(box)
             y += dy
 
+        print(poly_reg.bbox().left)
+        print(poly_reg.bbox().bottom)
+        print(poly_reg.bbox().right)
+        print(poly_reg.bbox().top)
         # Select only inner holes
         holes_inside = t_reg.select_inside(poly_reg)
         for box in holes_inside.each():
             poly.insert_hole(list(box.each_point_hull()))
 
         return poly
-        
     if isinstance(obj, pya.ObjectInstPath):
         print("obj inst")
         if (obj.is_cell_inst()):
@@ -85,12 +90,15 @@ def fill_holes(obj, dx=40e3, dy=40e3, width=32e3, height=32e3, d=150e3):
         poly = fill_poly(poly)
         obj.shape.polygon = poly
     elif isinstance(obj, pya.Polygon):
+        # recursion base
         poly = obj
         return fill_poly(poly)
     elif isinstance(obj, Region):
+        print("fill holes: got region")
         reg = obj
         result_reg = Region()
-        for poly in reg:
+        for i, poly in enumerate(reg):
+            print(f"fill holes: filling poly {i}")
             result_reg.insert(fill_holes(poly, dx=dx, dy=dy, width=width,
                                          height=height, d=d))
         return result_reg

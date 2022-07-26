@@ -202,9 +202,6 @@ class Design8Q(ChipDesign):
         self.ro_line_turn_radius: float = 100e3
         self.ro_line_dy: float = 1600e3
         self.cpwrl_ro_line1: DPathCPW = None
-        # primitive indexes of `self.cpwrl_ro_line1` that will be covered
-        # with airbridges in `draw_bridges`
-        self.cpwrl_ro_line1_idxs2bridgify: list[int] = []
         self.cpwrl_ro_line2: DPathCPW = None
         # primitive indexes of `self.cpwrl_ro_line2` that will be covered
         # with airbridges in `draw_bridges`
@@ -441,14 +438,14 @@ class Design8Q(ChipDesign):
         # # v.0.3.0.8 p.12 - ensure that contact pads has no holes
         for contact_pad in self.contact_pads:
             contact_pad.place(self.region_ph)
-        self.draw_cut_marks()
-        self.extend_photo_overetching()
-        self.inverse_destination(self.region_ph)
+        # self.draw_cut_marks()
+        # self.extend_photo_overetching()
+        # self.inverse_destination(self.region_ph)
         # convert to gds acceptable polygons (without inner holes)
-        self.resolve_holes()
+        # self.resolve_holes()
         # convert to litograph readable format. Litograph can't handle
         # polygons with more than 200 vertices.
-        self.split_polygons_in_layers(max_pts=180)
+        # self.split_polygons_in_layers(max_pts=180)
 
     def draw_for_res_f_and_Q_sim(self, res_idxs2Draw):
         """
@@ -830,12 +827,12 @@ class Design8Q(ChipDesign):
                  -self.to_line_list[7]
              )
         p6 = p_last + DVector(-2 * self.l_scale, 0)
-        self.cpwrl_ro_line1 = DPathCPW(
+        self.cpwrl_ro_line2 = DPathCPW(
             points=[p1, p2, p3, p4, p5, p6, p_last],
             cpw_parameters=self.ro_Z,
             turn_radiuses=self.ro_line_turn_radius
         )
-        self.cpwrl_ro_line1.place(self.region_ph)
+        self.cpwrl_ro_line2.place(self.region_ph)
 
     def draw_josephson_loops(self):
         # place left squid
@@ -1647,6 +1644,10 @@ class Design8Q(ChipDesign):
         for i, cpw_fl in enumerate(self.cpw_fl_lines):
             dy_list = [30e3, 130e3]
             for dy in dy_list:
+                if i < 4:
+                    pass
+                elif i >= 4:
+                    dy = -dy
                 bridge_center1 = cpw_fl.end + DVector(0, -dy)
                 br = Bridge1(center=bridge_center1, trans_in=Trans.R90)
                 br.place(dest=self.region_bridges1,
@@ -1697,23 +1698,31 @@ class Design8Q(ChipDesign):
         # points that select polygons of interest if they were clicked at
         selection_pts = [
             Point(0.1e6, 0.1e6),
-            (self.contact_pads[-1].end + self.contact_pads[-2].end) / 2,
-            (self.contact_pads[-3].end + self.contact_pads[-4].end) / 2
+            Point(3.5e6, 11.2e6),
+            (self.cpwrl_ro_line2.start + self.cpwrl_ro_line2.end) / 2
         ]
 
         # creating region of small boxes (polygon selection requires
         # regions)
-        dv = DVector(10, 10)
-        selection_region = Region(
-            [pya.Box(pt, pt + dv) for pt in selection_pts]
+        dv = DVector(1e3, 1e3)
+        selection_regions = [
+            Region(pya.Box(pt, pt + dv)) for pt in selection_pts
+        ]
+        selection_region = Region()
+        for reg in selection_regions:
+            selection_region += reg
+
+        other_polys_reg = self.region_ph.dup().select_not_interacting(
+            selection_region
         )
-        tmp_ph = self.region_ph.dup()
-        other_regs = tmp_ph.select_not_interacting(selection_region)
-        reg_to_fill = self.region_ph.select_interacting(selection_region)
+
+        reg_to_fill = self.region_ph.dup().select_interacting(
+            selection_region
+        )
         filled_reg = fill_holes(reg_to_fill, d=40e3, width=15e3,
                                 height=15e3)
-
-        self.region_ph = filled_reg + other_regs
+        
+        self.region_ph = filled_reg + other_polys_reg
 
     def extend_photo_overetching(self):
         tmp_reg = Region()
