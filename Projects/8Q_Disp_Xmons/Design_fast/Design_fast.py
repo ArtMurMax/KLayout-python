@@ -461,6 +461,7 @@ class Design8Q(ChipDesign):
         self.inverse_destination(self.region_ph)
         # convert to gds acceptable polygons (without inner holes)
         self.draw_cut_marks()
+        self.region_ph.merge()
         self.resolve_holes()
         # convert to litograph readable format. Litograph can't handle
         # polygons with more than 200 vertices.
@@ -560,7 +561,7 @@ class Design8Q(ChipDesign):
             DVector(-2.5e3, 2.5e3)
         ]
         for point in pts:
-            CutMark(origin=point, inverse=True).place(self.region_ph)
+            CutMark(origin=point).place(self.region_ph)
 
     def create_resonator_objects(self):
         ### RESONATORS TAILS CALCULATIONS SECTION START ###
@@ -2917,6 +2918,7 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
+    FABRICATION.OVERETCHING = 0.0e3
     design = Design8Q("testScript")
     design.draw()
     design.show()
@@ -2924,7 +2926,16 @@ if __name__ == "__main__":
         design.layout.write(
             os.path.join(
                 PROJECT_DIR,
-                design.get_version() + ".gds"
+                design.get_version() + "overetching_0um" + ".gds"
+            )
+        )
+    )
+    FABRICATION.OVERETCHING = 0.5e3
+    design.layout.write(
+        design.layout.write(
+            os.path.join(
+                PROJECT_DIR,
+                design.get_version() + "overetching_0um5" + ".gds"
             )
         )
     )
