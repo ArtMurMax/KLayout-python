@@ -62,7 +62,7 @@ class ChipDesign:
         self.lv.select_cell(self.cell.cell_index(), 0)
         self.lv.add_missing_layers()
 
-        self.__version = "not implemented"
+        self.version = "not implemented"
 
         # additinal variables for convinience
         self.origin = DPoint(0, 0)
@@ -73,7 +73,7 @@ class ChipDesign:
         self.sonnet_ports: list[DPoint] = []
 
     def get_version(self):
-        return self.__version
+        return self.version
 
     # Call other methods drawing parts of the design from here
     def draw(self, design_params=None):

@@ -70,12 +70,12 @@ class CPW(ElementBase):
         alpha = atan2(self.dr.y, self.dr.x)
         self.angle_connections = [alpha, alpha]
         alpha_trans = ICplxTrans().from_dtrans(DCplxTrans(1, alpha * 180 / pi, False, self.start))
-        metal_poly = DSimplePolygon([DPoint(0, -self.width / 2),
+        metal_poly = DPolygon([DPoint(0, -self.width / 2),
                                      DPoint(self.dr.abs(), -self.width / 2),
                                      DPoint(self.dr.abs(), self.width / 2),
                                      DPoint(0, self.width / 2)])
         self.connection_edges = [3, 1]
-        self.metal_region.insert(pya.SimplePolygon(metal_poly))
+        self.metal_region.insert(pya.Polygon().from_dpoly(metal_poly))
         if (self.gap != 0):
             self.empty_region.insert(
                 pya.Box(
@@ -91,6 +91,8 @@ class CPW(ElementBase):
                     Point().from_dpoint(DPoint(self.dr.abs(), -self.width / 2))
                 )
             )
+        self.metal_region.size(1,0,0)
+        self.empty_region.size(1,0,0)
         self.metal_region.transform(alpha_trans)
         self.empty_region.transform(alpha_trans)
 
@@ -225,16 +227,19 @@ class CPW2CPW(ElementBase):
         self.angle_connections = [alpha, alpha]
         alpha_trans = DCplxTrans(1, alpha * 180 / pi, False, 0, 0)
 
-        m_poly = DSimplePolygon([DPoint(0, -self.Z0.width / 2), DPoint(self.dr.abs(), -self.Z1.width / 2),
+        m_poly = DPolygon([DPoint(0, -self.Z0.width / 2), DPoint(self.dr.abs(), -self.Z1.width / 2),
                                  DPoint(self.dr.abs(), self.Z1.width / 2), DPoint(0, self.Z0.width / 2)])
-        e_poly1 = DSimplePolygon([DPoint(0, -self.Z0.b / 2), DPoint(self.dr.abs(), -self.Z1.b / 2),
+        e_poly1 = DPolygon([DPoint(0, -self.Z0.b / 2), DPoint(self.dr.abs(), -self.Z1.b / 2),
                                   DPoint(self.dr.abs(), -self.Z1.width / 2), DPoint(0, -self.Z0.width / 2)])
-        e_poly2 = DSimplePolygon([DPoint(0, self.Z0.b / 2), DPoint(self.dr.abs(), self.Z1.b / 2),
+        e_poly2 = DPolygon([DPoint(0, self.Z0.b / 2), DPoint(self.dr.abs(), self.Z1.b / 2),
                                   DPoint(self.dr.abs(), self.Z1.width / 2), DPoint(0, self.Z0.width / 2)])
+        m_poly.size(1,0,0)
+        e_poly1.size(1,0,0)
+        e_poly2.size(1,0,0)
 
-        self.metal_region.insert(SimplePolygon.from_dpoly(m_poly))
-        self.empty_region.insert(SimplePolygon.from_dpoly(e_poly1))
-        self.empty_region.insert(SimplePolygon.from_dpoly(e_poly2))
+        self.metal_region.insert(Polygon.from_dpoly(m_poly))
+        self.empty_region.insert(Polygon.from_dpoly(e_poly1))
+        self.empty_region.insert(Polygon.from_dpoly(e_poly2))
 
         self.make_trans(alpha_trans)
 
@@ -838,7 +843,7 @@ class DPathCPW(ComplexBase):
 
                     cpw_arc = CPW2CPWArc(
                         origin=arc_center, r=turn_radius,
-                        start_angle=-np.pi / 2,
+                        start_angle=-np.pi / 2 - 1e-5,
                         end_angle=turn_angle - np.pi / 2,
                         cpw1_params=cpw1_params,
                         cpw2_params=cpw2_params,

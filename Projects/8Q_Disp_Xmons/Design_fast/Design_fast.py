@@ -128,7 +128,7 @@ VERT_ARR_SHIFT = DVector(-50e3, -150e3)
 class Design8Q(ChipDesign):
     def __init__(self, cell_name):
         super().__init__(cell_name)
-        self.__version = "8Q_0.0.0.1"
+        self.version = "8Q_0.0.0.1"
         # print(self.__version)
         dc_bandage_layer_i = pya.LayerInfo(3,
                                            0)  # for DC contact deposition
@@ -439,7 +439,6 @@ class Design8Q(ChipDesign):
 
         self.draw_microwave_drvie_lines()
         self.draw_flux_control_lines()
-        # self.draw_coupling_res()
 
         self.draw_test_structures()
         self.draw_express_test_structures_pads()
@@ -450,11 +449,11 @@ class Design8Q(ChipDesign):
 
         self.region_el.merge()
         self.draw_el_protection()
-        # #
+        #
         self.draw_photo_el_marks()
         self.draw_bridges()
         self.draw_pinning_holes()
-        # # v.0.3.0.8 p.12 - ensure that contact pads has no holes
+        # v.0.3.0.8 p.12 - ensure that contact pads has no holes
         for contact_pad in self.contact_pads:
             contact_pad.place(self.region_ph)
         self.extend_photo_overetching()
@@ -931,10 +930,12 @@ class Design8Q(ChipDesign):
         p_tr_start = p_end + \
                      DVector(-trans_len - self.md_line_cpw2_len, 0)
         p_tr_end = p_tr_start + DVector(trans_len, 0)
+        p_end_empt = p_end + DVector(self.z_md2.b/2, 0)
         self.cpwrl_md0 = DPathCPW(
-            points=[p_start, p_tr_start, p_tr_end, p_end],
+            points=[p_start, p_tr_start, p_tr_end, p_end, p_end_empt],
             cpw_parameters=[self.z_md1, CPWParameters(smoothing=True),
-                            self.z_md2],
+                            self.z_md2,
+                            CPWParameters(width=0, gap=self.z_md2.b/2)],
             turn_radiuses=r_turn
         )
         self.cpw_md_lines.append(self.cpwrl_md0)
@@ -968,8 +969,9 @@ class Design8Q(ChipDesign):
             trans_len = 3 * self.z_md1.b
             after_trans_len = r_turn
 
-            p_tr_start = p4 + (after_trans_len + trans_len) * (-dv34_s)
-            p_tr_end = p_tr_start + trans_len * dv34_s
+            p_tr_start = p4 + (after_trans_len + trans_len + 1e-3) * (
+                -dv34_s)
+            p_tr_end = p_tr_start + (trans_len + 1e-3) * dv34_s
             p6 = p5 + (p5 - p4) / (p5 - p4).abs() * self.z_md2.b / 2
             md_dpath = DPathCPW(
                 points=[p1, p2, p3, p_tr_start, p_tr_end, p4, p5, p6],
@@ -1012,8 +1014,9 @@ class Design8Q(ChipDesign):
             trans_len = 3 * self.z_md1.b
             after_trans_len = r_turn
 
-            p_tr_start = p4 + (after_trans_len + trans_len) * (-dv34_s)
-            p_tr_end = p_tr_start + trans_len * dv34_s
+            p_tr_start = p4 + (after_trans_len + trans_len) * (
+                -dv34_s)
+            p_tr_end = p_tr_start + (trans_len) * dv34_s
             p6 = p5 + (p5 - p4) / (p5 - p4).abs() * self.z_md2.b / 2
             md_dpath = DPathCPW(
                 points=[p1, p2, p3, p_tr_start, p_tr_end, p4, p5, p6],
@@ -1031,10 +1034,12 @@ class Design8Q(ChipDesign):
         p_tr_start = p_end + \
                      DVector(trans_len + self.md_line_cpw2_len, 0)
         p_tr_end = p_tr_start + DVector(-trans_len, 0)
+        p_end_empt = p_end + DVector(-self.z_md2.b / 2, 0)
         self.cpwrl_md7 = DPathCPW(
-            points=[p_start, p_tr_start, p_tr_end, p_end],
+            points=[p_start, p_tr_start, p_tr_end, p_end, p_end_empt],
             cpw_parameters=[self.z_md1, CPWParameters(smoothing=True),
-                            self.z_md2],
+                            self.z_md2,
+                            CPWParameters(width=0, gap=self.z_md2.b / 2)],
             turn_radiuses=r_turn
         )
         self.cpw_md_lines.append(self.cpwrl_md7)
@@ -1181,8 +1186,9 @@ class Design8Q(ChipDesign):
             trans_len = 3 * self.z_md1.b
             after_trans_len = r_turn
 
-            p_tr_start = p4 + (after_trans_len + trans_len) * (-dv34_s)
-            p_tr_end = p_tr_start + trans_len * dv34_s
+            p_tr_start = p4 + (after_trans_len + trans_len) * (
+                -dv34_s)
+            p_tr_end = p_tr_start + (trans_len) * dv34_s
             fl_dpath = DPathCPW(
                 points=[p1, p2, p3, p_tr_start, p_tr_end, p4, p5],
                 cpw_parameters=[self.z_fl1] * 5 + [CPWParameters(
@@ -1226,8 +1232,9 @@ class Design8Q(ChipDesign):
             trans_len = 3 * self.z_md1.b
             after_trans_len = r_turn
 
-            p_tr_start = p4 + (after_trans_len + trans_len) * (-dv34_s)
-            p_tr_end = p_tr_start + trans_len * dv34_s
+            p_tr_start = p4 + (after_trans_len + trans_len) * (
+                -dv34_s)
+            p_tr_end = p_tr_start + (trans_len) * dv34_s
             fl_dpath = DPathCPW(
                 points=[p1, p2, p3, p_tr_start, p_tr_end, p4, p5],
                 cpw_parameters=[self.z_fl1] * 5 + [CPWParameters(
@@ -1330,31 +1337,6 @@ class Design8Q(ChipDesign):
             -3].end
         flux_line._refresh_named_connections()
         flux_line.place(self.region_ph)
-
-    def draw_coupling_res(self):
-        # TODO: draw appropriate coupling
-        self.coupling_cpw = CPW(
-            start=self.xmons[3].cpw_rempt.end +
-                  DPoint(self.coupling_resonator_dx, 0),
-            end=self.xmons[4].cpw_lempt.end +
-                DPoint(-self.coupling_resonator_dx, 0),
-            cpw_params=self.Z_res
-        )
-        self.coupling_cpw.place(self.region_ph)
-
-        self.cpw_empty1 = CPW(
-            width=0, gap=self.Z_res.b / 2,
-            start=self.coupling_cpw.start,
-            end=self.coupling_cpw.start + DVector(-self.Z_res.b / 2, 0)
-        )
-        self.cpw_empty1.place(self.region_ph)
-
-        self.cpw_empty2 = CPW(
-            width=0, gap=self.Z_res.b / 2,
-            start=self.coupling_cpw.end,
-            end=self.coupling_cpw.end + DVector(self.Z_res.b / 2, 0)
-        )
-        self.cpw_empty2.place(self.region_ph)
 
     def draw_test_structures(self):
         if isinstance(self.chip, CHIP_16p5x16p5_20pads):
@@ -1465,8 +1447,8 @@ class Design8Q(ChipDesign):
         elif isinstance(self.chip, CHIP_14x14_20pads):
             test_dc_el2_centers = [
                 DPoint(1.8e6, 7.8e6),
-                DPoint(11.7e6, 7.8e6),
-                DPoint(11.7e6, 6.2e6)
+                DPoint(12.5e6, 7.8e6),
+                DPoint(12.5e6, 6.2e6)
             ]
         for struct_center in test_dc_el2_centers:
             test_struct1 = TestStructurePadsSquare(struct_center)
@@ -2922,21 +2904,21 @@ if __name__ == "__main__":
     design = Design8Q("testScript")
     design.draw()
     design.show()
-    design.layout.write(
-        design.layout.write(
-            os.path.join(
-                PROJECT_DIR,
-                design.get_version() + "overetching_0um" + ".gds"
-            )
+    design.save_as_gds2(
+        os.path.join(
+            PROJECT_DIR,
+            "8Q_0.0.0.2_bad_bridges_overetching_0um.gds"
         )
     )
+
     FABRICATION.OVERETCHING = 0.5e3
-    design.layout.write(
-        design.layout.write(
-            os.path.join(
-                PROJECT_DIR,
-                design.get_version() + "overetching_0um5" + ".gds"
-            )
+    design = Design8Q("testScript")
+    design.draw()
+    design.show()
+    design.save_as_gds2(
+        os.path.join(
+            PROJECT_DIR,
+            "8Q_0.0.0.2_bad_bridges_overetching_0um5.gds"
         )
     )
 
