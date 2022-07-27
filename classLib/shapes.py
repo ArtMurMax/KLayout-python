@@ -715,5 +715,6 @@ class CutMark(ElementBase):
         poly = Polygon(DPolygon(pts))
         if self.inverse:
             self.empty_region.insert(poly)
+            self.metal_region.insert(poly.bbox().enlarged(100e3, 100e3))
         else:
             self.metal_region.insert(poly)

@@ -16,12 +16,12 @@ class ChipDesign:
         and override draw() method where other drawing
         methods should be called from
         call show() to draw everything
-        str cell_name - name of width cell, e.g. 'testScript'
+        str cell_name - chip_name of width cell, e.g. 'testScript'
 
         Parameters
         ----------
         cell_name : str
-            name of cell design will be written into, e.g. 'testScript'
+            chip_name of cell design will be written into, e.g. 'testScript'
         """
         # getting main references of the application
         self.app = pya.Application.instance()

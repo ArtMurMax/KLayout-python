@@ -51,9 +51,9 @@ from . import contactPads
 reload(contactPads)
 from .contactPads import *
 
-from . import chipTemplates
-reload(chipTemplates)
-from .chipTemplates import *
+import  classLib.chipTemplates
+reload(classLib.chipTemplates)
+from classLib import chipTemplates
 
 from . import marks
 reload(marks)

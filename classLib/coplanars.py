@@ -205,7 +205,8 @@ class CPWArc(ElementBase):
 
 
 class CPW2CPW(ElementBase):
-    def __init__(self, Z0, Z1, start, end, trans_in=None):
+    def __init__(self, Z0, Z1, start, end,
+                 trans_in=None):
         self.Z0: CPWParameters = Z0
         self.Z1: CPWParameters = Z1
         self.start = start
@@ -719,9 +720,17 @@ class DPathCPW(ComplexBase):
             a = (p2 - p1)
             b = (p3 - p2)
             # collinearity testing
-            angle = a.vprod_sign(b) * np.abs(
-                np.arccos(a.sprod(b) / (a.length() * b.length()))
-            )
+            a_s_b = a.sprod(b)
+            a_t_b = a.length() * b.length()
+            if a_s_b > a_t_b:  # numerical instability fix
+                angle = 0
+            elif a_s_b < - a_t_b:
+                angle = np.pi
+            else:
+                angle = a.vprod_sign(b) * np.abs(
+                    np.arccos(a.sprod(b) / (a.length() * b.length()))
+                )
+
             if np.abs(angle) < 1e-6:
                 self._shape_string += ["L"]
             else:
@@ -742,11 +751,11 @@ class DPathCPW(ComplexBase):
         # multi-type parameters parsing
         if hasattr(cpw_parameters, "__len__"):
             l_length = len(cpw_parameters)
-            if l_length != self._N_elements and l_length != 1:
+            if (l_length != self._N_elements) and (l_length != 1):
                 raise ValueError(
                     "CPW parameters dimension mismatch\n"
                     f"N_elements = {self._N_elements} != cpwpars given = "
-                    f"{len(cpw_parameters)}"
+                    f"{l_length}"
                 )
             else:
                 self._cpw_parameters = copy.deepcopy(cpw_parameters)
@@ -861,7 +870,7 @@ class DPathCPW(ComplexBase):
                     self._segment_lengths[idx_l] -= self._turn_radiuses[
                                                           idx_r] * coeff
                 # previous 'R' segment if exists
-                if (i - 1 > 0
+                if (i - 1 > 0  # line can't start with 'R'
                         and self._shape_string[i - 1] == 'R'
                         and abs(self._turn_angles[idx_r - 1]) < np.pi):
                     coeff = abs(np.tan(self._turn_angles[idx_r - 1] / 2))
@@ -889,14 +898,17 @@ class DPathCPW(ComplexBase):
                         self._cpw_parameters[i] = cpw2_params
 
                     cpw = CPW2CPW(
-                        Z0=prev_primitive.Z,
+                        Z0=cpw1_params,
+                        Z1=cpw2_params,
                         start=prev_primitive_end,
-                        start_angle=-np.pi / 2,
-                        end_angle=turn_angle - np.pi / 2,
-                        cpw1_params=cpw1_params,
-                        cpw2_params=cpw2_params,
-                        trans_in=DCplxTrans(1, prev_primitive_end_angle
-                                            * 180 / np.pi, False, 0, 0)
+                        end=prev_primitive_end + DPoint(
+                            self._segment_lengths[idx_l], 0),
+                        trans_in=DCplxTrans(
+                            1,
+                            prev_primitive_end_angle * 180 / np.pi,
+                            False,
+                            0, 0
+                        )
                     )
                 else:
                     cpw = CPW(
@@ -1032,6 +1044,7 @@ class Bridge1(ElementBase):
 
     @staticmethod
     def bridgify_CPW(cpw, bridges_step, dest=None, bridge_layer1=-1,
+                     gnd2gnd_dy=70e3,
                      bridge_layer2=-1, dest2=None,
                      avoid_points=[], avoid_distances=[]):
         """
@@ -1063,15 +1076,15 @@ class Bridge1(ElementBase):
         -------
         None
         """
-        bridge_tmp = Bridge1(DPoint(0, 0))
+        bridge_tmp = Bridge1(DPoint(0, 0), gnd2gnd_dy=gnd2gnd_dy)
         bridge_tmp.__bridgify_CPW(
-            cpw, bridges_step,
+            cpw, bridges_step, gnd2gnd_dy=gnd2gnd_dy,
             dest=dest, bridge_layer1=bridge_layer1,
             bridge_layer2=bridge_layer2, dest2=dest2,
             avoid_points=avoid_points, avoid_distances=avoid_distances
         )
 
-    def __bridgify_CPW(self, cpw, bridges_step, dest=None,
+    def __bridgify_CPW(self, cpw, bridges_step, dest=None, gnd2gnd_dy=70e3,
                        bridge_layer1=-1, bridge_layer2=-1, dest2=None,
                        avoid_points=[], avoid_distances=[]):
         """
@@ -1117,7 +1130,7 @@ class Bridge1(ElementBase):
             cpw_dir_unit_vector = cpw.dr / cpw.dr.abs()
 
             # bridge with some initial dimensions
-            tmp_bridge = Bridge1(DPoint(0, 0))
+            tmp_bridge = Bridge1(DPoint(0, 0), gnd2gnd_dy=gnd2gnd_dy)
             bridge_width = tmp_bridge.gnd_touch_dx + 2 * tmp_bridge.surround_gap
 
             # number of additional bridges on either side of center
@@ -1140,7 +1153,7 @@ class Bridge1(ElementBase):
             for center in bridge_centers:
                 bridges.append(
                     Bridge1(
-                        center,
+                        center, gnd2gnd_dy=gnd2gnd_dy,
                         trans_in=DCplxTrans(1, alpha / pi * 180, False, 0, 0)
                     )
                 )
@@ -1162,7 +1175,7 @@ class Bridge1(ElementBase):
             v_arc_mid_tangent = DCplxTrans(1, 90, False, 0, 0)*v_arc_mid
             alpha = np.arctan2(v_arc_mid_tangent.y, v_arc_mid_tangent.x)
             bridge = Bridge1(
-                center=arc_mid,
+                center=arc_mid, gnd2gnd_dy=gnd2gnd_dy,
                 trans_in=DCplxTrans(1, alpha / pi * 180, False, 0, 0)
             )
             bridge.place(dest=dest, layer_i=bridge_layer1,
@@ -1178,8 +1191,11 @@ class Bridge1(ElementBase):
             for name, primitive in cpw.primitives.items():
                 if isinstance(primitive, CPW):
                     Bridge1.bridgify_CPW(
-                        primitive, bridges_step,
-                        dest, bridge_layer1, bridge_layer2, dest2=dest2,
+                        cpw=primitive, bridges_step=bridges_step,
+                        dest=dest, bridge_layer1=bridge_layer1,
+                        gnd2gnd_dy=gnd2gnd_dy,
+                        bridge_layer2=bridge_layer2,
+                        dest2=dest2,
                         avoid_points=avoid_points,
                         avoid_distances=avoid_distances
                     )

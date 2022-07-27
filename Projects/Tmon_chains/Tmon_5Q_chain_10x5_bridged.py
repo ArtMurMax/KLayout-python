@@ -1,5 +1,5 @@
 # $show-in-menu
-# $group-name: Macros
+# $group-chip_name: Macros
 # $menu-path: Chain_bridged
 # Enter your Python code here
 

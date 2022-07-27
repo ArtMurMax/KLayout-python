@@ -16,7 +16,7 @@ class EMResonator_TL2Qbit_worm2(ComplexBase):
     def __init__(self, Z0, start, L_coupling, L1, r, L2, N, trans_in=None):
         self.Z0 = Z0  # resonator's coplanar waveguide parameters
         # first horizontal coplanar length.
-        # Usually located near readout waveguide, hence the name origin
+        # Usually located near readout waveguide, hence the chip_name origin
         self.L_coupling = L_coupling
         self.L1 = L1  # horizontal coplanars length
         self.r = r  # curvature outer_r of all arc coplanars
