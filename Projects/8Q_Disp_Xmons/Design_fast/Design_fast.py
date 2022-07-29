@@ -1,3 +1,5 @@
+__version__ = "8Q_0.0.0.1"
+
 '''
 Changes log
 
