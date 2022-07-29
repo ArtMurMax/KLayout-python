@@ -449,7 +449,7 @@ class Design8Q(ChipDesign):
 
         self.region_el.merge()
         self.draw_el_protection()
-        #
+
         self.draw_photo_el_marks()
         self.draw_bridges()
         self.draw_pinning_holes()
@@ -1726,7 +1726,8 @@ class Design8Q(ChipDesign):
                     cpwrl_md, bridges_step,
                     gnd2gnd_dy=100e3,
                     dest=self.region_bridges1, dest2=self.region_bridges2,
-                    avoid_points=[squid.origin for squid in self.squids]
+                    avoid_points=[squid.origin for squid in self.squids],
+                    avoid_distances=900e3
                 )
             elif "cpwrl_fl" in key:
                 cpwrl_fl = val
@@ -1735,12 +1736,12 @@ class Design8Q(ChipDesign):
                     gnd2gnd_dy=100e3,
                     dest=self.region_bridges1, dest2=self.region_bridges2,
                     avoid_points=[squid.origin for squid in self.squids],
-                    avoid_distances=200e3
+                    avoid_distances=900e3
                 )
 
         # close bridges for cpw_fl line
         for i, cpw_fl in enumerate(self.cpw_fl_lines):
-            dy_list = [30e3, 130e3]
+            dy_list = [30e3, 100e3, 235e3, 365e3, 495e3, 625e3, 755e3]
             for dy in dy_list:
                 if i < 4:
                     pass
@@ -1754,24 +1755,20 @@ class Design8Q(ChipDesign):
                 br.place(dest=self.region_bridges2,
                          region_name="bridges_2")
 
-        # close bridges for cpw_md line
-        # for i, cpw_md in enumerate(self.cpw_md_lines):
-        #     dy_list = [55e3, 200e3]
-        #     for dy in dy_list:
-        #         if i == 0:
-        #             bridge_center1 = cpw_md.end + DVector(-dy, 0)
-        #         elif i == 4:
-        #             bridge_center1 = cpw_md.end + DVector(dy, 0)
-        #             br = Bridge1(center=bridge_center1,
-        #                          trans_in=None)
-        #         else:
-        #             bridge_center1 = cpw_md.end + DVector(0, -dy)
-        #             br = Bridge1(center=bridge_center1,
-        #                          trans_in=Trans.R90)
-        #         br.place(dest=self.region_bridges1,
-        #                  region_name="bridges_1")
-        #         br.place(dest=self.region_bridges2,
-        #                  region_name="bridges_2")
+        for i, cpw_md in enumerate(self.cpw_md_lines):
+            dy_list = [110e3, 240e3, 370e3, 500e3, 630e3]
+            for dy in dy_list:
+                if i < 4:
+                    pass
+                elif i >= 4:
+                    dy = -dy
+                bridge_center1 = cpw_md.end + DVector(0, -dy)
+                br = Bridge1(center=bridge_center1, gnd2gnd_dy=70e3,
+                             trans_in=Trans.R90)
+                br.place(dest=self.region_bridges1,
+                         region_name="bridges_1")
+                br.place(dest=self.region_bridges2,
+                         region_name="bridges_2")
 
         # for readout waveguides
         avoid_points = []
@@ -2907,7 +2904,7 @@ if __name__ == "__main__":
     design.save_as_gds2(
         os.path.join(
             PROJECT_DIR,
-            "8Q_0.0.0.2_bad_bridges_overetching_0um.gds"
+            "8Q_0.0.0.1_A482_A483_overetching_0um.gds"
         )
     )
 
@@ -2918,7 +2915,7 @@ if __name__ == "__main__":
     design.save_as_gds2(
         os.path.join(
             PROJECT_DIR,
-            "8Q_0.0.0.2_bad_bridges_overetching_0um5.gds"
+            "8Q_0.0.0.1_A482_A483_overetching_0um5.gds"
         )
     )
 
