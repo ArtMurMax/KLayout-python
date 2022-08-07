@@ -2679,7 +2679,6 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
         '''SAVING REUSLTS SECTION END'''
 
 
-# TODO: pattern copied
 def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
     resolution_dx, resolution_dy = resolution
     # dl_list = np.linspace(-20e3, 20e3, 3)
