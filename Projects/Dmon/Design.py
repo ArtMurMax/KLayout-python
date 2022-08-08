@@ -367,7 +367,7 @@ class DesignDmon(ChipDesign):
         self.draw_josephson_loops()
 
         # self.draw_microwave_drvie_lines()
-        self.draw_flux_control_lines()
+        # self.draw_flux_control_lines()
 
         self.draw_test_structures()
         self.draw_bandages()
@@ -469,6 +469,8 @@ class DesignDmon(ChipDesign):
 
         self.region_ph.insert(self.chip_box)
         for i, contact_pad in enumerate(self.contact_pads):
+            # draw only ROWG pads
+            if (i==0) or (i==4):
              contact_pad.place(self.region_ph)
 
     def draw_cut_marks(self):
@@ -1684,12 +1686,14 @@ def simulate_resonators_f_and_Q_together():
     ''' RESULT SAVING SECTION END '''
 
 
-def simulate_Cqr(resolution=(4e3, 4e3), mode="Cqr"):
+def simulate_Cqr(resolution=(4e3, 4e3), mode="Cqr", pts=3, par_d=10e3):
     # TODO: 1. make 2d geometry parameters mesh, for simultaneous finding of C_qr and C_q
     #  2. make 3d geometry optimization inside kLayout for simultaneous finding of C_qr, C_q and C_qq
     resolution_dx = resolution[0]
     resolution_dy = resolution[1]
-    dl_list = np.linspace(-10e3, 10e3, 3)
+    # if linspace is requested with single point it will return
+    # lhs border of the interval
+    dl_list = np.linspace(-par_d/2, par_d/2, pts)
     # dl_list = [0e3]
     from itertools import product
 
@@ -1707,8 +1711,8 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cqr"):
                                        design.fork_y_span_list]
             save_fname = "Cqr_Cqr_results.csv"
         elif mode == "Cq":
-            # adjusting `cross_gnd_gap_x` and same for y, to gain proper E_C
-            design.cross_gnd_gap_y_list = [gnd_gap_y + dl for gnd_gap_y in
+            # adjusting `cross_len_x` to gain proper E_C
+            design.cross_len_x = [gnd_gap_y + dl for gnd_gap_y in
                                            design.cross_gnd_gap_y_list]
             save_fname = "Cqr_Cq_results.csv"
 
@@ -2270,8 +2274,44 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 
 
 if __name__ == "__main__":
-    design = DesignDmon("testScript")
-    design.draw()
-    design.show()
-    # simulate_resonators_f_and_Q()
-    # simulate_Cqr()
+    # ''' draw and show design for manual design evaluation '''
+    # FABRICATION.OVERETCHING = 0.0e3
+    # design = Design8Q("testScript")
+    # design.draw()
+    # design.show()
+    # design.save_as_gds2(
+    #     os.path.join(
+    #         PROJECT_DIR,
+    #         "8Q_0.0.0.1_A482_A483_overetching_0um.gds"
+    #     )
+    # )
+    #
+    # FABRICATION.OVERETCHING = 0.5e3
+    # design = Design8Q("testScript")
+    # design.draw()
+    # design.show()
+    # design.save_as_gds2(
+    #     os.path.join(
+    #         PROJECT_DIR,
+    #         "8Q_0.0.0.1_A482_A483_overetching_0um5.gds"
+    #     )
+    # )
+
+    ''' C_qr sim '''
+    simulate_Cqr(resolution=(1e3, 1e3), mode="Cq")
+    # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr")
+
+    ''' Simulation of C_{q1,q2} in fF '''
+    # simulate_Cqq(2, 3, resolution=(1e3, 1e3))
+
+    ''' MD line C_qd for md1,..., md6 '''
+    # for md_idx in [0,1]:
+    #     for q_idx in range(2):
+    #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(1e3, 1e3))
+
+    ''' Resonators Q and f sim'''
+    # simulate_resonators_f_and_Q(resolution=(2e3,2e3))
+
+    ''' Resonators Q and f when placed together'''
+    # simulate_resonators_f_and_Q_together()
+
