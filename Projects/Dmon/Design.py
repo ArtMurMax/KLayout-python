@@ -73,20 +73,101 @@ reload(sonnetSim)
 from sonnetSim import SonnetLab, SonnetPort, SimulationBox
 
 
-FABRICATION.OVERETCHING = 0.5e3
+FABRICATION.OVERETCHING = 0.0e3
 PROJECT_DIR = os.path.dirname(__file__)
 
-SQUID_PARAMETERS = AsymSquidParams(
-    band_ph_tol=1e3,
-    squid_dx=14.2e3,
-    squid_dy=7e3,
-    TC_dx=9e3,
-    TC_dy=7e3,
-    TCW_dy=6e3,
-    BCW_dy=0e3,
-    BC_dy=7e3,
-    BC_dx=7e3
-)
+
+class RFSquidParams(AsymSquidParams):
+    def __init__(
+            self,
+            asym_pars: AsymSquidParams=AsymSquidParams(),
+            line_width=115,
+            line_length=40e3,
+            line_gap=1.8e3
+    ):
+        self.__dict__.update(asym_pars.__dict__)
+        self.line_width = line_width
+        self.line_length = line_length
+        self.line_gap=line_gap
+
+
+class RFSquid(AsymSquid):
+    def __init__(self,origin: DPoint, squid_params: RFSquidParams,
+                 trans_in=None):
+        self.center = origin
+
+        # eliminate right JJ
+        squid_params.SQRBT_dx = 0
+        squid_params.SQRTJJ_dx = 0
+        squid_params.SQRTT_dx = 0
+        super().__init__(origin=origin, params=squid_params,
+                         trans_in=trans_in)
+        self.squid_params: RFSquidParams = squid_params
+
+    def init_primitives(self):
+        super().init_primitives()
+        sqt_c = self.SQT.center()
+        sqt_rect = self.SQT.metal_region.bbox()
+        self.SQT = CPW(
+            start=sqt_c, end=DPoint(sqt_rect.left,sqt_c.y),
+            width=self.squid_params.SQT_dy, gap=0
+        )
+        self.primitives["SQT"] = self.SQT
+
+        # draw kinetic wire
+        if hasattr(self, "BCW1"):
+            self.line_start_pt = self.BCW1.start + \
+                              DPoint(
+                                  self.squid_params.BCW_dx/2,
+                                  -self.squid_params.line_width/2
+                              )
+        else:
+            print("BCW1 is absent in squid skeleton\n"
+                  "can't set starting point for kin. ind. line")
+            return
+        # make transition from large `TC` polygon to thin line:
+        tc_bbx = self.TC.metal_region.bbox()
+        tcwl_start = DPoint(
+            tc_bbx.right - self.squid_params.BCW_dx/2,
+            tc_bbx.bottom
+        )
+        self.TCWL = CPW(
+            start=tcwl_start,
+            end=tcwl_start + DPoint(0, -self.squid_params.BCW_dy),
+            width=self.squid_params.BCW_dx, gap=0
+        )
+        self.primitives["TCWL"] = self.TCWL
+
+        self.line_end_pt = self.TCWL.end + \
+                             DPoint(
+                                 self.TCWL.width / 2,
+                                 self.squid_params.line_width / 2
+                             )
+
+        self.line = CPW(
+            start=self.line_start_pt,
+            end=self.line_end_pt,
+            width=self.squid_params.line_width, gap=0
+        )
+        self.primitives["line"] = self.line
+
+
+        dr = self.line_end_pt - self.line_start_pt
+        self.dy = dr.y
+        self.dx = dr.x
+        self.n_periods = (self.dy - self.squid_params.line_gap) // \
+                         (2*self.squid_params.line_gap)
+        self.dx_step = self.dx / (self.n_periods + 1)
+        self.dy_step = self.dy / (2*self.n_periods + 1)  # >= `line_gap`
+        self.s = ( (self.squid_params.line_length - self.dy)/(
+            self.n_periods + 1) + self.dx_step ) /2
+        # draw initial line segment
+
+        # for i in range(self.n_periods + 1):
+        #     prim_name = "line" + str(i)
+        #     prim = CPW(
+        #         start=
+        #     )
 
 
 class TestStructurePadsSquare(ComplexBase):
@@ -277,12 +358,45 @@ class DesignDmon(ChipDesign):
                        [1, 2.7, 3.5, 4.35, 5.5, 6.5, 7.6, 8.5]]
 
         # squids
-        self.squids: List[AsymSquid] = []
-        self.test_squids: List[AsymSquid] = []
-        # vertical shift of every squid local origin  coordinates
-        self.squid_vertical_shift = 3e3
+        self.squids: List[RFSquid] = []
+        self.test_squids: List[RFSquid] = []
+        # vertical shift of every squid local origin coordinates
+        self.squid_vertical_shift = 0e3
         # minimal distance between squid loop and photo layer
         self.squid_ph_clearance = 1.5e3
+
+        # josephson junctions
+        self.squid_pars: List[RFSquidParams] = []
+        self.jj_dx_list = [159.842, 159.842, 159.842, 99.482, 99.482,
+                           159.842, 203.785, 203.785]
+        self.jj_dy_list = [149.842, 149.842, 149.842, 89.482, 89.482,
+                          149.842, 193.785, 193.785]
+
+        for i, (jj_dy,jj_dx) in enumerate(
+                zip(self.jj_dy_list, self.jj_dx_list)
+        ):
+            pars_i = AsymSquidParams(
+                band_ph_tol=1e3,
+                squid_dx=14.2e3,
+                squid_dy=14.5e3,
+                TC_dx=2.5e3 * np.sqrt(2) + 1e3,
+                TC_dy=5e3 * np.sqrt(2) / 2 + 1e3,
+                TCW_dy=0,
+                BCW_dy=1.5e3,
+                BC_dy=5e3 * np.sqrt(2) / 2 + 1e3,
+                BC_dx=2.5e3 * np.sqrt(2) + 1e3,
+                SQLBJJ_dy=jj_dy,
+                SQLTJJ_dx=jj_dx,
+                # eliminate junction on the rhs
+                SQRBJJ_dy=0,
+                SQRTJJ_dx=0,
+                SQRBT_dx=0,
+                SQRTT_dx=0
+            )
+            dx = pars_i.SQB_dx / 2
+            pars_i.bot_wire_x = [-dx, 0]
+            self.squid_pars.append(RFSquidParams(asym_pars=pars_i))
+
 
         # el-dc concacts attributes
         # e-beam polygon has to cover hole in photoregion and also
@@ -301,8 +415,8 @@ class DesignDmon(ChipDesign):
         self.cont_lines_y_ref: float = 300e3  # nm
 
         # bandages
-        self.bandage_width = 5e3
-        self.bandage_height = 10e3
+        self.bandage_width = 2.5e3 * np.sqrt(2)
+        self.bandage_height = 5e3 * np.sqrt(2)
         self.bandage_r_outer = 2e3
         self.bandage_r_inner = 2e3
         self.bandage_curve_pts_n = 40
@@ -667,12 +781,12 @@ class DesignDmon(ChipDesign):
             xmonCross_corrected.place(self.region_ph)
 
     def draw_josephson_loops(self):
-        # place left squid
-        dx = SQUID_PARAMETERS.SQB_dx / 2 - SQUID_PARAMETERS.SQLBT_dx / 2
-        pars_local = deepcopy(SQUID_PARAMETERS)
-        pars_local.bot_wire_x = [-dx, dx]
-        pars_local.SQB_dy = 0
         for res_idx, xmon_cross in enumerate(self.xmons):
+            squid_pars = self.squid_pars[res_idx]
+            dx = squid_pars.SQB_dx / 2 - squid_pars.SQLBT_dx / 2
+            pars_local = deepcopy(squid_pars)
+            pars_local.bot_wire_x = [-dx, dx]
+            pars_local.SQB_dy = 0
             if res_idx % 2 == 0:  # above RO line
                 m = -1
                 squid_center = (xmon_cross.cpw_tempt.end +
@@ -683,9 +797,9 @@ class DesignDmon(ChipDesign):
                 squid_center = (xmon_cross.cpw_bempt.end +
                                 xmon_cross.cpw_bempt.start) / 2
                 trans = DTrans.R0
-            squid = AsymSquid(
+            squid = RFSquid(
                 squid_center + m * DVector(0, -self.squid_vertical_shift),
-                pars_local,
+                squid_pars,
                 trans_in=trans
             )
             self.squids.append(squid)
@@ -923,14 +1037,20 @@ class DesignDmon(ChipDesign):
         flux_gnd_cpw.place(self.region_ph)
 
     def draw_test_structures(self):
-        # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
+        ''' choose squid for test structures '''
+        # choosing squid with the smallest junction
+        test_squid_pars_idx = np.argmin(
+            map(lambda x: x.SQLTJJ_dx, self.squid_pars)
+        )
+        test_squid_pars = self.squid_pars[test_squid_pars_idx]
 
+        # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
         struct_centers = [DPoint(1.5e6, 1.5e6), DPoint(5.2e6, 1.5e6),
                           DPoint(2.2e6, 3.2e6)]
         self.test_squids_pads = []
         for struct_center in struct_centers:
             ## JJ test structures ##
-            dx = SQUID_PARAMETERS.SQB_dx / 2 - SQUID_PARAMETERS.SQLBT_dx / 2
+            dx = test_squid_pars.SQB_dx / 2 - test_squid_pars.SQLBT_dx / 2
 
             # test structure with big critical current (#1)
             test_struct1 = TestStructurePadsSquare(
@@ -949,13 +1069,11 @@ class DesignDmon(ChipDesign):
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
 
-            pars_local = deepcopy(SQUID_PARAMETERS)
-            pars_local.SQRBT_dx = 0
-            pars_local.SQRBJJ_dy = 0
+            pars_local = deepcopy(test_squid_pars)
             pars_local.bot_wire_x = [-dx]
 
             squid_center = test_struct1.center
-            test_jj = AsymSquid(
+            test_jj = RFSquid(
                 squid_center + DVector(0, -self.squid_vertical_shift),
                 pars_local
             )
@@ -975,13 +1093,10 @@ class DesignDmon(ChipDesign):
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
 
-            pars_local = deepcopy(SQUID_PARAMETERS)
-            pars_local.SQLBT_dx = 0
-            pars_local.SQLBJJ_dy = 0
-            pars_local.bot_wire_x = [dx]
+            pars_local.bot_wire_x = [-dx]
 
             squid_center = test_struct2.center
-            test_jj = AsymSquid(
+            test_jj = RFSquid(
                 squid_center + DVector(0, -self.squid_vertical_shift),
                 pars_local
             )
@@ -1052,31 +1167,45 @@ class DesignDmon(ChipDesign):
             # `self.dc_cont_clearance` represents minimum distance
             # from dc contact pad`s perimeter to the perimeter of the
             # e-beam and photo-deposed metal perimeter.
-            self.bandages_regs_list += self.draw_squid_bandage(squid)
+            self.bandages_regs_list += self.draw_squid_bandage(
+                squid,
+                shift2sq_center=0
+            )
             # collect all bottom contacts
 
-    def draw_squid_bandage(self, test_jj: AsymSquid = None):
+    def draw_squid_bandage(self, test_jj: RFSquid = None,
+                           shift2sq_center=0):
+        # squid direction from bottom to top
+        squid_BT_dv = test_jj.TC.start - test_jj.TC.end
+        squid_BT_dv_s = squid_BT_dv / squid_BT_dv.abs()  # normalized
+
         bandages_regs_list: List[Region] = []
 
-        import re
         # top bandage
-        top_bandage_reg = self._get_bandage_reg(test_jj.TC.start)
+        top_bandage_reg = self._get_bandage_reg(
+            center=test_jj.TC.start,
+            shift=-shift2sq_center * squid_BT_dv_s
+        )
         bandages_regs_list.append(top_bandage_reg)
         self.dc_bandage_reg += top_bandage_reg
 
         # bottom contacts
         for i, _ in enumerate(test_jj.squid_params.bot_wire_x):
             BC = getattr(test_jj, "BC" + str(i))
-            bot_bandage_reg = self._get_bandage_reg(BC.end)
+            bot_bandage_reg = self._get_bandage_reg(
+                center=BC.end,
+                shift=shift2sq_center * squid_BT_dv_s
+            )
             bandages_regs_list.append(bot_bandage_reg)
             self.dc_bandage_reg += bot_bandage_reg
         return bandages_regs_list
 
-    def _get_bandage_reg(self, center):
-        rect_lb = center +\
+    def _get_bandage_reg(self, center, shift: DVector = DVector(0, 0)):
+        center += shift
+        rect_lb = center + \
                   DVector(
-                      -self.bandage_width/2,
-                      -self.bandage_height/2
+                      -self.bandage_width / 2,
+                      -self.bandage_height / 2
                   )
         bandage_reg = Rectangle(
             origin=rect_lb,
@@ -1093,12 +1222,14 @@ class DesignDmon(ChipDesign):
 
     def draw_recess(self):
         for squid in itertools.chain(self.squids, self.test_squids):
-            recess_reg = squid.TC.metal_region.dup().size(-1.5e3)
+            # top recess
+            recess_reg = squid.TC.metal_region.dup().size(-1e3)
             self.region_ph -= recess_reg
 
+            # bottom recess(es)
             for i, _ in enumerate(squid.squid_params.bot_wire_x):
-                BC = getattr(squid, "BC"+str(i))
-                recess_reg = BC.metal_region.dup().size(-1.5e3)
+                BC = getattr(squid, "BC" + str(i))
+                recess_reg = BC.metal_region.dup().size(-1e3)
                 self.region_ph -= recess_reg
 
     def draw_el_protection(self):
@@ -2291,10 +2422,10 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
-    # FABRICATION.OVERETCHING = 0.0e3
-    # design = DesignDmon("testScript")
-    # design.draw()
-    # design.show()
+    FABRICATION.OVERETCHING = 0.0e3
+    design = DesignDmon("testScript")
+    design.draw()
+    design.show()
 
     # design.save_as_gds2(
     #     os.path.join(
@@ -2315,7 +2446,7 @@ if __name__ == "__main__":
     # )
 
     ''' C_qr sim '''
-    simulate_Cqr(resolution=(2e3, 2e3), mode="Cqr", pts=7, par_d=30e3)
+    # simulate_Cqr(resolution=(2e3, 2e3), mode="Cqr", pts=7, par_d=30e3)
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr")
 
     ''' Simulation of C_{q1,q2} in fF '''
