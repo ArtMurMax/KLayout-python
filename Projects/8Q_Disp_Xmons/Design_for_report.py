@@ -637,7 +637,7 @@ class Design8Q(ChipDesign):
                 ) / 2 + \
                 DVector(
                     0,
-                    -xmon_dy_Cg_coupling - res.fork_metal_width / 2
+                    -xmon_dy_Cg_coupling - res.fork_metal_width_list / 2
                 )
             # changes start #
             xmon_center += DPoint(
@@ -696,7 +696,7 @@ class Design8Q(ChipDesign):
                 ) / 2 + \
                 DVector(
                     0,
-                    -xmon_dy_Cg_coupling - res.fork_metal_width / 2
+                    -xmon_dy_Cg_coupling - res.fork_metal_width_list / 2
                 )
             # changes start #
             xmon_center += DPoint(

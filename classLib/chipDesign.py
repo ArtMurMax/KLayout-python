@@ -177,7 +177,7 @@ class ChipDesign:
 
         Parameters
         ----------
-        reg : int
+        reg : rEGiOn
             layer index, >0
         trans : Union[DcplxTrans, DTrans]
             transformation to perform

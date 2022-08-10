@@ -37,6 +37,9 @@ from math import cos, sin, tan, atan2, pi, degrees
 import itertools
 from typing import List, Dict, Union, Optional
 from copy import deepcopy
+import csv
+import os
+import shutil
 
 import numpy as np
 
@@ -69,12 +72,10 @@ import sonnetSim
 reload(sonnetSim)
 from sonnetSim import SonnetLab, SonnetPort, SimulationBox
 
-import copy
 
-# 0.0 - for development
-# 0.8e3 - estimation for fabrication by Bolgar photolytography etching
-# recipe
 FABRICATION.OVERETCHING = 0.5e3
+PROJECT_DIR = os.path.dirname(__file__)
+
 SQUID_PARAMETERS = AsymSquidParams(
     band_ph_tol=1e3,
     squid_dx=14.2e3,
@@ -202,16 +203,28 @@ class DesignDmon(ChipDesign):
 
         # xmon parameters
         self.xmon_x_distance: float = 722e3
-        self.xmon_res_d = 254e3
+
+        self.xmon_res_d_list = [14e3]*self.NQUBITS
         self.xmons: list[XmonCross] = []
         self.xmons_corrected: list[XmonCross] = []
 
-        self.cross_len_x = 180e3
-        self.cross_width_x = 60e3
-        self.cross_gnd_gap_x = 20e3
-        self.cross_len_y = 155e3
-        self.cross_width_y = 60e3
-        self.cross_gnd_gap_y = 20e3
+        self.cross_len_x_list = np.array(
+            [1e3*x for x in [20, 0, 0, 0, 0, 230, 300, 300]]
+        )
+        self.cross_width_x_list = np.array(
+            [1e3*x for x in [60]*self.NQUBITS]
+        )
+        self.cross_len_y_list = np.array(
+            [1e3*x for x in [150, 114, 94, 50, 50, 80, 116, 116]]
+        )
+        self.cross_width_y_list = np.array(
+            [1e3*x for x in [60]*self.NQUBITS]
+        )
+        self.cross_gnd_gap_y_list = np.array(
+            [1e3*x for x in [60]*self.NQUBITS]
+        )
+        self.cross_gnd_gap_x = 60e3
+        self.cross_gnd_gap_face_y = 20e3
 
         # resonators objects and parameters
         self.resonators: List[EMResonatorTL3QbitWormRLTailXmonFork] = []
@@ -237,7 +250,7 @@ class DesignDmon(ChipDesign):
         # curvature radius of resonators CPW turns
         self.res_r = 60e3
         # coil consist of L1, 2r, L1, 2r segment
-        self.N_coils = [3, 3, 3, 3] * 2
+        self.N_coils = [3]*self.NQUBITS
         # another vertical line connected to L0
         self.L2_list = [self.res_r] * len(self.L1_list)
         # horizontal line connected to L2
@@ -248,24 +261,20 @@ class DesignDmon(ChipDesign):
         self.Z_res = CPWParameters(10e3, 6e3)
         self.to_line_list = [45e3] * len(self.L1_list)
         # fork at the end of resonator parameters
-        self.fork_metal_width = 15e3
-        self.fork_gnd_gap = 10e3
+        self.fork_metal_width_list = np.array([30e3]*self.NQUBITS)
+        self.fork_gnd_gap = 20e3
         self.xmon_fork_gnd_gap = 14e3
-        self.fork_x_span = self.cross_width_y + + 2 * \
-                           (self.xmon_fork_gnd_gap + self.fork_metal_width)
+        # fork at the end of resonator parameters
+        self.fork_x_span_list = self.cross_width_y_list + + 2 * \
+                                (self.xmon_fork_gnd_gap + self.fork_metal_width_list)
         # resonator-fork parameters
         # from simulation of g_qr
         self.fork_y_span_list = [
             x * 1e3 for x in
-            [33.18, 91.43, 39.36, 95.31, 44.34, 96.58, 49.92, 99.59]
+            [45]*self.NQUBITS
         ]
         self.worm_x_list = [x * 1e6 for x in
                        [1, 2.7, 3.5, 4.35, 5.5, 6.5, 7.6, 8.5]]
-
-        # fork at the end of resonator parameters
-        # ABOVE RO LINE
-        self.fork_x_span = 60e3 + + 2 * \
-                           (self.xmon_fork_gnd_gap + self.fork_metal_width)
 
         # squids
         self.squids: List[AsymSquid] = []
@@ -544,8 +553,8 @@ class DesignDmon(ChipDesign):
             worm_x = self.worm_x_list[res_idx]
             worm_y = self.chip.dy / 2 + to_line * (-1) ** (res_idx)
 
-            fork_x_span = self.fork_x_span
-            fork_metal_width = self.fork_metal_width
+            fork_x_span = self.fork_x_span_list[res_idx]
+            fork_metal_width = self.fork_metal_width_list[res_idx]
             fork_gnd_gap = self.fork_gnd_gap
             if res_idx % 2 == 0:  # above RO line
                 trans = DTrans.M0
@@ -570,11 +579,6 @@ class DesignDmon(ChipDesign):
                     trans_in=trans
                 )
             )
-        # print([self.L0 - xmon_dy_Cg_coupling for xmon_dy_Cg_coupling in  self.xmon_dys_Cg_coupling])
-        # print(self.L1_list)
-        # print(self.L2_list)
-        # print(self.L3_list)
-        # print(self.L4_list)
 
     def draw_readout_waveguide(self):
         '''
@@ -615,23 +619,25 @@ class DesignDmon(ChipDesign):
             )
         )
         for res_idx, res in it_list:
+            d = self.xmon_res_d_list[res_idx] + self.cross_len_y_list[res_idx] + self.cross_width_x_list[res_idx] / 2 + \
+                self.fork_metal_width_list[res_idx] + self.fork_gnd_gap
             if res_idx % 2 == 0:
                 # above RO line
-                xmon_center = res.end + DVector(0, self.xmon_res_d)
+                xmon_center = res.end + DVector(0, d)
             else:
                 # below RO line
-                xmon_center = res.end + DVector(0, -self.xmon_res_d)
+                xmon_center = res.end + DVector(0, -d)
             self.xmons.append(
                 XmonCross(
                     xmon_center,
-                    sideX_length=self.cross_len_x,
-                    sideX_width=self.cross_width_x,
+                    sideX_length=self.cross_len_x_list[res_idx],
+                    sideX_width=self.cross_width_x_list[res_idx],
                     sideX_gnd_gap=self.cross_gnd_gap_x,
-                    sideY_length=self.cross_len_y,
-                    sideY_width=self.cross_width_y,
-                    sideY_gnd_gap=self.cross_gnd_gap_y,
+                    sideY_length=self.cross_len_y_list[res_idx],
+                    sideY_width=self.cross_width_y_list[res_idx],
+                    sideY_gnd_gap=self.cross_gnd_gap_y_list[res_idx],
                     sideX_face_gnd_gap=self.cross_gnd_gap_x,
-                    sideY_face_gnd_gap=self.cross_gnd_gap_y
+                    sideY_face_gnd_gap=self.cross_gnd_gap_face_y
                 )
             )
 
@@ -645,16 +651,16 @@ class DesignDmon(ChipDesign):
             res.place(self.region_ph)
             xmonCross_corrected = XmonCross(
                 xmon_center,
-                sideX_length=self.cross_len_x,
-                sideX_width=self.cross_width_x,
+                sideX_length=self.cross_len_x_list[res_idx],
+                sideX_width=self.cross_width_x_list[res_idx],
                 sideX_gnd_gap=self.cross_gnd_gap_x,
-                sideY_length=self.cross_len_y,
-                sideY_width=self.cross_width_y,
+                sideY_length=self.cross_len_y_list[res_idx],
+                sideY_width=self.cross_width_y_list[res_idx],
                 sideY_gnd_gap=max(
                     0,
-                    self.fork_x_span - 2 * self.fork_metal_width -
-                    self.cross_width_y -
-                    max(self.cross_gnd_gap_y, self.fork_gnd_gap)
+                    self.fork_x_span_list[res_idx] - 2 * self.fork_metal_width_list[res_idx] -
+                    self.cross_width_y_list[res_idx] -
+                    max(self.cross_gnd_gap_y_list[res_idx], self.fork_gnd_gap)
                 ) / 2
             )
             self.xmons_corrected.append(xmonCross_corrected)
@@ -666,7 +672,7 @@ class DesignDmon(ChipDesign):
         pars_local = deepcopy(SQUID_PARAMETERS)
         pars_local.bot_wire_x = [-dx, dx]
         pars_local.SQB_dy = 0
-        for res_idx, xmon_cross in enumerate(self.xmons[:-2]):
+        for res_idx, xmon_cross in enumerate(self.xmons):
             if res_idx % 2 == 0:  # above RO line
                 m = -1
                 squid_center = (xmon_cross.cpw_tempt.end +
@@ -1704,20 +1710,20 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cqr", pts=3, par_d=10e3):
     ):
         ### DRAWING SECTION START ###
         design = DesignDmon("testScript")
-
         # adjusting `self.fork_y_span_list` for C_qr
         if mode == "Cqr":
-            design.fork_y_span_list = [fork_y_span + dl for fork_y_span in
-                                       design.fork_y_span_list]
+            design.fork_x_span_list += dl
+            # design.fork_metal_width_list += dl
+            # design.fork_x_span_list += 2*dl
             save_fname = "Cqr_Cqr_results.csv"
         elif mode == "Cq":
             # adjusting `cross_len_x` to gain proper E_C
-            design.cross_len_x = [gnd_gap_y + dl for gnd_gap_y in
-                                           design.cross_gnd_gap_y_list]
+            design.cross_len_y_list = [design_val + dl for design_val in
+                                           design.cross_len_y_list]
             save_fname = "Cqr_Cq_results.csv"
 
         # exclude coils from simulation (sometimes port is placed onto coil (TODO: fix)
-        design.N_coils = [1] * design.NQUBITS
+        design.N_coils = [0] * design.NQUBITS
         design.draw_for_Cqr_simulation(res_idx=res_idx)
 
         worm = design.resonators[res_idx]
@@ -1737,9 +1743,9 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cqr", pts=3, par_d=10e3):
         dr.x = abs(dr.x)
         dr.y = abs(dr.y)
 
-        box_side_x = 8 * xmonCross.sideX_length
-        box_side_y = 8 * xmonCross.sideY_length
-        dv = DVector(box_side_x / 2, box_side_y / 2)
+        xc_bbx = xmonCross.empty_region.bbox()
+        box_side_l = max(xc_bbx.height(), xc_bbx.width())
+        dv = DVector(box_side_l, box_side_l)
 
         crop_box = pya.Box().from_dbox(pya.Box(
             xmonCross.center + dv,
@@ -1752,19 +1758,28 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cqr", pts=3, par_d=10e3):
         # sonnet port will be attached to this edge
         reg1 = worm.metal_region & Region(crop_box)
         reg1.merge()
-        max_distance = 0
-        port_pt = None
-        for poly in reg1.each():
-            for edge in poly.each_edge():
-                edge_center = (edge.p1 + edge.p2) / 2
-                dp = edge_center - xmonCross.cpw_b.end
-                d = max(abs(dp.x), abs(dp.y))
-                if d > max_distance:
-                    max_distance = d
-                    port_pt = edge_center
-        design.sonnet_ports.append(port_pt)
-        design.sonnet_ports.append(xmonCross.cpw_l.end)
 
+        port_pt = None
+        min_dist = 10e6
+        for center_edge in reg1.edges().centers(0,0).each():
+            edge_center = center_edge.p1
+            dist = np.min(
+                np.abs(
+                    [edge_center.x - crop_box.left, edge_center.x - crop_box.right,
+                     edge_center.y - crop_box.bottom, edge_center.y - crop_box.top]
+                )
+            )
+            if dist < min_dist:
+                min_dist = dist
+                port_pt = edge_center
+        design.sonnet_ports.append(port_pt)
+        # place xmon port
+        if xmonCross.sideX_length > xmonCross.sideY_length:
+            design.sonnet_ports.append(xmonCross.cpw_l.end)
+        elif res_idx%2 == 0:
+            design.sonnet_ports.append(xmonCross.cpw_t.end)
+        else:
+            design.sonnet_ports.append(xmonCross.cpw_b.end)
         design.transform_region(design.region_ph, DTrans(dr.x, dr.y),
                                 trans_ports=True)
 
@@ -1834,10 +1849,11 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cqr", pts=3, par_d=10e3):
             y21 = -2 * s[1][0] / delta * 1 / R
             C12 = 1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y21).imag)
 
-        print("fork_y_span = ", design.fork_y_span_list[res_idx] / 1e3)
+        print(f"cross_x_len[{res_idx}] = {design.cross_len_x_list[res_idx] / 1e3}")
         print("C1 = ", C1)
         print("C12 = ", C12)
         print("C2 = ", C2)
+        print("------------")  # 12 `-` whitespace
         ### CALCULATE C_QR CAPACITANCE SECTION START ###
 
         ### SAVING REUSLTS SECTION START ###
@@ -2274,11 +2290,12 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 
 
 if __name__ == "__main__":
-    # ''' draw and show design for manual design evaluation '''
+    ''' draw and show design for manual design evaluation '''
     # FABRICATION.OVERETCHING = 0.0e3
-    # design = Design8Q("testScript")
+    # design = DesignDmon("testScript")
     # design.draw()
     # design.show()
+
     # design.save_as_gds2(
     #     os.path.join(
     #         PROJECT_DIR,
@@ -2287,7 +2304,7 @@ if __name__ == "__main__":
     # )
     #
     # FABRICATION.OVERETCHING = 0.5e3
-    # design = Design8Q("testScript")
+    # design = DesignDmon("testScript")
     # design.draw()
     # design.show()
     # design.save_as_gds2(
@@ -2298,7 +2315,7 @@ if __name__ == "__main__":
     # )
 
     ''' C_qr sim '''
-    simulate_Cqr(resolution=(1e3, 1e3), mode="Cq")
+    simulate_Cqr(resolution=(2e3, 2e3), mode="Cqr", pts=7, par_d=30e3)
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr")
 
     ''' Simulation of C_{q1,q2} in fF '''
