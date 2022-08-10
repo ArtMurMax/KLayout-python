@@ -1,3 +1,4 @@
+#OK
 # Enter your Python code here
 from math import cos, sin, atan2, pi
 import itertools
@@ -14,6 +15,8 @@ from classLib.shapes import XmonCross
 from sonnetSim.sonnetLab import SonnetLab, SonnetPort, SimulationBox
 
 # NOT TESTED, ERRORS CAN BE FIGURED OUT EASILY
+from Examples.lambda_4_resonators_Examples.EMResonator_TL2Qbit_worm3_XmonFork import \
+    EMResonator_TL2Qbit_worm3_XmonFork
 
 class CHIP:
     dx = 0.6e6

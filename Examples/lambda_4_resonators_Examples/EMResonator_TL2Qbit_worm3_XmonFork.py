@@ -1,3 +1,4 @@
+#OK
 # Enter your Python code here
 from math import cos, sin, atan2, pi
 import itertools
@@ -85,7 +86,7 @@ class EMResonator_TL2Qbit_worm3_1(ComplexBase):
         self.angle_connections = [0, self.cop_end_open.alpha_end]
 
 
-class EMResonator_TL2Qbit_worm3_1_XmonFork(EMResonator_TL2Qbit_worm3_1):
+class EMResonator_TL2Qbit_worm3_XmonFork(EMResonator_TL2Qbit_worm3_1):
     def __init__(self, Z0, start, L_coupling, L0, L1, r, L2, N,
                  fork_x_span, fork_y_span, fork_metal_width, fork_gnd_gap,
                  trans_in=None):
@@ -285,7 +286,7 @@ if __name__ == "__main__":
         cell.clear()
         fork_y_span = xmon_fork_penetration + xmon_fork_gnd_gap
         worm_x = CHIP.dx / 2 - (L_coupling + 2*r)/2 + (cross_len + cross_gnd_gap)/2
-        worm = EMResonator_TL2Qbit_worm3_1_XmonFork(
+        worm = EMResonator_TL2Qbit_worm3_XmonFork(
             Z_res, DPoint(worm_x, y - to_line), L_coupling, L0, L1, r, L2, N,
             fork_x_span, fork_y_span, fork_metal_width, fork_gnd_gap
         )

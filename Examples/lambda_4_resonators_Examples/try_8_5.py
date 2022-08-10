@@ -1,3 +1,4 @@
+#OK
 # Enter your Python code here
 from math import cos, sin, atan2, pi
 import itertools
