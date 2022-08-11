@@ -729,7 +729,7 @@ class DPathCPW(ComplexBase):
             a_t_b = a.length() * b.length()
             if a_s_b > a_t_b:  # numerical instability fix
                 angle = 0
-            elif a_s_b < - a_t_b:
+            elif a_s_b < -a_t_b:  # numerical instability fix
                 angle = np.pi
             else:
                 angle = a.vprod_sign(b) * np.abs(

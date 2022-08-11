@@ -82,13 +82,15 @@ class RFSquidParams(AsymSquidParams):
             self,
             asym_pars: AsymSquidParams=AsymSquidParams(),
             line_width=115,
-            line_length=40e3,
-            line_gap=1.8e3
+            line_length=120e3,
+            line_gap=1.8e3,
+            add_dx_mid=-1.8e3
     ):
         self.__dict__.update(asym_pars.__dict__)
         self.line_width = line_width
         self.line_length = line_length
-        self.line_gap=line_gap
+        self.line_gap = line_gap
+        self.add_dx_mid = add_dx_mid
 
 
 class RFSquid(AsymSquid):
@@ -122,9 +124,8 @@ class RFSquid(AsymSquid):
                                   -self.squid_params.line_width/2
                               )
         else:
-            print("BCW1 is absent in squid skeleton\n"
-                  "can't set starting point for kin. ind. line")
             return
+
         # make transition from large `TC` polygon to thin line:
         tc_bbx = self.TC.metal_region.bbox()
         tcwl_start = DPoint(
@@ -144,23 +145,62 @@ class RFSquid(AsymSquid):
                                  self.squid_params.line_width / 2
                              )
 
-        self.line = CPW(
-            start=self.line_start_pt,
-            end=self.line_end_pt,
-            width=self.squid_params.line_width, gap=0
-        )
-        self.primitives["line"] = self.line
-
-
         dr = self.line_end_pt - self.line_start_pt
         self.dy = dr.y
         self.dx = dr.x
         self.n_periods = (self.dy - self.squid_params.line_gap) // \
                          (2*self.squid_params.line_gap)
+        self.n_periods = int(self.n_periods)
         self.dx_step = self.dx / (self.n_periods + 1)
         self.dy_step = self.dy / (2*self.n_periods + 1)  # >= `line_gap`
         self.s = ( (self.squid_params.line_length - self.dy)/(
             self.n_periods + 1) + self.dx_step ) /2
+
+        # print("n_periods:", self.n_periods)
+        # print("dx_step:", self.dx_step)
+        # print("dy_step:", self.dy_step)
+        # print("s:", self.s)
+
+        # creating points for kin.ind. line
+        # first 180 turn
+        line_pts = []
+        p1 = self.line_start_pt
+        p2 = p1 + DVector(self.s, 0)
+        p3 = p2 + DVector(0, self.dy_step)
+        if self.n_periods == 0:
+            p4 = p1 + DVector(self.dx_step, 2*self.dy_step)
+        else:
+            p4 = p1 + DVector(
+                self.dx_step + self.squid_params.add_dx_mid,
+                self.dy_step
+            )
+        line_pts += [p1, p2, p3, p4]
+
+        # further meander
+        for i in range(self.n_periods):
+            p1 = line_pts[-1]
+            p2 = p1 + DVector(0, self.dy_step)
+            p3 = p2 + DVector(self.s, 0)
+            p4 = p3 + DVector(0, self.dy_step)
+            if i == (self.n_periods - 1):
+                p5 = p2 + DVector(
+                    self.dx_step - self.squid_params.add_dx_mid,
+                    self.dy_step
+                )
+            else:
+                p5 = p2 + DVector(self.dx_step, self.dy_step)
+            line_pts += [p2, p3, p4, p5]
+        self.line = DPathCPW(
+            points=line_pts,
+            cpw_parameters=CPWParameters(
+                width=self.squid_params.line_width, gap=0
+            ),
+            turn_radiuses=self.squid_params.line_width
+        )
+        self.primitives["line"] = self.line
+
+
+
         # draw initial line segment
 
         # for i in range(self.n_periods + 1):
