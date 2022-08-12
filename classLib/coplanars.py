@@ -682,7 +682,7 @@ class DPathCPW(ComplexBase):
 
         Parameters
         ----------
-        points : List[DPoint]
+        points : Union[List[DPoint],np.ndarray[Point]]
             list of anchor points of width Path
         cpw_parameters : Union[CPWParameters, List[CPWParameters]]
             Parameters of the CPW or an array-like with parameters

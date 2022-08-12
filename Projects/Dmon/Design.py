@@ -90,11 +90,12 @@ class RFSquidParams(AsymSquidParams):
         self.line_width = line_width
         self.line_length = line_length
         self.line_gap = line_gap
+        # signed shift of the middle meanders
         self.add_dx_mid = add_dx_mid
 
 
 class RFSquid(AsymSquid):
-    def __init__(self,origin: DPoint, squid_params: RFSquidParams,
+    def __init__(self, origin: DPoint, squid_params: RFSquidParams,
                  trans_in=None):
         self.center = origin
 
@@ -102,9 +103,11 @@ class RFSquid(AsymSquid):
         squid_params.SQRBT_dx = 0
         squid_params.SQRTJJ_dx = 0
         squid_params.SQRTT_dx = 0
+        self.r_curve = squid_params.line_width
+        # declare for proper code completion
+        self.squid_params : RFSquidParams = None
         super().__init__(origin=origin, params=squid_params,
                          trans_in=trans_in)
-        self.squid_params: RFSquidParams = squid_params
 
     def init_primitives(self):
         super().init_primitives()
@@ -148,13 +151,28 @@ class RFSquid(AsymSquid):
         dr = self.line_end_pt - self.line_start_pt
         self.dy = dr.y
         self.dx = dr.x
+        if (self.dy < self.squid_params.line_gap):
+            print(
+                "RFSquid meander drawing error:"
+                f"impossible to draw line with meander step "
+                f"{self.squid_params.line_gap:.0f} nm"
+                f"total dy of meander is too small: dy = {self.dy:.f} nm\n"
+            )
+            return
         self.n_periods = (self.dy - self.squid_params.line_gap) // \
                          (2*self.squid_params.line_gap)
         self.n_periods = int(self.n_periods)
-        self.dx_step = self.dx / (self.n_periods + 1)
+        self.dx_step = (self.dx) / (self.n_periods + 1)
         self.dy_step = self.dy / (2*self.n_periods + 1)  # >= `line_gap`
-        self.s = ( (self.squid_params.line_length - self.dy)/(
-            self.n_periods + 1) + self.dx_step ) /2
+        # due to curved turns, line will be shorter by
+        # the following amount:
+        curvature_correction = \
+            self.r_curve*(2-np.pi/2)*(4*self.n_periods + 2)
+        self.s = (
+                (self.squid_params.line_length + curvature_correction
+                 - self.dy + self.dx - 2 * self.squid_params.add_dx_mid) /
+                (self.n_periods + 1) / 2
+        )
 
         # print("n_periods:", self.n_periods)
         # print("dx_step:", self.dx_step)
@@ -167,13 +185,7 @@ class RFSquid(AsymSquid):
         p1 = self.line_start_pt
         p2 = p1 + DVector(self.s, 0)
         p3 = p2 + DVector(0, self.dy_step)
-        if self.n_periods == 0:
-            p4 = p1 + DVector(self.dx_step, 2*self.dy_step)
-        else:
-            p4 = p1 + DVector(
-                self.dx_step + self.squid_params.add_dx_mid,
-                self.dy_step
-            )
+        p4 = p3 + DVector(-self.s + self.dx_step, 0)
         line_pts += [p1, p2, p3, p4]
 
         # further meander
@@ -182,21 +194,21 @@ class RFSquid(AsymSquid):
             p2 = p1 + DVector(0, self.dy_step)
             p3 = p2 + DVector(self.s, 0)
             p4 = p3 + DVector(0, self.dy_step)
-            if i == (self.n_periods - 1):
-                p5 = p2 + DVector(
-                    self.dx_step - self.squid_params.add_dx_mid,
-                    self.dy_step
-                )
-            else:
-                p5 = p2 + DVector(self.dx_step, self.dy_step)
+            p5 = p4 + DVector(-self.s + self.dx_step, 0)
             line_pts += [p2, p3, p4, p5]
+
+        line_pts = np.array(line_pts)
+        # shift all but first and last point by certain amount
+        # in Ox direction
+        line_pts[1:-1] += DVector(self.squid_params.add_dx_mid, 0)
         self.line = DPathCPW(
             points=line_pts,
             cpw_parameters=CPWParameters(
                 width=self.squid_params.line_width, gap=0
             ),
-            turn_radiuses=self.squid_params.line_width
+            turn_radiuses=self.r_curve
         )
+        print(self.line.get_total_length())
         self.primitives["line"] = self.line
 
 
