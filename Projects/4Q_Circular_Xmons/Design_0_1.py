@@ -970,8 +970,8 @@ class Design4QSquare(ChipDesign):
         bridge56 = Bridge1(
             (seg5.end + seg6.start)/2, gnd2gnd_dy=100e3
         )
-        bridge56.place(self.region_bridges1, region_name="bridges_1")
-        bridge56.place(self.region_bridges2, region_name="bridges_2")
+        bridge56.place(self.region_bridges1, region_id="bridges_1")
+        bridge56.place(self.region_bridges2, region_id="bridges_2")
 
         seg7 = CPW(
             start=seg6.end + DPoint(0, ro_bridges_l),
@@ -987,8 +987,8 @@ class Design4QSquare(ChipDesign):
         bridge67 = Bridge1(
             (seg6.end + seg7.start) / 2, gnd2gnd_dy=100e3
         )
-        bridge67.place(self.region_bridges1, region_name="bridges_1")
-        bridge67.place(self.region_bridges2, region_name="bridges_2")
+        bridge67.place(self.region_bridges1, region_id="bridges_1")
+        bridge67.place(self.region_bridges2, region_id="bridges_2")
 
         seg8 = CPW(
             start=seg7.end + DPoint(0, ro_bridges_l),
@@ -1004,8 +1004,8 @@ class Design4QSquare(ChipDesign):
         bridge78 = Bridge1(
             (seg7.end + seg8.start) / 2, gnd2gnd_dy=100e3
         )
-        bridge78.place(self.region_bridges1, region_name="bridges_1")
-        bridge78.place(self.region_bridges2, region_name="bridges_2")
+        bridge78.place(self.region_bridges1, region_id="bridges_1")
+        bridge78.place(self.region_bridges2, region_id="bridges_2")
 
         seg9 = CPWRLPath(
             seg8.end + DPoint(0, ro_bridges_l), "LRL", self.ro_Z,
@@ -1025,8 +1025,8 @@ class Design4QSquare(ChipDesign):
         bridge89 = Bridge1(
             (seg8.end + seg9.start) / 2, gnd2gnd_dy=100e3
         )
-        bridge89.place(self.region_bridges1, region_name="bridges_1")
-        bridge89.place(self.region_bridges2, region_name="bridges_2")
+        bridge89.place(self.region_bridges1, region_id="bridges_1")
+        bridge89.place(self.region_bridges2, region_id="bridges_2")
 
         seg10 = CPW(
             start=seg9.end,
@@ -1117,8 +1117,8 @@ class Design4QSquare(ChipDesign):
                 bridge = Bridge1(test_struct3.center + DPoint(50e3 * (i - 1), 0),
                                  gnd_touch_dx=20e3)
                 test_bridges.append(bridge)
-                bridge.place(self.region_bridges1, region_name="bridges_1")
-                bridge.place(self.region_bridges2, region_name="bridges_2")
+                bridge.place(self.region_bridges1, region_id="bridges_1")
+                bridge.place(self.region_bridges2, region_id="bridges_2")
 
         # bandages test structures
         test_dc_el2_centers = [

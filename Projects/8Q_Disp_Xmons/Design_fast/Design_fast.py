@@ -1436,8 +1436,8 @@ class Design8Q(ChipDesign):
                     gnd_touch_dx=20e3
                 )
                 test_bridges.append(bridge)
-                bridge.place(self.region_bridges1, region_name="bridges_1")
-                bridge.place(self.region_bridges2, region_name="bridges_2")
+                bridge.place(self.region_bridges1, region_id="bridges_1")
+                bridge.place(self.region_bridges2, region_id="bridges_2")
 
         # bandages test structures
         if isinstance(self.chip, CHIP_16p5x16p5_20pads):
@@ -1753,9 +1753,9 @@ class Design8Q(ChipDesign):
                 br = Bridge1(center=bridge_center1, gnd2gnd_dy=70e3,
                              trans_in=Trans.R90)
                 br.place(dest=self.region_bridges1,
-                         region_name="bridges_1")
+                         region_id="bridges_1")
                 br.place(dest=self.region_bridges2,
-                         region_name="bridges_2")
+                         region_id="bridges_2")
 
         for i, cpw_md in enumerate(self.cpw_md_lines):
             dy_list = [110e3, 240e3, 370e3, 500e3, 630e3]
@@ -1768,9 +1768,9 @@ class Design8Q(ChipDesign):
                 br = Bridge1(center=bridge_center1, gnd2gnd_dy=70e3,
                              trans_in=Trans.R90)
                 br.place(dest=self.region_bridges1,
-                         region_name="bridges_1")
+                         region_id="bridges_1")
                 br.place(dest=self.region_bridges2,
-                         region_name="bridges_2")
+                         region_id="bridges_2")
 
         # for readout waveguides
         avoid_points = []

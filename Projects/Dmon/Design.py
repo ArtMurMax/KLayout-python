@@ -206,12 +206,11 @@ class RFSquid(AsymSquid):
             cpw_parameters=CPWParameters(
                 width=self.squid_params.line_width, gap=0
             ),
-            turn_radiuses=self.r_curve
+            turn_radiuses=self.r_curve,
+            region_id="kinInd"
         )
-        print(self.line.get_total_length())
+        # print(self.line.get_total_length())
         self.primitives["line"] = self.line
-
-
 
         # draw initial line segment
 
@@ -296,6 +295,10 @@ class DesignDmon(ChipDesign):
         info_el_protection = pya.LayerInfo(6, 0)
         self.region_el_protection = Region()
         self.layer_el_protection = self.layout.layer(info_el_protection)
+
+        info_kinInd_layer = pya.LayerInfo(7, 0)
+        self.region_kinInd = Region()
+        self.layer_kinInd = self.layout.layer(info_kinInd_layer)
 
         # has to call it once more to add new layers
         self.lv.add_missing_layers()
@@ -637,6 +640,7 @@ class DesignDmon(ChipDesign):
         self.cell.shapes(self.layer_bridges2).insert(self.region_bridges2)
         self.cell.shapes(self.layer_el_protection).insert(
             self.region_el_protection)
+        self.cell.shapes(self.layer_kinInd).insert(self.region_kinInd)
         self.lv.zoom_fit()
 
     def draw_chip(self):
@@ -856,6 +860,7 @@ class DesignDmon(ChipDesign):
             )
             self.squids.append(squid)
             squid.place(self.region_el)
+            squid.place(self.region_kinInd, region_id="kinInd")
 
     def draw_microwave_drvie_lines(self):
 
@@ -1175,8 +1180,8 @@ class DesignDmon(ChipDesign):
                     gnd_touch_dx=20e3
                 )
                 test_bridges.append(bridge)
-                bridge.place(self.region_bridges1, region_name="bridges_1")
-                bridge.place(self.region_bridges2, region_name="bridges_2")
+                bridge.place(self.region_bridges1, region_id="bridges_1")
+                bridge.place(self.region_bridges2, region_id="bridges_2")
 
             # bandages test structures
         test_dc_el2_centers = [
@@ -1360,8 +1365,8 @@ class DesignDmon(ChipDesign):
                     dy = -dy
                 bridge_center1 = cpw_fl.end + DVector(0, -dy)
                 br = Bridge1(center=bridge_center1, trans_in=Trans.R90)
-                br.place(dest=self.region_bridges1, region_name="bridges_1")
-                br.place(dest=self.region_bridges2, region_name="bridges_2")
+                br.place(dest=self.region_bridges1, region_id="bridges_1")
+                br.place(dest=self.region_bridges2, region_id="bridges_2")
 
         # for readout waveguide
         avoid_resonator_points = []

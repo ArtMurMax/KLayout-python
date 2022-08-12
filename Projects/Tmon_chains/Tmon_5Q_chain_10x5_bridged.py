@@ -203,8 +203,8 @@ for i in range(-(chain_length) // 2, (chain_length) // 2, 1):
                 tmon_JJ_arm_len, tmon_JJ_site_span, tmon_coupling_pads_len, \
                 h_jj, w_jj, asymmetry, None, True)
 
-    tmon.place(canvas, region_name="photo")
-    tmon.place(ebeam, region_name="ebeam")
+    tmon.place(canvas, region_id="photo")
+    tmon.place(ebeam, region_id="ebeam")
 
     qubit_ports.append(tmon.end)
 
@@ -260,9 +260,9 @@ tmon1_fc_segment_lengths = \
      (qubit_ports[0].x - cp1.end.x) / 2 + 0.495e6 + 2e3, (-cp1.end.y + qubit_ports[0].y) / 3 - 120e3 + 7.5e3]
 tmon1_fc = CPWRLPath(cp1.end, "LRLRLRL", fc_cpw_params, 240e3,
                      tmon1_fc_segment_lengths, [pi / 2, -pi / 2, -pi / 2], trans_in=None, bridged=True)
-tmon1_fc.place(canvas, region_name="photo")
-tmon1_fc.place(bridges, region_name="bridges")
-tmon1_fc.place(bridge_patches, region_name="bridge_patches")
+tmon1_fc.place(canvas, region_id="photo")
+tmon1_fc.place(bridges, region_id="bridges")
+tmon1_fc.place(bridge_patches, region_id="bridge_patches")
 
 tmon1_fc_end = FluxCoil(tmon1_fc.end, fc_cpw_params, width=20e3, trans_in=DTrans.R180)
 tmon1_fc_end.place(canvas)
@@ -271,9 +271,9 @@ tmon2_fc_segment_lengths = \
     [0.5e6, (qubit_ports[1].x - cp2.end.x) - 0.5e6, -(-cp2.end.y + qubit_ports[1].y) / 2 + 0.26e6 + 4.25e3]
 tmon2_fc = CPWRLPath(cp2.end, "LRRLRL", fc_cpw_params, 150e3,
                      tmon2_fc_segment_lengths, [-pi / 2, pi / 2, -pi / 2], trans_in=None, bridged=True)
-tmon2_fc.place(canvas, region_name="photo")
-tmon2_fc.place(bridges, region_name="bridges")
-tmon2_fc.place(bridge_patches, region_name="bridge_patches")
+tmon2_fc.place(canvas, region_id="photo")
+tmon2_fc.place(bridges, region_id="bridges")
+tmon2_fc.place(bridge_patches, region_id="bridge_patches")
 
 tmon1_fc_end = FluxCoil(tmon2_fc.end, fc_cpw_params, width=20e3, trans_in=DTrans.R180)
 tmon1_fc_end.place(canvas)
@@ -283,9 +283,9 @@ tmon3_fc_segment_lengths = \
      -(-cp3.end.y + qubit_ports[2].y) / 3 + 0.775e6 + 2.2e3]
 tmon3_fc = CPWRLPath(cp3.end, "LRLRL", fc_cpw_params, 150e3,
                      tmon3_fc_segment_lengths, [pi / 2, -pi / 2], trans_in=DTrans.R90, bridged=True)
-tmon3_fc.place(canvas, region_name="photo")
-tmon3_fc.place(bridges, region_name="bridges")
-tmon3_fc.place(bridge_patches, region_name="bridge_patches")
+tmon3_fc.place(canvas, region_id="photo")
+tmon3_fc.place(bridges, region_id="bridges")
+tmon3_fc.place(bridge_patches, region_id="bridge_patches")
 
 tmon1_fc_end = FluxCoil(tmon3_fc.end, fc_cpw_params, width=20e3, trans_in=DTrans.R180)
 tmon1_fc_end.place(canvas)
@@ -295,9 +295,9 @@ tmon4_fc_segment_lengths = \
      -(-cp4.end.y + qubit_ports[3].y) / 3 + 0.771e6 + 6.2e3]
 tmon4_fc = CPWRLPath(cp4.end, "LRLRL", fc_cpw_params, 150e3,
                      tmon4_fc_segment_lengths, [-pi / 2, pi / 2], trans_in=DTrans.R90, bridged=True)
-tmon4_fc.place(canvas, region_name="photo")
-tmon4_fc.place(bridges, region_name="bridges")
-tmon4_fc.place(bridge_patches, region_name="bridge_patches")
+tmon4_fc.place(canvas, region_id="photo")
+tmon4_fc.place(bridges, region_id="bridges")
+tmon4_fc.place(bridge_patches, region_id="bridge_patches")
 
 tmon1_fc_end = FluxCoil(tmon4_fc.end, fc_cpw_params, width=20e3, trans_in=DTrans.R180)
 tmon1_fc_end.place(canvas)
@@ -306,33 +306,33 @@ tmon_m1_fc_segment_lengths = \
     [0.5e6, -qubit_ports[-1].x + cp5.end.x - 0.5e6, cp5.end.y - qubit_ports[-1].y - 0.320e6 + 4e3]
 tmon_m1_fc = CPWRLPath(cp5.end, "LRRLRL", fc_cpw_params, 150e3,
                        tmon_m1_fc_segment_lengths, [-pi / 2, pi / 2, -pi / 2], trans_in=DTrans.M90, bridged=True)
-tmon_m1_fc.place(canvas, region_name="photo")
-tmon_m1_fc.place(bridges, region_name="bridges")
-tmon_m1_fc.place(bridge_patches, region_name="bridge_patches")
+tmon_m1_fc.place(canvas, region_id="photo")
+tmon_m1_fc.place(bridges, region_id="bridges")
+tmon_m1_fc.place(bridge_patches, region_id="bridge_patches")
 
 tmon1_fc_end = FluxCoil(tmon_m1_fc.end, fc_cpw_params, width=20e3, trans_in=DTrans.R180)
 tmon1_fc_end.place(canvas)
 
 ###TEST STRUCTURE
 test_frame1 = Test_frame(DPoint(-3146e3, -1752e3), h_jj, w_jj, asymmetry, 8e3, use_cell=True)
-test_frame1.place(canvas, region_name="photo")
-test_frame1.place(ebeam, region_name="ebeam")
+test_frame1.place(canvas, region_id="photo")
+test_frame1.place(ebeam, region_id="ebeam")
 
 test_frame2 = Test_frame(DPoint(3146e3, -1752e3), h_jj, w_jj, asymmetry, 8e3, use_cell=True)
-test_frame2.place(canvas, region_name="photo")
-test_frame2.place(ebeam, region_name="ebeam")
+test_frame2.place(canvas, region_id="photo")
+test_frame2.place(ebeam, region_id="ebeam")
 
 test_frame3 = Test_frame(DPoint(-3146e3, 1500e3), h_jj, w_jj, asymmetry, 8e3, use_cell=True)
-test_frame3.place(canvas, region_name="photo")
-test_frame3.place(ebeam, region_name="ebeam")
+test_frame3.place(canvas, region_id="photo")
+test_frame3.place(ebeam, region_id="ebeam")
 
 test_frame4 = Test_frame(DPoint(3146e3, 1500e3), h_jj, w_jj, asymmetry, 8e3, use_cell=True)
-test_frame4.place(canvas, region_name="photo")
-test_frame4.place(ebeam, region_name="ebeam")
+test_frame4.place(canvas, region_id="photo")
+test_frame4.place(ebeam, region_id="ebeam")
 
 # ab = Airbridge(DPoint(0, 0), None)
-# ab.place(bridges, region_name = "bridges")
-# ab.place(bridge_patches, region_name = "bridge_patches")
+# ab.place(bridges, region_id = "bridges")
+# ab.place(bridge_patches, region_id = "bridge_patches")
 
 ### DRAW SECTION END ###
 ebeam = ebeam.merge()

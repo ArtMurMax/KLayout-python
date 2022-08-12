@@ -37,7 +37,7 @@ class CPW(ElementBase):
     """
 
     def __init__(self, width=None, gap=None, start=DPoint(0, 0), end=DPoint(0, 0), gndWidth=-1, trans_in=None,
-                 cpw_params=None):
+                 cpw_params=None, region_id="default"):
         if (cpw_params is None):
             self.width = width
             self.gap = gap
@@ -50,7 +50,11 @@ class CPW(ElementBase):
         self.end = end
         self.start = start
         self.dr = end - start
-        super().__init__(origin=start, trans_in=trans_in)
+        super().__init__(
+            origin=start,
+            trans_in=trans_in,
+            region_id=region_id
+        )
 
         self._geometry_parameters = OrderedDict(
             [
@@ -115,7 +119,7 @@ class CPW(ElementBase):
 class CPWArc(ElementBase):
     def __init__(self, z0=CPWParameters(width=20e3, gap=10e3),
                  start=DPoint(0, 0), R=2e3,
-                 delta_alpha=pi/4, trans_in=None):
+                 delta_alpha=pi/4, trans_in=None, region_id="default"):
         # TODO: make constructor parametrical
         #  i.e. request center of the arc and angle interval in
         #  radians (\alpha_1, \alpha_2) such that \alpha_1 <= \alpha_2 and
@@ -136,7 +140,7 @@ class CPWArc(ElementBase):
         self.alpha_start = 0
         self.alpha_end = self.delta_alpha
 
-        super().__init__(start, trans_in)
+        super().__init__(start, trans_in, region_id=region_id)
         self.start = self.connections[0]
         self.end = self.connections[1]
         self.center = self.connections[2]
@@ -208,13 +212,13 @@ class CPWArc(ElementBase):
 
 class CPW2CPW(ElementBase):
     def __init__(self, Z0, Z1, start, end,
-                 trans_in=None):
+                 trans_in=None, region_id="default"):
         self.Z0: CPWParameters = Z0
         self.Z1: CPWParameters = Z1
         self.start = start
         self.end = end
         self.dr = self.end - self.start
-        super().__init__(start, trans_in)
+        super().__init__(start, trans_in, region_id=region_id)
         self.start = self.connections[0]
         self.end = self.connections[1]
         self.alpha_start = self.angle_connections[0]
@@ -256,7 +260,7 @@ class CPW2CPWArc(ElementBase):
     def __init__(self, origin=DPoint(0, 0), r=10, start_angle=0,
                  end_angle=np.pi / 4,
                  cpw1_params=None, cpw2_params=None,
-                 trans_in=None, inverse=False):
+                 trans_in=None, inverse=False, region_id="default"):
         """
         Parameters
         ----------
@@ -306,7 +310,8 @@ class CPW2CPWArc(ElementBase):
         self.n_arc_pts = PROGRAM.ARC_PTS_N
 
         super().__init__(
-            origin=origin, trans_in=trans_in, inverse=inverse
+            origin=origin, trans_in=trans_in, inverse=inverse,
+            region_id=region_id
         )
         # print("end: ", self.end)
         # print("start: ", self.start)
@@ -672,7 +677,7 @@ class CPWRLPath(ComplexBase):
 class DPathCPW(ComplexBase):
 
     def __init__(self, points, cpw_parameters,
-                 turn_radiuses, trans_in=None):
+                 turn_radiuses, trans_in=None, region_id="default"):
         """
         A piecewise-linear coplanar waveguide with rounded turns.
 
@@ -794,15 +799,13 @@ class DPathCPW(ComplexBase):
             self._segment_lengths: List[float] = [segment_lengths] * \
                                        self._N_straights
 
-        super().__init__(self.points[0], trans_in)
+        super().__init__(self.points[0], trans_in, region_id=region_id)
         self.start = self.connections[0]
         self.end = self.connections[1]
         self.alpha_start = self.angle_connections[0]
         self.alpha_end = self.angle_connections[1]
 
     def init_primitives(self):
-        pass
-
         idx_r = 0
         idx_l = 0
         origin = DPoint(0, 0)
@@ -848,7 +851,8 @@ class DPathCPW(ComplexBase):
                         cpw1_params=cpw1_params,
                         cpw2_params=cpw2_params,
                         trans_in=DCplxTrans(1, prev_primitive_end_angle
-                                            * 180 / np.pi, False, 0, 0)
+                                            * 180 / np.pi, False, 0, 0),
+                        region_id=self.region_id
                     )
                 else:
                     cpw_arc = CPW2CPWArc(
@@ -858,7 +862,8 @@ class DPathCPW(ComplexBase):
                         cpw1_params=self._cpw_parameters[i],
                         cpw2_params=self._cpw_parameters[i],
                         trans_in=DCplxTrans(1, prev_primitive_end_angle
-                                            * 180 / np.pi, False, 0, 0)
+                                            * 180 / np.pi, False, 0, 0),
+                        region_id=self.region_id
                     )
 
                 self.primitives["arc_" + str(idx_r)] = cpw_arc
@@ -913,7 +918,8 @@ class DPathCPW(ComplexBase):
                             prev_primitive_end_angle * 180 / np.pi,
                             False,
                             0, 0
-                        )
+                        ),
+                        region_id=self.region_id
                     )
                 else:
                     cpw = CPW(
@@ -927,7 +933,8 @@ class DPathCPW(ComplexBase):
                             prev_primitive_end_angle *180 / np.pi,
                             False,
                             0, 0
-                        )
+                        ),
+                        region_id=self.region_id
                     )
 
                 self.primitives["cpw_" + str(idx_l)] = cpw
@@ -1163,11 +1170,11 @@ class Bridge1(ElementBase):
                     )
                 )
             for bridge in bridges:
-                bridge.place(dest=dest, layer_i=bridge_layer1, region_name="bridges_1")
+                bridge.place(dest=dest, layer_i=bridge_layer1, region_id="bridges_1")
                 if dest2 is not None:
-                    bridge.place(dest=dest2, layer_i=bridge_layer2, region_name="bridges_2")
+                    bridge.place(dest=dest2, layer_i=bridge_layer2, region_id="bridges_2")
                 else:
-                    bridge.place(dest=dest, layer_i=bridge_layer2, region_name="bridges_2")
+                    bridge.place(dest=dest, layer_i=bridge_layer2, region_id="bridges_2")
         elif isinstance(cpw, CPWArc):
             # only 1 bridge is placed, in the middle of an arc
 
@@ -1184,13 +1191,13 @@ class Bridge1(ElementBase):
                 trans_in=DCplxTrans(1, alpha / pi * 180, False, 0, 0)
             )
             bridge.place(dest=dest, layer_i=bridge_layer1,
-                         region_name="bridges_1")
+                         region_id="bridges_1")
             if dest2 is not None:
                 bridge.place(dest=dest2, layer_i=bridge_layer2,
-                             region_name="bridges_2")
+                             region_id="bridges_2")
             else:
                 bridge.place(dest=dest, layer_i=bridge_layer2,
-                             region_name="bridges_2")
+                             region_id="bridges_2")
         elif isinstance(cpw, CPWRLPath) or isinstance(cpw, Coil_type_1)\
                 or isinstance(cpw, DPathCPW):
             for name, primitive in cpw.primitives.items():

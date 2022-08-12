@@ -1156,8 +1156,8 @@ class Design5Q(ChipDesign):
                     gnd_touch_dx=20e3
                 )
                 test_bridges.append(bridge)
-                bridge.place(self.region_bridges1, region_name="bridges_1")
-                bridge.place(self.region_bridges2, region_name="bridges_2")
+                bridge.place(self.region_bridges1, region_id="bridges_1")
+                bridge.place(self.region_bridges2, region_id="bridges_2")
 
         # bandages test structures
         test_dc_el2_centers = [
@@ -1416,8 +1416,8 @@ class Design5Q(ChipDesign):
             for dy in dy_list:
                 bridge_center1 = cpw_fl.end + DVector(0, -dy)
                 br = Bridge1(center=bridge_center1, trans_in=Trans.R90)
-                br.place(dest=self.region_bridges1, region_name="bridges_1")
-                br.place(dest=self.region_bridges2, region_name="bridges_2")
+                br.place(dest=self.region_bridges1, region_id="bridges_1")
+                br.place(dest=self.region_bridges2, region_id="bridges_2")
 
         # close bridges for cpw_md line
         for i, cpw_md in enumerate(self.cpw_md_lines):
@@ -1434,9 +1434,9 @@ class Design5Q(ChipDesign):
                     br = Bridge1(center=bridge_center1,
                                  trans_in=Trans.R90)
                 br.place(dest=self.region_bridges1,
-                         region_name="bridges_1")
+                         region_id="bridges_1")
                 br.place(dest=self.region_bridges2,
-                         region_name="bridges_2")
+                         region_id="bridges_2")
 
 
 
