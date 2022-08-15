@@ -197,16 +197,17 @@ class ElementBase():
             poly_temp.transform(dCplxTrans)
             self.origin = poly_temp.point(0)
 
+    def change_region_id(self, old_reg_id, new_reg_id):
+        self.metal_regions[new_reg_id] = self.metal_regions.pop(old_reg_id)
+        self.empty_regions[new_reg_id] = self.empty_regions.pop(old_reg_id)
+        self.region_id = new_reg_id
+
     def place(self, dest, layer_i=-1, region_id="default", merge=False):
         metal_region = None
         empty_region = None
 
         if (region_id in self.metal_regions):
             metal_region = self.metal_regions[region_id]
-        else:
-            return
-
-        if (region_id in self.empty_regions):
             empty_region = self.empty_regions[region_id]
         else:
             return

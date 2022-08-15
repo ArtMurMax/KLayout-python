@@ -2,7 +2,8 @@ from math import sqrt, cos, sin, atan2, pi, copysign, tan
 
 import pya
 import numpy as np
-from pya import Point, DPoint, DVector, DSimplePolygon, SimplePolygon, DPolygon, Polygon, Region
+from pya import Point, DPoint, DVector, DSimplePolygon, SimplePolygon, \
+    DPolygon, Polygon, Region
 from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans
 
 from typing import Union, List
@@ -24,7 +25,8 @@ class CPWParameters(ElementBase):
         self.gap = gap
         self.b = 2 * gap + width
 
-        self._geometry_parameters = {"cpw width, um": self.width, "cpw_gap, um": self.gap}
+        self._geometry_parameters = {"cpw width, um": self.width,
+                                     "cpw_gap, um": self.gap}
 
 
 class CPW(ElementBase):
@@ -36,7 +38,8 @@ class CPW(ElementBase):
                         DPoint end - center aligned point, determines the end point of the coplanar segment
     """
 
-    def __init__(self, width=None, gap=None, start=DPoint(0, 0), end=DPoint(0, 0), gndWidth=-1, trans_in=None,
+    def __init__(self, width=None, gap=None, start=DPoint(0, 0),
+                 end=DPoint(0, 0), gndWidth=-1, trans_in=None,
                  cpw_params=None, region_id="default"):
         if (cpw_params is None):
             self.width = width
@@ -73,11 +76,12 @@ class CPW(ElementBase):
         self.end = self.start + self.dr
         alpha = atan2(self.dr.y, self.dr.x)
         self.angle_connections = [alpha, alpha]
-        alpha_trans = ICplxTrans().from_dtrans(DCplxTrans(1, alpha * 180 / pi, False, self.start))
+        alpha_trans = ICplxTrans().from_dtrans(
+            DCplxTrans(1, alpha * 180 / pi, False, self.start))
         metal_poly = DPolygon([DPoint(0, -self.width / 2),
-                                     DPoint(self.dr.abs(), -self.width / 2),
-                                     DPoint(self.dr.abs(), self.width / 2),
-                                     DPoint(0, self.width / 2)])
+                               DPoint(self.dr.abs(), -self.width / 2),
+                               DPoint(self.dr.abs(), self.width / 2),
+                               DPoint(0, self.width / 2)])
         self.connection_edges = [3, 1]
         self.metal_region.insert(pya.Polygon().from_dpoly(metal_poly))
         if (self.gap != 0):
@@ -91,12 +95,14 @@ class CPW(ElementBase):
             )
             self.empty_region.insert(
                 pya.Box(
-                    Point().from_dpoint(DPoint(0, -self.width / 2 - self.gap)),
-                    Point().from_dpoint(DPoint(self.dr.abs(), -self.width / 2))
+                    Point().from_dpoint(
+                        DPoint(0, -self.width / 2 - self.gap)),
+                    Point().from_dpoint(
+                        DPoint(self.dr.abs(), -self.width / 2))
                 )
             )
-        self.metal_region.size(1,0,0)
-        self.empty_region.size(1,0,0)
+        self.metal_region.size(1, 0, 0)
+        self.empty_region.size(1, 0, 0)
         self.metal_region.transform(alpha_trans)
         self.empty_region.transform(alpha_trans)
 
@@ -113,13 +119,13 @@ class CPW(ElementBase):
         return self.dr.abs()
 
     def center(self):
-        return (self.end + self.start)/2
+        return (self.end + self.start) / 2
 
 
 class CPWArc(ElementBase):
     def __init__(self, z0=CPWParameters(width=20e3, gap=10e3),
                  start=DPoint(0, 0), R=2e3,
-                 delta_alpha=pi/4, trans_in=None, region_id="default"):
+                 delta_alpha=pi / 4, trans_in=None, region_id="default"):
         # TODO: make constructor parametrical
         #  i.e. request center of the arc and angle interval in
         #  radians (\alpha_1, \alpha_2) such that \alpha_1 <= \alpha_2 and
@@ -129,12 +135,13 @@ class CPWArc(ElementBase):
         self.R = R
         self.start = start
         self.center = start + DPoint(0, self.R)
-        self.end = self.center + DPoint(sin(delta_alpha), -cos(delta_alpha)) * self.R
+        self.end = self.center + DPoint(sin(delta_alpha),
+                                        -cos(delta_alpha)) * self.R
         self.dr = self.end - self.start
 
         self.width = z0.width
         self.gap = z0.gap
-        self.b = self.width + 2*self.gap
+        self.b = self.width + 2 * self.gap
 
         self.delta_alpha = delta_alpha
         self.alpha_start = 0
@@ -167,10 +174,12 @@ class CPWArc(ElementBase):
         #        print("Center:", center)
         for i in range(0, n_inner):
             alpha = alpha_start + d_alpha_inner * i
-            pts.append(center + DPoint(cos(alpha), sin(alpha)) * (R - width / 2))
+            pts.append(
+                center + DPoint(cos(alpha), sin(alpha)) * (R - width / 2))
         for i in range(0, n_outer):
             alpha = alpha_end + d_alpha_outer * i
-            pts.append(center + DPoint(cos(alpha), sin(alpha)) * (R + width / 2))
+            pts.append(
+                center + DPoint(cos(alpha), sin(alpha)) * (R + width / 2))
         #        print("Points:", pts[:n_inner],"\n       ", pts[n_inner:], "\n")
         return DSimplePolygon(pts)
 
@@ -186,13 +195,23 @@ class CPWArc(ElementBase):
         n_outer = PROGRAM.ARC_PTS_N
 
         metal_arc = self._get_solid_arc(self.center, self.R, self.width,
-                                        self.alpha_start - pi / 2, self.alpha_end - pi / 2, n_inner, n_outer)
+                                        self.alpha_start - pi / 2,
+                                        self.alpha_end - pi / 2, n_inner,
+                                        n_outer)
         self.connection_edges = [n_inner + n_outer, n_inner]
-        empty_arc1 = self._get_solid_arc(self.center, self.R - (self.width + self.gap) / 2,
-                                         self.gap, self.alpha_start - pi / 2, self.alpha_end - pi / 2, n_inner, n_outer)
+        empty_arc1 = self._get_solid_arc(self.center, self.R - (
+                    self.width + self.gap) / 2,
+                                         self.gap,
+                                         self.alpha_start - pi / 2,
+                                         self.alpha_end - pi / 2, n_inner,
+                                         n_outer)
 
-        empty_arc2 = self._get_solid_arc(self.center, self.R + (self.width + self.gap) / 2,
-                                         self.gap, self.alpha_start - pi / 2, self.alpha_end - pi / 2, n_inner, n_outer)
+        empty_arc2 = self._get_solid_arc(self.center, self.R + (
+                    self.width + self.gap) / 2,
+                                         self.gap,
+                                         self.alpha_start - pi / 2,
+                                         self.alpha_end - pi / 2, n_inner,
+                                         n_outer)
         self.metal_region.insert(SimplePolygon(metal_arc))
         self.empty_region.insert(SimplePolygon(empty_arc1))
         self.empty_region.insert(SimplePolygon(empty_arc2))
@@ -207,7 +226,7 @@ class CPWArc(ElementBase):
         self.alpha_end = self.angle_connections[1]
 
     def length(self):
-        return abs(self.delta_alpha*self.R)
+        return abs(self.delta_alpha * self.R)
 
 
 class CPW2CPW(ElementBase):
@@ -231,15 +250,21 @@ class CPW2CPW(ElementBase):
         self.angle_connections = [alpha, alpha]
         alpha_trans = DCplxTrans(1, alpha * 180 / pi, False, 0, 0)
 
-        m_poly = DPolygon([DPoint(0, -self.Z0.width / 2), DPoint(self.dr.abs(), -self.Z1.width / 2),
-                                 DPoint(self.dr.abs(), self.Z1.width / 2), DPoint(0, self.Z0.width / 2)])
-        e_poly1 = DPolygon([DPoint(0, -self.Z0.b / 2), DPoint(self.dr.abs(), -self.Z1.b / 2),
-                                  DPoint(self.dr.abs(), -self.Z1.width / 2), DPoint(0, -self.Z0.width / 2)])
-        e_poly2 = DPolygon([DPoint(0, self.Z0.b / 2), DPoint(self.dr.abs(), self.Z1.b / 2),
-                                  DPoint(self.dr.abs(), self.Z1.width / 2), DPoint(0, self.Z0.width / 2)])
-        m_poly.size(1,0,0)
-        e_poly1.size(1,0,0)
-        e_poly2.size(1,0,0)
+        m_poly = DPolygon([DPoint(0, -self.Z0.width / 2),
+                           DPoint(self.dr.abs(), -self.Z1.width / 2),
+                           DPoint(self.dr.abs(), self.Z1.width / 2),
+                           DPoint(0, self.Z0.width / 2)])
+        e_poly1 = DPolygon([DPoint(0, -self.Z0.b / 2),
+                            DPoint(self.dr.abs(), -self.Z1.b / 2),
+                            DPoint(self.dr.abs(), -self.Z1.width / 2),
+                            DPoint(0, -self.Z0.width / 2)])
+        e_poly2 = DPolygon([DPoint(0, self.Z0.b / 2),
+                            DPoint(self.dr.abs(), self.Z1.b / 2),
+                            DPoint(self.dr.abs(), self.Z1.width / 2),
+                            DPoint(0, self.Z0.width / 2)])
+        m_poly.size(1, 0, 0)
+        e_poly1.size(1, 0, 0)
+        e_poly2.size(1, 0, 0)
 
         self.metal_region.insert(Polygon.from_dpoly(m_poly))
         self.empty_region.insert(Polygon.from_dpoly(e_poly1))
@@ -304,7 +329,7 @@ class CPW2CPWArc(ElementBase):
 
         self.width = self.cpw2_params.width
         self.gap = self.cpw2_params.gap
-        self.b = self.width + 2*self.gap
+        self.b = self.width + 2 * self.gap
 
         from classLib._PROG_SETTINGS import PROGRAM
         self.n_arc_pts = PROGRAM.ARC_PTS_N
@@ -337,8 +362,8 @@ class CPW2CPWArc(ElementBase):
 
         self.connections = [self.start.dup(), self.center.dup(),
                             self.end.dup()]
-        self.angle_connections = [self.start_angle + np.pi/2,
-                                  self.end_angle + np.pi/2]
+        self.angle_connections = [self.start_angle + np.pi / 2,
+                                  self.end_angle + np.pi / 2]
 
     def _get_cpw_arc(self, center, r, n_arc_pts=200, method="linear",
                      segment="center_metal"):
@@ -429,7 +454,7 @@ class CPW2CPWArc(ElementBase):
         self.alpha_end = self.angle_connections[1]
 
     def length(self):
-        return abs((self.end_angle - self.start_angle)*self.r)
+        return abs((self.end_angle - self.start_angle) * self.r)
 
 
 class Coil_type_1(ComplexBase):
@@ -446,14 +471,18 @@ class Coil_type_1(ComplexBase):
         self.alpha_end = self.angle_connections[1]
 
     def init_primitives(self):
-        self.cop1 = CPW(self.Z0.width, self.Z0.gap, DPoint(0, 0), DPoint(self.L1, 0))
+        self.cop1 = CPW(self.Z0.width, self.Z0.gap, DPoint(0, 0),
+                        DPoint(self.L1, 0))
         self.arc1 = CPWArc(self.Z0, self.cop1.end, -self.r, -pi)
-        self.cop2 = CPW(self.Z0.width, self.Z0.gap, self.arc1.end, self.arc1.end - DPoint(self.L2, 0))
+        self.cop2 = CPW(self.Z0.width, self.Z0.gap, self.arc1.end,
+                        self.arc1.end - DPoint(self.L2, 0))
         self.arc2 = CPWArc(self.Z0, self.cop2.end, -self.r, pi)
 
         self.connections = [self.cop1.start, self.arc2.end]
-        self.angle_connections = [self.cop1.alpha_start, self.arc2.alpha_end]
-        self.primitives = {"cop1": self.cop1, "arc1": self.arc1, "cop2": self.cop2, "arc2": self.arc2}
+        self.angle_connections = [self.cop1.alpha_start,
+                                  self.arc2.alpha_end]
+        self.primitives = {"cop1": self.cop1, "arc1": self.arc1,
+                           "cop2": self.cop2, "arc2": self.arc2}
 
 
 from collections import Counter
@@ -601,15 +630,15 @@ class CPWRLPath(ComplexBase):
                                             * 180 / np.pi, False, 0, 0)
                     )
                 else:  # draw constant width coplanar
-                        cpw_arc = CPW2CPWArc(
-                            origin=arc_center, r=turn_radius,
-                            start_angle=-np.pi / 2,
-                            end_angle=turn_angle - np.pi / 2,
-                            cpw1_params=self._cpw_parameters[i],
-                            cpw2_params=self._cpw_parameters[i],
-                            trans_in=DCplxTrans(1, prev_primitive_end_angle
-                                                * 180 / np.pi, False, 0, 0)
-                        )
+                    cpw_arc = CPW2CPWArc(
+                        origin=arc_center, r=turn_radius,
+                        start_angle=-np.pi / 2,
+                        end_angle=turn_angle - np.pi / 2,
+                        cpw1_params=self._cpw_parameters[i],
+                        cpw2_params=self._cpw_parameters[i],
+                        trans_in=DCplxTrans(1, prev_primitive_end_angle
+                                            * 180 / np.pi, False, 0, 0)
+                    )
 
                 self.primitives["arc_" + str(idx_r)] = cpw_arc
                 idx_r += 1
@@ -635,7 +664,7 @@ class CPWRLPath(ComplexBase):
                     self._segment_lengths[idx_l] -= \
                         self._turn_radiuses[idx_r - 1] * coeff
 
-                if(self._segment_lengths[idx_l] < 0):
+                if (self._segment_lengths[idx_l] < 0):
                     raise Warning(
                         f"{self.__class__.__name__} warning: segment №"
                         f"{idx_l} length is less than zero\n:"
@@ -721,7 +750,6 @@ class DPathCPW(ComplexBase):
                 except ValueError as e:
                     print(e)
 
-
         # translating from points, to squences of segments lengths and
         # turn angles
         self._turn_angles = []
@@ -770,7 +798,8 @@ class DPathCPW(ComplexBase):
             else:
                 self._cpw_parameters = copy.deepcopy(cpw_parameters)
             if l_length == 1:
-                self._cpw_parameters = [cpw_parameters[0]]*self._N_elements
+                self._cpw_parameters = [cpw_parameters[
+                                            0]] * self._N_elements
         else:
             self._cpw_parameters = [cpw_parameters] * self._N_elements
 
@@ -789,15 +818,15 @@ class DPathCPW(ComplexBase):
         if hasattr(segment_lengths, "__len__"):
             if len(segment_lengths) != self._N_straights:
                 raise ValueError(
-                     "Straight segments dimension mismatch"
-                     f"self._N_straights = {self._N_straights}\n"
-                     f"segment_lengths = {segment_lengths}"
+                    "Straight segments dimension mismatch"
+                    f"self._N_straights = {self._N_straights}\n"
+                    f"segment_lengths = {segment_lengths}"
                 )
             else:
                 self._segment_lengths = copy.deepcopy(segment_lengths)
         else:
             self._segment_lengths: List[float] = [segment_lengths] * \
-                                       self._N_straights
+                                                 self._N_straights
 
         super().__init__(self.points[0], trans_in, region_id=region_id)
         self.start = self.connections[0]
@@ -834,14 +863,14 @@ class DPathCPW(ComplexBase):
                 )
                 if self._cpw_parameters[i].smoothing:
                     if i > 0:
-                        cpw1_params = self._cpw_parameters[i-1]
+                        cpw1_params = self._cpw_parameters[i - 1]
                     else:
                         raise ValueError(
                             "No previous segment to smooth into"
                         )
 
                     if i < self._N_elements:
-                        cpw2_params = self._cpw_parameters[i+1]
+                        cpw2_params = self._cpw_parameters[i + 1]
                         self._cpw_parameters[i] = cpw2_params
 
                     cpw_arc = CPW2CPWArc(
@@ -878,14 +907,14 @@ class DPathCPW(ComplexBase):
                         and abs(self._turn_angles[idx_r]) < np.pi):
                     coeff = abs(np.tan(self._turn_angles[idx_r] / 2))
                     self._segment_lengths[idx_l] -= self._turn_radiuses[
-                                                          idx_r] * coeff
+                                                        idx_r] * coeff
                 # previous 'R' segment if exists
                 if (i - 1 > 0  # line can't start with 'R'
                         and self._shape_string[i - 1] == 'R'
                         and abs(self._turn_angles[idx_r - 1]) < np.pi):
                     coeff = abs(np.tan(self._turn_angles[idx_r - 1] / 2))
                     self._segment_lengths[idx_l] -= self._turn_radiuses[
-                                                          idx_r - 1] * coeff
+                                                        idx_r - 1] * coeff
 
                 if (self._segment_lengths[idx_l] < 0):
                     raise Warning(
@@ -897,14 +926,14 @@ class DPathCPW(ComplexBase):
 
                 if self._cpw_parameters[i].smoothing:
                     if i > 0:
-                        cpw1_params = self._cpw_parameters[i-1]
+                        cpw1_params = self._cpw_parameters[i - 1]
                     else:
                         raise ValueError(
                             "No previous segment to smooth into"
                         )
 
                     if i < self._N_elements:
-                        cpw2_params = self._cpw_parameters[i+1]
+                        cpw2_params = self._cpw_parameters[i + 1]
                         self._cpw_parameters[i] = cpw2_params
 
                     cpw = CPW2CPW(
@@ -930,7 +959,7 @@ class DPathCPW(ComplexBase):
                         DPoint(self._segment_lengths[idx_l], 0),
                         trans_in=DCplxTrans(
                             1,
-                            prev_primitive_end_angle *180 / np.pi,
+                            prev_primitive_end_angle * 180 / np.pi,
                             False,
                             0, 0
                         ),
@@ -983,11 +1012,12 @@ class Bridge1(ElementBase):
     transition_len = 12e3
     gnd2gnd_dy = 70e3
 
-    def __init__(self, center, gnd_touch_dx=20e3, gnd2gnd_dy=70e3, trans_in=None):
+    def __init__(self, center, gnd_touch_dx=20e3, gnd2gnd_dy=70e3,
+                 trans_in=None):
         self.center = center
         self.gnd_touch_dx = gnd_touch_dx
         self.angle = 0
-        self.gnd2gnd_dy=gnd2gnd_dy
+        self.gnd2gnd_dy = gnd2gnd_dy
         super().__init__(center, trans_in)
 
         self._geometry_parameters = OrderedDict(
@@ -998,55 +1028,69 @@ class Bridge1(ElementBase):
         )
 
     def init_regions(self):
-        self.metal_regions["bridges_1"] = Region()  # region with ground contacts
+        self.metal_regions[
+            "bridges_1"] = Region()  # region with ground contacts
         self.empty_regions["bridges_1"] = Region()  # remains empty
 
         self.metal_regions["bridges_2"] = Region()  # remains empty
-        self.empty_regions["bridges_2"] = Region()  # region with erased bridge area
+        self.empty_regions[
+            "bridges_2"] = Region()  # region with erased bridge area
 
         center = DPoint(0, 0)
         self.connections = [center]
         self.angle_connections = [0]
 
         # init metal region of ground touching layer
-        top_gnd_center = center + DPoint(0, self.gnd2gnd_dy / 2 + self.gnd_touch_dy / 2)
-        p1 = top_gnd_center + DPoint(-self.gnd_touch_dx / 2, -self.gnd_touch_dy / 2)
+        top_gnd_center = center + DPoint(0,
+                                         self.gnd2gnd_dy / 2 + self.gnd_touch_dy / 2)
+        p1 = top_gnd_center + DPoint(-self.gnd_touch_dx / 2,
+                                     -self.gnd_touch_dy / 2)
         p2 = p1 + DVector(self.gnd_touch_dx, self.gnd_touch_dy)
         top_gnd_touch_box = pya.DBox(p1, p2)
-        self.metal_regions["bridges_1"].insert(pya.Box().from_dbox(top_gnd_touch_box))
+        self.metal_regions["bridges_1"].insert(
+            pya.Box().from_dbox(top_gnd_touch_box))
 
-        bot_gnd_center = center + DPoint(0, -(self.gnd2gnd_dy / 2 + self.gnd_touch_dy / 2))
-        p1 = bot_gnd_center + DPoint(-self.gnd_touch_dx / 2, -self.gnd_touch_dy / 2)
+        bot_gnd_center = center + DPoint(0, -(
+                    self.gnd2gnd_dy / 2 + self.gnd_touch_dy / 2))
+        p1 = bot_gnd_center + DPoint(-self.gnd_touch_dx / 2,
+                                     -self.gnd_touch_dy / 2)
         p2 = p1 + DVector(self.gnd_touch_dx, self.gnd_touch_dy)
         bot_gnd_touch_box = pya.DBox(p1, p2)
-        self.metal_regions["bridges_1"].insert(pya.Box().from_dbox(bot_gnd_touch_box))
+        self.metal_regions["bridges_1"].insert(
+            pya.Box().from_dbox(bot_gnd_touch_box))
 
         # init empty region for second layout layer
         # points start from left-bottom corner and goes in clockwise direction
-        p1 = bot_gnd_touch_box.p1 + DPoint(-self.surround_gap, -self.surround_gap)
+        p1 = bot_gnd_touch_box.p1 + DPoint(-self.surround_gap,
+                                           -self.surround_gap)
         p2 = p1 + DPoint(0, self.surround_gap + self.gnd_touch_dy +
                          self.transition_len - self.surround_gap)
         # top left corner + `surrounding_gap` + `transition_length`
         p3 = bot_gnd_touch_box.p1 + DPoint(0, bot_gnd_touch_box.height()) + \
-             DPoint(-(20e3-self.gnd_touch_dx)/2, self.transition_len)
+             DPoint(-(20e3 - self.gnd_touch_dx) / 2, self.transition_len)
         bl_pts_list = [p1, p2, p3]  # bl stands for bottom-left
         ''' exploiting symmetry of reflection at x and y axes. '''
         # reflecting at x-axis
-        tl_pts_list = list(map(lambda x: DTrans.M0 * x, bl_pts_list))  # tl stands for top-left
+        tl_pts_list = list(map(lambda x: DTrans.M0 * x,
+                               bl_pts_list))  # tl stands for top-left
         # preserving order
-        tl_pts_list = reversed(list(tl_pts_list))  # preserving clockwise points order
+        tl_pts_list = reversed(
+            list(tl_pts_list))  # preserving clockwise points order
         # converting iterator to list
-        l_pts_list = list(itertools.chain(bl_pts_list, tl_pts_list))  # l stands for left
+        l_pts_list = list(
+            itertools.chain(bl_pts_list, tl_pts_list))  # l stands for left
 
         # reflecting all points at y-axis
         r_pts_list = list(map(lambda x: DTrans.M90 * x, l_pts_list))
-        r_pts_list = list(reversed(r_pts_list))  # preserving clockwise points order
+        r_pts_list = list(
+            reversed(r_pts_list))  # preserving clockwise points order
 
         # gathering points
         pts_list = l_pts_list + r_pts_list  # concatenating proper ordered lists
 
         empty_polygon = DSimplePolygon(pts_list)
-        self.empty_regions["bridges_2"].insert(SimplePolygon.from_dpoly(empty_polygon))
+        self.empty_regions["bridges_2"].insert(
+            SimplePolygon.from_dpoly(empty_polygon))
 
     def _refresh_named_connections(self):
         self.center = self.connections[0]
@@ -1130,7 +1174,7 @@ class Bridge1(ElementBase):
         # if avoid distance passed as float - it is interpreted as the
         # same for all points
         if not hasattr(avoid_distances, "__len__"):
-            avoid_distances = [avoid_distances]*len(avoid_points)
+            avoid_distances = [avoid_distances] * len(avoid_points)
 
         if isinstance(cpw, CPW):
             # recursion base
@@ -1146,15 +1190,19 @@ class Bridge1(ElementBase):
             bridge_width = tmp_bridge.gnd_touch_dx + 2 * tmp_bridge.surround_gap
 
             # number of additional bridges on either side of center
-            additional_bridges_n = int((cpw_len / 2 - bridge_width / 2) // bridges_step)
+            additional_bridges_n = int(
+                (cpw_len / 2 - bridge_width / 2) // bridges_step)
             bridge_centers = []
-            for i in range(-additional_bridges_n, additional_bridges_n + 1):
-                bridge_center = cpw.start + (cpw_len / 2 + i * bridges_step) * cpw_dir_unit_vector
+            for i in range(-additional_bridges_n,
+                           additional_bridges_n + 1):
+                bridge_center = cpw.start + (
+                            cpw_len / 2 + i * bridges_step) * cpw_dir_unit_vector
 
                 avoid = False
                 for avoid_point, avoid_distance in zip(avoid_points,
                                                        avoid_distances):
-                    if (avoid_point - bridge_center).abs() < avoid_distance:
+                    if (
+                            avoid_point - bridge_center).abs() < avoid_distance:
                         avoid = True
                         break
 
@@ -1166,25 +1214,29 @@ class Bridge1(ElementBase):
                 bridges.append(
                     Bridge1(
                         center, gnd2gnd_dy=gnd2gnd_dy,
-                        trans_in=DCplxTrans(1, alpha / pi * 180, False, 0, 0)
+                        trans_in=DCplxTrans(1, alpha / pi * 180, False, 0,
+                                            0)
                     )
                 )
             for bridge in bridges:
-                bridge.place(dest=dest, layer_i=bridge_layer1, region_id="bridges_1")
+                bridge.place(dest=dest, layer_i=bridge_layer1,
+                             region_id="bridges_1")
                 if dest2 is not None:
-                    bridge.place(dest=dest2, layer_i=bridge_layer2, region_id="bridges_2")
+                    bridge.place(dest=dest2, layer_i=bridge_layer2,
+                                 region_id="bridges_2")
                 else:
-                    bridge.place(dest=dest, layer_i=bridge_layer2, region_id="bridges_2")
+                    bridge.place(dest=dest, layer_i=bridge_layer2,
+                                 region_id="bridges_2")
         elif isinstance(cpw, CPWArc):
             # only 1 bridge is placed, in the middle of an arc
 
-            alpha_mid = cpw.alpha_start + cpw.delta_alpha/2 - np.pi/2
+            alpha_mid = cpw.alpha_start + cpw.delta_alpha / 2 - np.pi / 2
 
             # unit vector from a center of the arc to its mid point
             v_arc_mid = DVector(np.cos(alpha_mid), np.sin(alpha_mid))
-            arc_mid = cpw.center + cpw.R*v_arc_mid
+            arc_mid = cpw.center + cpw.R * v_arc_mid
             # tangent vector to the center of a bridge
-            v_arc_mid_tangent = DCplxTrans(1, 90, False, 0, 0)*v_arc_mid
+            v_arc_mid_tangent = DCplxTrans(1, 90, False, 0, 0) * v_arc_mid
             alpha = np.arctan2(v_arc_mid_tangent.y, v_arc_mid_tangent.x)
             bridge = Bridge1(
                 center=arc_mid, gnd2gnd_dy=gnd2gnd_dy,
@@ -1198,7 +1250,7 @@ class Bridge1(ElementBase):
             else:
                 bridge.place(dest=dest, layer_i=bridge_layer2,
                              region_id="bridges_2")
-        elif isinstance(cpw, CPWRLPath) or isinstance(cpw, Coil_type_1)\
+        elif isinstance(cpw, CPWRLPath) or isinstance(cpw, Coil_type_1) \
                 or isinstance(cpw, DPathCPW):
             for name, primitive in cpw.primitives.items():
                 if isinstance(primitive, CPW):

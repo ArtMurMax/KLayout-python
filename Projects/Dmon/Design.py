@@ -94,7 +94,7 @@ class RFSquidParams(AsymSquidParams):
         self.add_dx_mid = add_dx_mid
 
 
-class RFSquid(AsymSquid):
+class Fluxonium(AsymSquid):
     def __init__(self, origin: DPoint, squid_params: RFSquidParams,
                  trans_in=None):
         self.center = origin
@@ -138,7 +138,8 @@ class RFSquid(AsymSquid):
         self.TCWL = CPW(
             start=tcwl_start,
             end=tcwl_start + DPoint(0, -self.squid_params.BCW_dy),
-            width=self.squid_params.BCW_dx, gap=0
+            width=self.squid_params.BCW_dx, gap=0,
+            region_id="kinInd"
         )
         self.primitives["TCWL"] = self.TCWL
 
@@ -153,7 +154,7 @@ class RFSquid(AsymSquid):
         self.dx = dr.x
         if (self.dy < self.squid_params.line_gap):
             print(
-                "RFSquid meander drawing error:"
+                "Fluxonium meander drawing error:"
                 f"impossible to draw line with meander step "
                 f"{self.squid_params.line_gap:.0f} nm"
                 f"total dy of meander is too small: dy = {self.dy:.f} nm\n"
@@ -212,13 +213,23 @@ class RFSquid(AsymSquid):
         # print(self.line.get_total_length())
         self.primitives["line"] = self.line
 
-        # draw initial line segment
+        # shift BC1 onto the `kinInd` layer
+        self.BC1.change_region_id(self.BC1.region_id, "kinInd")
+        # shift BCW1 onto the `kinInd` layer
+        self.BCW1.change_region_id(self.BCW1.region_id, "kinInd")
 
-        # for i in range(self.n_periods + 1):
-        #     prim_name = "line" + str(i)
-        #     prim = CPW(
-        #         start=
-        #     )
+        # create top contact pad for kinetic inductance wire
+        dr = self.TC.dr
+        tcki_width = 0.6*self.TC.width
+        shift_dv = DVector(self.TCWL.end.x - self.TC.end.x
+                           + self.TCWL.width/2 - tcki_width/2, 0)
+        self.TC_KI = CPW(
+            start=self.TC.start + 0.45*dr + shift_dv,
+            end=self.TC.end + shift_dv,
+            width=tcki_width, gap=0,
+            region_id="kinInd"
+        )
+        self.primitives["TC_KI"] = self.TC_KI
 
 
 class TestStructurePadsSquare(ComplexBase):
@@ -413,8 +424,8 @@ class DesignDmon(ChipDesign):
                        [1, 2.7, 3.5, 4.35, 5.5, 6.5, 7.6, 8.5]]
 
         # squids
-        self.squids: List[RFSquid] = []
-        self.test_squids: List[RFSquid] = []
+        self.squids: List[Fluxonium] = []
+        self.test_squids: List[Fluxonium] = []
         # vertical shift of every squid local origin coordinates
         self.squid_vertical_shift = 0e3
         # minimal distance between squid loop and photo layer
@@ -548,6 +559,7 @@ class DesignDmon(ChipDesign):
         # self.draw_flux_control_lines()
 
         self.draw_test_structures()
+        self.draw_express_test_structures_pads()
         self.draw_bandages()
         self.draw_recess()
         self.draw_el_protection()
@@ -558,7 +570,8 @@ class DesignDmon(ChipDesign):
         # for contact_pad in self.contact_pads:  # delete holes from
         #     # contact pads
         #     contact_pad.place(self.region_ph)
-        # self.region_ph.merge()
+        self.region_ph.merge()
+        self.region_el.merge()
         # self.extend_photo_overetching()
         # self.inverse_destination(self.region_ph)
         # self.draw_cut_marks()
@@ -839,10 +852,6 @@ class DesignDmon(ChipDesign):
     def draw_josephson_loops(self):
         for res_idx, xmon_cross in enumerate(self.xmons):
             squid_pars = self.squid_pars[res_idx]
-            dx = squid_pars.SQB_dx / 2 - squid_pars.SQLBT_dx / 2
-            pars_local = deepcopy(squid_pars)
-            pars_local.bot_wire_x = [-dx, dx]
-            pars_local.SQB_dy = 0
             if res_idx % 2 == 0:  # above RO line
                 m = -1
                 squid_center = (xmon_cross.cpw_tempt.end +
@@ -853,7 +862,7 @@ class DesignDmon(ChipDesign):
                 squid_center = (xmon_cross.cpw_bempt.end +
                                 xmon_cross.cpw_bempt.start) / 2
                 trans = DTrans.R0
-            squid = RFSquid(
+            squid = Fluxonium(
                 squid_center + m * DVector(0, -self.squid_vertical_shift),
                 squid_pars,
                 trans_in=trans
@@ -1107,9 +1116,7 @@ class DesignDmon(ChipDesign):
         self.test_squids_pads = []
         for struct_center in struct_centers:
             ## JJ test structures ##
-            dx = test_squid_pars.SQB_dx / 2 - test_squid_pars.SQLBT_dx / 2
-
-            # test structure with big critical current (#1)
+            # test structure for left leg (#1)
             test_struct1 = TestStructurePadsSquare(
                 struct_center,
                 # gnd gap in test structure is now equal to
@@ -1126,18 +1133,15 @@ class DesignDmon(ChipDesign):
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
 
-            pars_local = deepcopy(test_squid_pars)
-            pars_local.bot_wire_x = [-dx]
-
             squid_center = test_struct1.center
-            test_jj = RFSquid(
+            test_jj = Fluxonium(
                 squid_center + DVector(0, -self.squid_vertical_shift),
-                pars_local
+                squid_params=test_squid_pars
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
 
-            # test structure with low critical current
+            # test structure for right leg (#2)
             test_struct2 = TestStructurePadsSquare(
                 struct_center + DPoint(0.3e6, 0))
             self.test_squids_pads.append(test_struct2)
@@ -1150,15 +1154,21 @@ class DesignDmon(ChipDesign):
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
 
-            pars_local.bot_wire_x = [-dx]
+            # eliminate left leg
+            pars_local_tp2 = deepcopy(test_squid_pars)
+            pars_local_tp2.SQLTJJ_dx = 0
+            pars_local_tp2.SQLBJJ_dy = 0
+            pars_local_tp2.SQLBT_dx = 0
+            pars_local_tp2.SQLTT_dx = 0
 
             squid_center = test_struct2.center
-            test_jj = RFSquid(
+            test_jj = Fluxonium(
                 squid_center + DVector(0, -self.squid_vertical_shift),
-                pars_local
+                pars_local_tp2
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
+            test_jj.place(self.region_kinInd, region_id="kinInd")
 
             # test structure for bridge DC contact
             test_struct3 = TestStructurePadsSquare(
@@ -1207,6 +1217,56 @@ class DesignDmon(ChipDesign):
             dc_rec = Rectangle(p1, rec_width, rec_height)
             dc_rec.place(self.dc_bandage_reg)
 
+    def draw_express_test_structures_pads(self):
+        el_pad_height = 30e3
+        el_pad_width = 40e3
+        for squid, test_pad in zip(
+                self.test_squids,
+                self.test_squids_pads
+        ):
+            if squid.squid_params.SQRBJJ_dy == 0:
+                ## only left JJ is present ##
+                # test pad to the right
+                p1 = DPoint(test_pad.top_rec.p2.x, test_pad.center.y)
+                p2 = p1 + DVector(-el_pad_width, 0)
+                tp_cpw = CPW(
+                    start=p1, end=p2,
+                    width=el_pad_height, gap=0
+                )
+                self.region_ph -= tp_cpw.metal_region.dup().size(20e3)
+                tp_cpw.place(self.region_el)
+
+                p3 = squid.SQLTT.center()
+                p4 = tp_cpw.center()
+                etc3 = CPW(
+                    start=p3, end=p4,
+                    width=1e3,  # TODO: hardcoded value
+                    gap=0
+                )
+                etc3.place(self.region_el)
+
+                # test pad on the left
+                p1 = DPoint(test_pad.top_rec.p1.x, test_pad.center.y)
+                p2 = p1 + DVector(el_pad_width, 0)
+                tp_cpw = CPW(
+                    start=p1, end=p2,
+                    width=el_pad_height, gap=0
+                )
+                self.region_ph -= tp_cpw.metal_region.dup().size(20e3)
+                tp_cpw.place(self.region_el)
+
+                p3 = squid.BC0.center()
+                p4 = tp_cpw.center()
+                etc3 = CPW(
+                    start=p3, end=p4,
+                    width=1e3,  # TODO: hardcoded value
+                    gap=0
+                )
+                etc3.place(self.region_el)
+
+            elif squid.squid_params.SQLBJJ_dy == 0:
+                pass
+
     def draw_bandages(self):
         """
         Returns
@@ -1230,7 +1290,7 @@ class DesignDmon(ChipDesign):
             )
             # collect all bottom contacts
 
-    def draw_squid_bandage(self, test_jj: RFSquid = None,
+    def draw_squid_bandage(self, test_jj: Fluxonium = None,
                            shift2sq_center=0):
         # squid direction from bottom to top
         squid_BT_dv = test_jj.TC.start - test_jj.TC.end

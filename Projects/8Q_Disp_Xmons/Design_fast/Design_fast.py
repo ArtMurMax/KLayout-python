@@ -1515,44 +1515,8 @@ class Design8Q(ChipDesign):
                 )
                 etc3.place(self.region_el)
 
-            elif squid.squid_params.SQLBJJ_dy == 0:
-                pass
-                ## only right leg is present ##
-                # test pad expanded to the left
-                p1 = DPoint(test_pad.top_rec.p1.x, test_pad.center.y)
-                p2 = p1 + DVector(el_pad_width, 0)
-                tp_cpw = CPW(
-                    start=p1, end=p2,
-                    width=el_pad_height, gap=0
-                )
-                tp_cpw.place(self.region_el)
-
-                p3 = squid.TCW.center()
-                p4 = tp_cpw.center()
-                etc3 = CPW(
-                    start=p3, end=p4,
-                    width=1e3,  # TODO: hardcoded value
-                    gap=0
-                )
-                etc3.place(self.region_el)
-
-                # test pad expanded to the right
-                p1 = DPoint(test_pad.top_rec.p2.x, test_pad.center.y)
-                p2 = p1 + DVector(-el_pad_width, 0)
-                tp_cpw = CPW(
-                    start=p1, end=p2,
-                    width=el_pad_height, gap=0
-                )
-                tp_cpw.place(self.region_el)
-
-                p3 = squid.BC0.center()
-                p4 = tp_cpw.center()
-                etc3 = CPW(
-                    start=p3, end=p4,
-                    width=1e3,  # TODO: hardcoded value
-                    gap=0
-                )
-                etc3.place(self.region_el)
+            # elif squid.squid_params.SQLBJJ_dy == 0:
+            #     pass
 
     def draw_bandages(self):
         """
