@@ -19,7 +19,8 @@ class ElementBase():
 
     """
 
-    def __init__(self, origin, trans_in=None, inverse=False):
+    def __init__(self, origin, trans_in=None, inverse=False,
+                 region_id="default"):
         ## MUST BE IMPLEMENTED ##
         self.connections = []  # DPoint list with possible connection points
         self.connection_edges = []  # indexes of edges that are intended to connect to other polygons
@@ -41,12 +42,13 @@ class ElementBase():
         #  something "blank" at the creation moment. This may be solved
         #  by either shrinking resulting region to shapes it contains,
         #  or by refusing of usage of empty `Region()`s
-        self.metal_region = Region()
-        self.empty_region = Region()
         self.metal_regions = OrderedDict()
         self.empty_regions = OrderedDict()
-        self.metal_regions["default"] = self.metal_region
-        self.empty_regions["default"] = self.empty_region
+        self.metal_region = Region()
+        self.empty_region = Region()
+        self.region_id = region_id
+        self.metal_regions[self.region_id] = self.metal_region
+        self.empty_regions[self.region_id] = self.empty_region
 
         self.metal_region.merged_semantics = True
         self.empty_region.merged_semantics = True
@@ -195,23 +197,20 @@ class ElementBase():
             poly_temp.transform(dCplxTrans)
             self.origin = poly_temp.point(0)
 
-    def place(self, dest, layer_i=-1, region_name=None, merge=False):
-        r_cell = None
+    def change_region_id(self, old_reg_id, new_reg_id):
+        self.metal_regions[new_reg_id] = self.metal_regions.pop(old_reg_id)
+        self.empty_regions[new_reg_id] = self.empty_regions.pop(old_reg_id)
+        self.region_id = new_reg_id
+
+    def place(self, dest, layer_i=-1, region_id="default", merge=False):
         metal_region = None
         empty_region = None
-        if (region_name == None):
-            metal_region = self.metal_region
-            empty_region = self.empty_region
-        else:
-            if (region_name in self.metal_regions):
-                metal_region = self.metal_regions[region_name]
-            else:
-                metal_region = Region()
 
-            if (region_name in self.empty_regions):
-                empty_region = self.empty_regions[region_name]
-            else:
-                empty_region = Region()
+        if (region_id in self.metal_regions):
+            metal_region = self.metal_regions[region_id]
+            empty_region = self.empty_regions[region_id]
+        else:
+            return
 
         if (layer_i != -1):
             r_cell = Region(dest.begin_shapes_rec(layer_i))
@@ -234,8 +233,8 @@ class ElementBase():
 
 
 class ComplexBase(ElementBase):
-    def __init__(self, origin, trans_in=None):
-        super().__init__(origin, trans_in)
+    def __init__(self, origin, trans_in=None, region_id="default"):
+        super().__init__(origin, trans_in, region_id=region_id)
         # ensures sequential order of drawing primitives
         self.primitives = OrderedDict()
         self._init_primitives_trans()
@@ -270,17 +269,17 @@ class ComplexBase(ElementBase):
         dCplxTrans_temp = DCplxTrans(1, 0, False, self.origin.x, self.origin.y)
         self.make_trans(dCplxTrans_temp)  # move to the origin
         self.origin += dr_origin.point(0)
-        # FOLLOWING CYCLE GIVES WRONG INFO ABOUT FILLED AND ERASED AREAS
-        for element in self.primitives.values():
-            self.metal_region += element.metal_region
-            self.empty_region += element.empty_region
+        # # FOLLOWING CYCLE GIVES WRONG INFO ABOUT FILLED AND ERASED AREAS
+        # for element in self.primitives.values():
+        #     self.metal_region += element.metal_region
+        #     self.empty_region += element.empty_region
 
-    def place(self, dest, layer_i=-1, region_name=None):
+    def place(self, dest, layer_i=-1, region_id="default"):
         if (layer_i != -1):
             # `dest` is interpreted as `pya.Cell` object
             r_cell = Region(dest.begin_shapes_rec(layer_i))
             for primitive in self.primitives.values():
-                primitive.place(r_cell, region_name=region_name)
+                primitive.place(r_cell, region_id=region_id)
 
             temp_i = dest.layout().layer(pya.LayerInfo(PROGRAM.LAYER1_NUM, 0))
             dest.shapes(temp_i).insert(r_cell)
@@ -290,7 +289,7 @@ class ComplexBase(ElementBase):
         else:
             # `dest` is interpreted as `pya.Region` object
             for primitive in self.primitives.values():
-                primitive.place(dest, region_name=region_name)
+                primitive.place(dest, region_id=region_id)
 
     def init_primitives(self):
         raise NotImplementedError

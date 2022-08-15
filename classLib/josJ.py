@@ -293,7 +293,7 @@ class AsymSquid(ComplexBase):
             pars.bot_wire_x = [pars.bot_wire_x]
 
         for i, x in enumerate(pars.bot_wire_x):
-            # (BC) bottom contact polygon
+            # (BC) bottom contact pad polygon
             bc_p1 = DPoint(x, -pars.squid_dy / 2 - pars.BCW_dy)
             bc_p2 = bc_p1 + DVector(0, -pars.BC_dy)
             name = "BC" + str(i)

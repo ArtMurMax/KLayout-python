@@ -164,8 +164,8 @@ for i in range(-(chain_length)//2, (chain_length)//2, 1):
                 tmon_JJ_arm_len, tmon_JJ_site_span, tmon_coupling_pads_len, \
                   h_jj, w_jj, asymmetry, None)
 
-  tmon.place(canvas, region_name = "photo")
-  tmon.place(ebeam, region_name = "ebeam")
+  tmon.place(canvas, region_id="photo")
+  tmon.place(ebeam, region_id="ebeam")
 
 
   qubit_ports.append(tmon.end)

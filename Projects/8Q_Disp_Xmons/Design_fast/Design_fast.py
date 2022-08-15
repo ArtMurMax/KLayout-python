@@ -1436,8 +1436,8 @@ class Design8Q(ChipDesign):
                     gnd_touch_dx=20e3
                 )
                 test_bridges.append(bridge)
-                bridge.place(self.region_bridges1, region_name="bridges_1")
-                bridge.place(self.region_bridges2, region_name="bridges_2")
+                bridge.place(self.region_bridges1, region_id="bridges_1")
+                bridge.place(self.region_bridges2, region_id="bridges_2")
 
         # bandages test structures
         if isinstance(self.chip, CHIP_16p5x16p5_20pads):
@@ -1515,44 +1515,8 @@ class Design8Q(ChipDesign):
                 )
                 etc3.place(self.region_el)
 
-            elif squid.squid_params.SQLBJJ_dy == 0:
-                pass
-                ## only right leg is present ##
-                # test pad expanded to the left
-                p1 = DPoint(test_pad.top_rec.p1.x, test_pad.center.y)
-                p2 = p1 + DVector(el_pad_width, 0)
-                tp_cpw = CPW(
-                    start=p1, end=p2,
-                    width=el_pad_height, gap=0
-                )
-                tp_cpw.place(self.region_el)
-
-                p3 = squid.TCW.center()
-                p4 = tp_cpw.center()
-                etc3 = CPW(
-                    start=p3, end=p4,
-                    width=1e3,  # TODO: hardcoded value
-                    gap=0
-                )
-                etc3.place(self.region_el)
-
-                # test pad expanded to the right
-                p1 = DPoint(test_pad.top_rec.p2.x, test_pad.center.y)
-                p2 = p1 + DVector(-el_pad_width, 0)
-                tp_cpw = CPW(
-                    start=p1, end=p2,
-                    width=el_pad_height, gap=0
-                )
-                tp_cpw.place(self.region_el)
-
-                p3 = squid.BC0.center()
-                p4 = tp_cpw.center()
-                etc3 = CPW(
-                    start=p3, end=p4,
-                    width=1e3,  # TODO: hardcoded value
-                    gap=0
-                )
-                etc3.place(self.region_el)
+            # elif squid.squid_params.SQLBJJ_dy == 0:
+            #     pass
 
     def draw_bandages(self):
         """
@@ -1753,9 +1717,9 @@ class Design8Q(ChipDesign):
                 br = Bridge1(center=bridge_center1, gnd2gnd_dy=70e3,
                              trans_in=Trans.R90)
                 br.place(dest=self.region_bridges1,
-                         region_name="bridges_1")
+                         region_id="bridges_1")
                 br.place(dest=self.region_bridges2,
-                         region_name="bridges_2")
+                         region_id="bridges_2")
 
         for i, cpw_md in enumerate(self.cpw_md_lines):
             dy_list = [110e3, 240e3, 370e3, 500e3, 630e3]
@@ -1768,9 +1732,9 @@ class Design8Q(ChipDesign):
                 br = Bridge1(center=bridge_center1, gnd2gnd_dy=70e3,
                              trans_in=Trans.R90)
                 br.place(dest=self.region_bridges1,
-                         region_name="bridges_1")
+                         region_id="bridges_1")
                 br.place(dest=self.region_bridges2,
-                         region_name="bridges_2")
+                         region_id="bridges_2")
 
         # for readout waveguides
         avoid_points = []

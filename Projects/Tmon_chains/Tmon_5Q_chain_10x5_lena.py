@@ -186,8 +186,8 @@ for i in range(-(chain_length) // 2, (chain_length) // 2, 1):
                 tmon_JJ_arm_len, tmon_JJ_site_span, tmon_coupling_pads_len, \
                 h_jj, w_jj, asymmetry, None, True)
 
-    tmon.place(canvas, region_name="photo")
-    tmon.place(ebeam, region_name="ebeam")
+    tmon.place(canvas, region_id="photo")
+    tmon.place(ebeam, region_id="ebeam")
 
     qubit_ports.append(tmon.end)
 
@@ -288,24 +288,24 @@ tmon1_fc_end.place(canvas)
 
 ###TEST STRUCTURE
 test_frame1 = Test_frame(DPoint(-3146e3, -1752e3), h_jj, w_jj, asymmetry, 8e3, use_cell=True)
-test_frame1.place(canvas, region_name="photo")
-test_frame1.place(ebeam, region_name="ebeam")
+test_frame1.place(canvas, region_id="photo")
+test_frame1.place(ebeam, region_id="ebeam")
 
 test_frame2 = Test_frame(DPoint(3146e3, -1752e3), h_jj, w_jj, asymmetry, 8e3, use_cell=True)
-test_frame2.place(canvas, region_name="photo")
-test_frame2.place(ebeam, region_name="ebeam")
+test_frame2.place(canvas, region_id="photo")
+test_frame2.place(ebeam, region_id="ebeam")
 
 test_frame3 = Test_frame(DPoint(-3146e3, 1500e3), h_jj, w_jj, asymmetry, 8e3, use_cell=True)
-test_frame3.place(canvas, region_name="photo")
-test_frame3.place(ebeam, region_name="ebeam")
+test_frame3.place(canvas, region_id="photo")
+test_frame3.place(ebeam, region_id="ebeam")
 
 test_frame4 = Test_frame(DPoint(3146e3, 1500e3), h_jj, w_jj, asymmetry, 8e3, use_cell=True)
-test_frame4.place(canvas, region_name="photo")
-test_frame4.place(ebeam, region_name="ebeam")
+test_frame4.place(canvas, region_id="photo")
+test_frame4.place(ebeam, region_id="ebeam")
 
 # ab = Airbridge(DPoint(0, 0), None)
-# ab.place(bridges, region_name = "bridges")
-# ab.place(bridge_patches, region_name = "bridge_patches")
+# ab.place(bridges, region_id = "bridges")
+# ab.place(bridge_patches, region_id = "bridge_patches")
 
 ### DRAW SECTION END ###
 ebeam = ebeam.merge()

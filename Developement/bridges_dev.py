@@ -238,8 +238,8 @@ class Bridge1(ElementBase):
                     )
                 )
             for bridge in bridges:
-                bridge.place(dest=cell, layer_i=bridge_layer1, region_name="bridges_1")
-                bridge.place(dest=cell, layer_i=bridge_layer2, region_name="bridges_2")
+                bridge.place(dest=cell, layer_i=bridge_layer1, region_id="bridges_1")
+                bridge.place(dest=cell, layer_i=bridge_layer2, region_id="bridges_2")
         elif isinstance(cpw, CPWArc):
             # to be implemented
             pass

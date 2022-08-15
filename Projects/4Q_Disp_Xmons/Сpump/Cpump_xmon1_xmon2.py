@@ -1001,8 +1001,8 @@ class Design5Q(ChipDesign):
                 bridge = Bridge1(test_struct3.center + DPoint(50e3 * (i - 1), 0),
                                  gnd_touch_dx=20e3)
                 test_bridges.append(bridge)
-                bridge.place(self.region_bridges1, region_name="bridges_1")
-                bridge.place(self.region_bridges2, region_name="bridges_2")
+                bridge.place(self.region_bridges1, region_id="bridges_1")
+                bridge.place(self.region_bridges2, region_id="bridges_2")
 
         # bandages test structures
         test_dc_el2_centers = [
