@@ -847,10 +847,6 @@ class DesignDmon(ChipDesign):
 
     def draw_josephson_loops(self):
         # place left squid
-        dx = SQUID_PARAMETERS.SQB_dx / 2 - SQUID_PARAMETERS.SQLBT_dx / 2
-        pars_local = deepcopy(SQUID_PARAMETERS)
-        pars_local.bot_wire_x = [-dx, dx]
-        pars_local.SQB_dy = 0
         for res_idx, xmon_cross in enumerate(self.xmons):
             squid_pars = self.squid_pars[res_idx]
             if res_idx % 2 == 0:  # above RO line
@@ -1134,11 +1130,6 @@ class DesignDmon(ChipDesign):
             text_reg.transform(
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
             self.region_ph -= text_reg
-
-            pars_local = deepcopy(SQUID_PARAMETERS)
-            pars_local.SQRBT_dx = 0
-            pars_local.SQRBJJ_dy = 0
-            pars_local.bot_wire_x = [-dx]
 
             squid_center = test_struct1.center
             test_jj = Fluxonium(
@@ -2612,7 +2603,7 @@ if __name__ == "__main__":
     # )
 
     ''' C_qr sim '''
-    simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr", pts=3, par_d=5e3)
+    # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr", pts=3, par_d=5e3)
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cq", pts=3, par_d=20e3)
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr")
 
