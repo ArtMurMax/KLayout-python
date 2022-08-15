@@ -572,6 +572,7 @@ class DesignDmon(ChipDesign):
         #     contact_pad.place(self.region_ph)
         self.region_ph.merge()
         self.region_el.merge()
+        self.region_kinInd.merge()
         # self.extend_photo_overetching()
         # self.inverse_destination(self.region_ph)
         # self.draw_cut_marks()
@@ -1224,7 +1225,7 @@ class DesignDmon(ChipDesign):
                 self.test_squids,
                 self.test_squids_pads
         ):
-            if squid.squid_params.SQRBJJ_dy == 0:
+            if not squid.squid_params.SQLBJJ_dy == 0:
                 ## only left JJ is present ##
                 # test pad to the right
                 p1 = DPoint(test_pad.top_rec.p2.x, test_pad.center.y)
@@ -1265,7 +1266,47 @@ class DesignDmon(ChipDesign):
                 etc3.place(self.region_el)
 
             elif squid.squid_params.SQLBJJ_dy == 0:
-                pass
+                # only right leg is present
+
+                # test pad expanded to the left
+                p1 = DPoint(test_pad.top_rec.p1.x, test_pad.center.y)
+                p2 = p1 + DVector(el_pad_width, 0)
+                etc1 = CPW(
+                    start=p1, end=p2,
+                    width=el_pad_height,
+                    gap=0
+                )
+                etc1.place(self.region_kinInd)
+                self.region_ph -= etc1.metal_region.dup().size(20e3)
+
+                p1 = squid.TC.center()
+                p2 = etc1.center()
+                etc2 = CPW(
+                    start=p1, end=p2,
+                    width=1e3,
+                    gap=0
+                )
+                etc2.place(self.region_kinInd)
+
+                # test pad expanded to the right
+                p1 = DPoint(test_pad.top_rec.p2.x, test_pad.center.y)
+                p2 = p1 + DVector(-el_pad_width, 0)
+                etc3 = CPW(
+                    start=p1, end=p2,
+                    width=el_pad_height,
+                    gap=0
+                )
+                etc3.place(self.region_kinInd)
+                self.region_ph -= etc3.metal_region.dup().size(20e3)
+
+                p1 = squid.BC1.start
+                p2 = DPoint(etc3.center().x, p1.y)
+                etc4 = CPW(
+                    start=p1, end=p2,
+                    width=1e3,  # TODO: hardcoded value
+                    gap=0
+                )
+                etc4.place(self.region_kinInd)
 
     def draw_bandages(self):
         """
