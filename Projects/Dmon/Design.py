@@ -204,21 +204,21 @@ class DesignDmon(ChipDesign):
         # xmon parameters
         self.xmon_x_distance: float = 722e3
 
-        self.xmon_res_d_list = [14e3]*self.NQUBITS
+        self.xmon_res_d_list = [40e3]*self.NQUBITS
         self.xmons: list[XmonCross] = []
         self.xmons_corrected: list[XmonCross] = []
 
         self.cross_len_x_list = np.array(
-            [1e3*x for x in [20, 0, 0, 0, 0, 230, 300, 300]]
+            [1e3*x for x in [129.905, 65.602, 35.098, 0.001, 0.001, 196.603, 233.873, 233.415]]
         )
         self.cross_width_x_list = np.array(
-            [1e3*x for x in [60]*self.NQUBITS]
+            [1e3*x for x in [16, 16, 16, 16, 16, 32, 56, 56]]
         )
         self.cross_len_y_list = np.array(
-            [1e3*x for x in [150, 114, 94, 50, 50, 80, 116, 116]]
+            [1e3*x for x in [245.0, 225.0, 211.0, 154.0, 154.0, 258.0, 267.0, 267.0 ]]
         )
         self.cross_width_y_list = np.array(
-            [1e3*x for x in [60]*self.NQUBITS]
+            [1e3*x for x in [16, 16, 16, 16, 16, 32, 56, 56]]
         )
         self.cross_gnd_gap_y_list = np.array(
             [1e3*x for x in [60]*self.NQUBITS]
@@ -261,9 +261,9 @@ class DesignDmon(ChipDesign):
         self.Z_res = CPWParameters(10e3, 6e3)
         self.to_line_list = [45e3] * len(self.L1_list)
         # fork at the end of resonator parameters
-        self.fork_metal_width_list = np.array([30e3]*self.NQUBITS)
-        self.fork_gnd_gap = 20e3
-        self.xmon_fork_gnd_gap = 14e3
+        self.fork_metal_width_list = np.array([10e3]*self.NQUBITS)
+        self.fork_gnd_gap = 10e3
+        self.xmon_fork_gnd_gap = 10e3
         # fork at the end of resonator parameters
         self.fork_x_span_list = self.cross_width_y_list + + 2 * \
                                 (self.xmon_fork_gnd_gap + self.fork_metal_width_list)
@@ -271,7 +271,7 @@ class DesignDmon(ChipDesign):
         # from simulation of g_qr
         self.fork_y_span_list = [
             x * 1e3 for x in
-            [45]*self.NQUBITS
+            [53.6, 31.5, 13.7, 7.7, 9.7, 71.2, 75.3, 76.2]
         ]
         self.worm_x_list = [x * 1e6 for x in
                        [1, 2.7, 3.5, 4.35, 5.5, 6.5, 7.6, 8.5]]
@@ -656,12 +656,7 @@ class DesignDmon(ChipDesign):
                 sideX_gnd_gap=self.cross_gnd_gap_x,
                 sideY_length=self.cross_len_y_list[res_idx],
                 sideY_width=self.cross_width_y_list[res_idx],
-                sideY_gnd_gap=max(
-                    0,
-                    self.fork_x_span_list[res_idx] - 2 * self.fork_metal_width_list[res_idx] -
-                    self.cross_width_y_list[res_idx] -
-                    max(self.cross_gnd_gap_y_list[res_idx], self.fork_gnd_gap)
-                ) / 2
+                sideY_gnd_gap=0
             )
             self.xmons_corrected.append(xmonCross_corrected)
             xmonCross_corrected.place(self.region_ph)
@@ -1692,7 +1687,7 @@ def simulate_resonators_f_and_Q_together():
     ''' RESULT SAVING SECTION END '''
 
 
-def simulate_Cqr(resolution=(4e3, 4e3), mode="Cqr", pts=3, par_d=10e3):
+def simulate_Cqr(resolution=(4e3, 4e3), mode="Cq", pts=3, par_d=10e3):
     # TODO: 1. make 2d geometry parameters mesh, for simultaneous finding of C_qr and C_q
     #  2. make 3d geometry optimization inside kLayout for simultaneous finding of C_qr, C_q and C_qq
     resolution_dx = resolution[0]
@@ -1712,14 +1707,16 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cqr", pts=3, par_d=10e3):
         design = DesignDmon("testScript")
         # adjusting `self.fork_y_span_list` for C_qr
         if mode == "Cqr":
-            design.fork_x_span_list += dl
+            design.fork_y_span_list += dl
             # design.fork_metal_width_list += dl
             # design.fork_x_span_list += 2*dl
             save_fname = "Cqr_Cqr_results.csv"
         elif mode == "Cq":
             # adjusting `cross_len_x` to gain proper E_C
-            design.cross_len_y_list = [design_val + dl for design_val in
-                                           design.cross_len_y_list]
+            # design.cross_width_y_list += dl
+            # design.cross_width_x_list += dl
+            # design.cross_len_x_list += dl
+            design.cross_len_y_list += dl
             save_fname = "Cqr_Cq_results.csv"
 
         # exclude coils from simulation (sometimes port is placed onto coil (TODO: fix)
@@ -2315,7 +2312,8 @@ if __name__ == "__main__":
     # )
 
     ''' C_qr sim '''
-    simulate_Cqr(resolution=(2e3, 2e3), mode="Cqr", pts=7, par_d=30e3)
+    simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr", pts=3, par_d=5e3)
+    # simulate_Cqr(resolution=(1e3, 1e3), mode="Cq", pts=3, par_d=20e3)
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr")
 
     ''' Simulation of C_{q1,q2} in fF '''
