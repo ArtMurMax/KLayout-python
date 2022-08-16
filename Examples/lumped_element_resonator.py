@@ -118,14 +118,14 @@ if __name__ == "__main__":
                 pts.append(pya.DPoint(x, y))
                 if (i % 2) == 0:
                     for j in range(1, self.n_points + 1):
-                        x += (self.u + self.w) * sin(pi / (2 * n_points)) * cos(pi * j / self.n_points)
-                        y += (self.u + self.w) * sin(pi / (2 * n_points)) * sin(pi * j / self.n_points)
+                        x += (self.u + self.w) * sin(pi / (2 * self.n_points)) * cos(pi * j / self.n_points)
+                        y += (self.u + self.w) * sin(pi / (2 * self.n_points)) * sin(pi * j / self.n_points)
                         pts.append(pya.DPoint(x, y))
                     x -= self.s + self.w
                 else:
                     for j in range(1, self.n_points + 1):
-                        x -= (self.u + self.w) * sin(pi / (2 * n_points)) * cos(pi * j / self.n_points)
-                        y += (self.u + self.w) * sin(pi / (2 * n_points)) * sin(pi * j / self.n_points)
+                        x -= (self.u + self.w) * sin(pi / (2 * self.n_points)) * cos(pi * j / self.n_points)
+                        y += (self.u + self.w) * sin(pi / (2 * self.n_points)) * sin(pi * j / self.n_points)
                         pts.append(pya.DPoint(x, y))
                     x += self.s + self.w
                 pts.append(pya.DPoint(x, y))
@@ -136,14 +136,14 @@ if __name__ == "__main__":
             if (self.n % 2) == 0:
                 #x -= self.last_length + self.w/2
                 for j in range(1, self.n_points + 1):
-                    x += (self.u + self.w) * sin(pi / (2 * n_points)) * cos(pi * j / self.n_points)
-                    y += (self.u + self.w) * sin(pi / (2 * n_points)) * sin(pi * j / self.n_points)
+                    x += (self.u + self.w) * sin(pi / (2 * self.n_points)) * cos(pi * j / self.n_points)
+                    y += (self.u + self.w) * sin(pi / (2 * self.n_points)) * sin(pi * j / self.n_points)
                     pts.append(pya.DPoint(x, y))
                 x -= self.last_length + 3 + self.w/2
             else:
                 for j in range(1, self.n_points + 1):
-                    x -= (self.u + self.w) * sin(pi / (2 * n_points)) * cos(pi * j / self.n_points)
-                    y += (self.u + self.w) * sin(pi / (2 * n_points)) * sin(pi * j / self.n_points)
+                    x -= (self.u + self.w) * sin(pi / (2 * self.n_points)) * cos(pi * j / self.n_points)
+                    y += (self.u + self.w) * sin(pi / (2 * self.n_points)) * sin(pi * j / self.n_points)
                     pts.append(pya.DPoint(x, y))
                 x += self.last_length + 3 + self.w/2
             pts.append(pya.DPoint(x, y))
@@ -221,7 +221,7 @@ if __name__ == "__main__":
     meander.start_point_y=181
     meander.first_length=100
     meander.last_length=80
-    meander.n_points=1000
+    meander.n_points=100
     meander.produce_impl()
     #draw capacitance
     capacitance = pya.DPolygon([DPoint(284, 122), DPoint(98, 122), DPoint(98, 565), DPoint(571, 565),
