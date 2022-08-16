@@ -408,7 +408,9 @@ class DesignDmon(ChipDesign):
         self.Z_res = CPWParameters(10e3, 6e3)
         self.to_line_list = [45e3] * len(self.L1_list)
         # fork at the end of resonator parameters
-        self.fork_metal_width_list = np.array([10e3]*self.NQUBITS)
+        self.fork_metal_width_list = np.array(
+            [1e3*x for x in ([10]*3 + [6] + [10]*4)]
+        )
         self.fork_gnd_gap = 10e3
         self.xmon_fork_gnd_gap = 10e3
         # fork at the end of resonator parameters
@@ -418,7 +420,7 @@ class DesignDmon(ChipDesign):
         # from simulation of g_qr
         self.fork_y_span_list = [
             x * 1e3 for x in
-            [53.6, 31.5, 13.7, 7.7, 9.7, 71.2, 75.3, 76.2]
+            [53.6, 31.5, 13.7, 14.0, 9.7, 71.2, 75.3, 76.2]
         ]
         self.worm_x_list = [x * 1e6 for x in
                        [1, 2.7, 3.5, 4.35, 5.5, 6.5, 7.6, 8.5]]
@@ -1994,6 +1996,8 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cq", pts=3, par_d=10e3):
                 dl_list, range(8)
             )
     ):
+        if res_idx != 3:
+            continue
         ### DRAWING SECTION START ###
         design = DesignDmon("testScript")
         # adjusting `self.fork_y_span_list` for C_qr
@@ -2031,7 +2035,7 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cq", pts=3, par_d=10e3):
         dr.x = abs(dr.x)
         dr.y = abs(dr.y)
 
-        xc_bbx = xmonCross.empty_region.bbox()
+        xc_bbx = xmonCross.metal_region.bbox()
         box_side_l = max(xc_bbx.height(), xc_bbx.width())
         dv = DVector(box_side_l, box_side_l)
 
@@ -2579,10 +2583,10 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
-    FABRICATION.OVERETCHING = 0.0e3
-    design = DesignDmon("testScript")
-    design.draw()
-    design.show()
+    # FABRICATION.OVERETCHING = 0.0e3
+    # design = DesignDmon("testScript")
+    # design.draw()
+    # design.show()
 
     # design.save_as_gds2(
     #     os.path.join(
@@ -2603,7 +2607,7 @@ if __name__ == "__main__":
     # )
 
     ''' C_qr sim '''
-    # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr", pts=3, par_d=5e3)
+    simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr", pts=11, par_d=10e3)
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cq", pts=3, par_d=20e3)
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr")
 
