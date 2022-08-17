@@ -1,5 +1,5 @@
 
-#TODO don't work in KLayout
+#OK
 
 # Enter your Python code here
 import pya
