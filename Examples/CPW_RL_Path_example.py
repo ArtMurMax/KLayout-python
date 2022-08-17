@@ -58,8 +58,8 @@ cell.shapes( layer_photo ).insert( pya.Box( Point( -CHIP.dx/2, -CHIP.dy/2 ), Poi
 cp1 = ContactPad(origin = DPoint(-5e6, -2.5e6), chip_cpw_params = CPWParameters(width=20e3, gap=10e3))
 cp1.place(cell, layer_photo)
 
-cp2 = ContactPad(DPoint(-5e6, 2.5e6), chip_cpw_params = CPWParameters(width=20e3, gap=10e3))
-cp2.place(cell, layer_photo)
+#cp2 = ContactPad(DPoint(-5e6, 2.5e6), chip_cpw_params = CPWParameters(width=20e3, gap=10e3))
+#cp2.place(cell, layer_photo)
 
 cp3 = ContactPad(DPoint(-2.5e6, 5e6), chip_cpw_params = CPWParameters(width=20e3, gap=10e3), trans_in = DTrans.R270)
 cp3.place(cell, layer_photo)

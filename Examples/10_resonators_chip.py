@@ -65,23 +65,28 @@ if __name__ == "__main__":
     #pts.append(DPoint(x1, y1))
 
     for i in range(5):
-        if i != 0:
+        if i != 0 and i != 4:
             box -= pya.Region(pya.Box(DPoint(x0 + x_shift*i, y0), DPoint(x0 + length + x_shift*i, y0 + width)))
+        if i == 4:
+            box -= pya.Region(pya.Box(DPoint(x0 + x_shift * i - 550e3, y0), DPoint(x0 + length + x_shift * i - 550e3, y0 + width)))
         if i != 4:
             box -= pya.Region(pya.Box(DPoint(x0 + x_shift*i, y0 + 1500e3 + width), DPoint(x0 + length + x_shift*i, y0 + width + 1500e3 + width)))
         if i != 4 and i != 0:
-            box -= pya.Region(pya.Box(DPoint(x1 + 49e3 + 90, y0 + width + 1500e3/2 - width/2), DPoint(x1 + 49e3 + 90 + length, y0 + width + 1500e3/2 + width - width / 2)))
+            box -= pya.Region(pya.Box(DPoint(x1 + 68e3, y0 + width + 1500e3/2 - width/2), DPoint(x1 + 68e3 + length, y0 + width + 1500e3/2 + width - width / 2)))
         if i == 0 or i == 4:
-            y1 += (5000e3 - 2 * 300e3 - 2200e3 - 2 * r) * (1 - 2 * (i % 2))
+            y1 += (5000e3 - 2 * 600e3 - 1900e3 - 2 * r) * (1 - 2 * (i % 2))
         else:
-            y1 += (5000e3 - 2*300e3 - 2*r) * (1 - 2 * (i % 2))
+            y1 += (5000e3 - 2*600e3 - 2*r) * (1 - 2 * (i % 2))
         for j in range(1, n_points + 1):
             x1 += 2*r * sin(pi/(4 * n_points)) * sin(pi/2 * j/n_points)
             y1 += 2*r * sin(pi / (4 * n_points)) * cos(pi / 2 * j / n_points) * (1 - 2 * (i % 2))
             pts.append(DPoint(x1, y1))
         pts.append(DPoint(x1, y1))
         if i != 4:
-            x1 += x_shift - 2*r
+            if i == 3:
+                x1 += x_shift - 2*r - 550e3
+            else:
+                x1 += x_shift - 2*r
             pts.append(DPoint(x1, y1))
             for j in range(1, n_points + 1):
                 x1 += 2*r * sin(pi / (4 * n_points)) * cos(pi / 2 * j / n_points)
@@ -89,11 +94,16 @@ if __name__ == "__main__":
                 pts.append(DPoint(x1, y1))
     pts.append(DPoint(10000.0e3, y1))
     print(pts)
-    path1 = pya.DPath(pts, 49e3)
-    path2 = pya.DPath(pts, 30e3)
+
+    path1 = pya.DPath(pts, 68e3*2)
+    path2 = pya.DPath(pts, 30e3*2)
     box -= pya.Region(path1)
     box += pya.Region(path2)
     cell.shapes(layer_photo).insert(box)
+    cp1 = ContactPad(DPoint(0 - 120e3, 2500e3), chip_cpw_params=CPWParameters(width=60e3, gap=38e3), pad_length=300e3)
+    cp1.place(cell, layer_photo)
+    cp2 = ContactPad(DPoint(10000e3 + 120e3, 2500e3), chip_cpw_params=CPWParameters(width=60e3, gap=38e3), trans_in=DTrans.R180, pad_length=300e3)
+    cp2.place(cell, layer_photo)
 
 
     lv.zoom_fit()
