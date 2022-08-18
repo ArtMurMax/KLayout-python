@@ -1260,6 +1260,8 @@ class DesignDmon(ChipDesign):
     def draw_express_test_structures_pads(self):
         el_pad_height = 30e3
         el_pad_width = 40e3
+        # contact wire cpw parameters
+        c_cpw = CPWParameters(width=1e3, gap=0)
         for squid, test_pad in zip(
                 self.test_squids,
                 self.test_squids_pads
@@ -1280,8 +1282,7 @@ class DesignDmon(ChipDesign):
                 p4 = tp_cpw.center()
                 etc3 = CPW(
                     start=p3, end=p4,
-                    width=1e3,  # TODO: hardcoded value
-                    gap=0
+                    cpw_params=c_cpw
                 )
                 etc3.place(self.region_el)
 
@@ -1299,8 +1300,7 @@ class DesignDmon(ChipDesign):
                 p4 = tp_cpw.center()
                 etc3 = CPW(
                     start=p3, end=p4,
-                    width=1e3,  # TODO: hardcoded value
-                    gap=0
+                    cpw_params=c_cpw
                 )
                 etc3.place(self.region_el)
 
@@ -1318,12 +1318,14 @@ class DesignDmon(ChipDesign):
                 etc1.place(self.region_kinInd)
                 self.region_ph -= etc1.metal_region.dup().size(20e3)
 
-                p1 = squid.TC.center()
+                p1 = squid.BC1.start + DVector(
+                    squid.BC1.b / 2,
+                    -c_cpw.b / 2
+                )
                 p2 = etc1.center()
                 etc2 = CPW(
                     start=p1, end=p2,
-                    width=1e3,
-                    gap=0
+                    cpw_params=c_cpw
                 )
                 etc2.place(self.region_kinInd)
 
@@ -1338,17 +1340,13 @@ class DesignDmon(ChipDesign):
                 etc3.place(self.region_kinInd)
                 self.region_ph -= etc3.metal_region.dup().size(20e3)
 
-                p1 = squid.BC1.center()
-                p3 = etc3.center()
-                p2 = (p1 + p3)/2 + DVector(0, -test_pad.gnd_gap)
-                etc4 = DPathCPW(
-                    points=[p1,p2,p3], cpw_parameters=CPWParameters(
-                        width=1e3, gap=0
-                    ),
-                    turn_radiuses=self.res_r
+                p1 = squid.TC_KI.center()
+                p2 = DPoint(etc3.center().x, p1.y)
+                etc4 = CPW(
+                    start=p1, end=p2,
+                    cpw_params=c_cpw
                 )
                 etc4.place(self.region_kinInd)
-                self.region_ph -= etc4.metal_region.dup().size(20e3)
 
     def draw_bandages(self):
         """
@@ -1663,13 +1661,15 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
 
         wg_cropped_reg = design.cpwrl_ro_line.metal_region & Region(crop_box)
         d_min = 1e6
-        for cpt in wg_cropped_reg.edges().each():
+        for cpt in wg_cropped_reg.edges().each().centers(0,0):
             if  (
                     np.abs(
                         cpt.x - crop_box.left, cpt.x - crop_box.right,
                         cpt.y - crop_box.top, cpt.y - crop_box.bottom
                     ) < dmin
             ).any():
+                pass
+                raise NotImplementedError
 
         # transforming cropped box to the origin
         dr = DPoint(0, 0) - crop_box.p1
@@ -2636,10 +2636,10 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
-    # FABRICATION.OVERETCHING = 0.0e3
-    # design = DesignDmon("testScript")
-    # design.draw()
-    # design.show()
+    FABRICATION.OVERETCHING = 0.0e3
+    design = DesignDmon("testScript")
+    design.draw()
+    design.show()
 
     # design.save_as_gds2(
     #     os.path.join(
@@ -2673,7 +2673,7 @@ if __name__ == "__main__":
     #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(1e3, 1e3))
 
     ''' Resonators Q and f sim'''
-    simulate_resonators_f_and_Q(resolution=(2e3,2e3))
+    # simulate_resonators_f_and_Q(resolution=(2e3,2e3))
 
     ''' Resonators Q and f when placed together'''
     # simulate_resonators_f_and_Q_together()
