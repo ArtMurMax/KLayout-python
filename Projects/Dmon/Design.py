@@ -35,6 +35,7 @@ Copied fromv.0.3.0.8.T3
 # Enter your Python code here
 from math import cos, sin, tan, atan2, pi, degrees
 import itertools
+from dataclasses import dataclass
 from typing import List, Dict, Union, Optional
 from copy import deepcopy
 import csv
@@ -86,6 +87,7 @@ class RFSquidParams(AsymSquidParams):
             line_gap=1.8e3,
             add_dx_mid=-1.8e3
     ):
+
         self.__dict__.update(asym_pars.__dict__)
         self.line_width = line_width
         self.line_length = line_length
@@ -103,6 +105,7 @@ class Fluxonium(AsymSquid):
         squid_params.SQRBT_dx = 0
         squid_params.SQRTJJ_dx = 0
         squid_params.SQRTT_dx = 0
+        squid_params.SQRBJJ_dy = 0
         self.r_curve = squid_params.line_width
         # declare for proper code completion
         self.squid_params : RFSquidParams = None
@@ -427,7 +430,7 @@ class DesignDmon(ChipDesign):
         self.squids: List[Fluxonium] = []
         self.test_squids: List[Fluxonium] = []
         # vertical shift of every squid local origin coordinates
-        self.squid_vertical_shift = 0e3
+        self.squid_vertical_shift_list = [0e3]*6 + [3e3]*2
         # minimal distance between squid loop and photo layer
         self.squid_ph_clearance = 1.5e3
 
@@ -436,9 +439,9 @@ class DesignDmon(ChipDesign):
         self.jj_dx_list = [159.842, 159.842, 159.842, 99.482, 99.482,
                            159.842, 203.785, 203.785]
         self.jj_dy_list = [149.842, 149.842, 149.842, 89.482, 89.482,
-                          149.842, 193.785, 193.785]
+                           149.842, 193.785, 193.785]
 
-        for i, (jj_dy,jj_dx) in enumerate(
+        for i, (jj_dy, jj_dx) in enumerate(
                 zip(self.jj_dy_list, self.jj_dx_list)
         ):
             pars_i = AsymSquidParams(
@@ -454,13 +457,31 @@ class DesignDmon(ChipDesign):
                 SQLBJJ_dy=jj_dy,
                 SQLTJJ_dx=jj_dx,
                 # eliminate junction on the rhs
-                SQRBJJ_dy=0,
-                SQRTJJ_dx=0,
-                SQRBT_dx=0,
-                SQRTT_dx=0
+                SQRBJJ_dy=jj_dy,
+                SQRTJJ_dx=jj_dx # ,
+                # SQRBT_dx=0,
+                # SQRTT_dx=0
             )
             dx = pars_i.SQB_dx / 2
-            pars_i.bot_wire_x = [-dx, 0]
+            if i < 6:
+                pars_i.bot_wire_x = [-dx, 0]
+            else:
+                pars_i = AsymSquidParams(
+                    band_ph_tol=1e3,
+                    squid_dx=14.2e3,
+                    squid_dy=7e3,
+                    TC_dx=pars_i.TC_dx,
+                    TC_dy=7e3,
+                    TCW_dy=6e3,
+                    BCW_dy=0e3,
+                    BC_dy=7e3,
+                    BC_dx=pars_i.BC_dx,
+                    SQLTJJ_dx=jj_dx,
+                    SQRTJJ_dx=jj_dx,
+                    SQRBJJ_dy=jj_dy,
+                    SQLBJJ_dy=jj_dy
+                )
+                pars_i.bot_wire_x = [-dx, dx]
             self.squid_pars.append(RFSquidParams(asym_pars=pars_i))
 
 
@@ -859,14 +880,27 @@ class DesignDmon(ChipDesign):
                 squid_center = (xmon_cross.cpw_bempt.end +
                                 xmon_cross.cpw_bempt.start) / 2
                 trans = DTrans.R0
-            squid = Fluxonium(
-                squid_center + m * DVector(0, -self.squid_vertical_shift),
-                squid_pars,
-                trans_in=trans
-            )
+            if res_idx < 6:
+                squid = Fluxonium(
+                    squid_center + m * DVector(
+                        0,
+                        -self.squid_vertical_shift_list[res_idx]
+                    ),
+                    squid_pars,
+                    trans_in=trans
+                )
+                squid.place(self.region_kinInd, region_id="kinInd")
+            elif res_idx >= 6:
+                squid = AsymSquid(
+                    squid_center + m * DVector(
+                        0,
+                        -self.squid_vertical_shift_list[res_idx]
+                    ),
+                    squid_pars,
+                    trans_in=trans
+                )
             self.squids.append(squid)
             squid.place(self.region_el)
-            squid.place(self.region_kinInd, region_id="kinInd")
 
     def draw_microwave_drvie_lines(self):
 
@@ -1133,7 +1167,10 @@ class DesignDmon(ChipDesign):
 
             squid_center = test_struct1.center
             test_jj = Fluxonium(
-                squid_center + DVector(0, -self.squid_vertical_shift),
+                squid_center + DVector(
+                    0,
+                    -self.squid_vertical_shift_list[test_squid_pars_idx]
+                ),
                 squid_params=test_squid_pars
             )
             self.test_squids.append(test_jj)
@@ -1161,7 +1198,10 @@ class DesignDmon(ChipDesign):
 
             squid_center = test_struct2.center
             test_jj = Fluxonium(
-                squid_center + DVector(0, -self.squid_vertical_shift),
+                squid_center + DVector(
+                    0,
+                    -self.squid_vertical_shift_list[test_squid_pars_idx]
+                ),
                 pars_local_tp2
             )
             self.test_squids.append(test_jj)
@@ -1296,14 +1336,17 @@ class DesignDmon(ChipDesign):
                 etc3.place(self.region_kinInd)
                 self.region_ph -= etc3.metal_region.dup().size(20e3)
 
-                p1 = squid.BC1.start
-                p2 = DPoint(etc3.center().x, p1.y)
-                etc4 = CPW(
-                    start=p1, end=p2,
-                    width=1e3,  # TODO: hardcoded value
-                    gap=0
+                p1 = squid.BC1.center()
+                p3 = etc3.center()
+                p2 = (p1 + p3)/2 + DVector(0, -test_pad.gnd_gap)
+                etc4 = DPathCPW(
+                    points=[p1,p2,p3], cpw_parameters=CPWParameters(
+                        width=1e3, gap=0
+                    ),
+                    turn_radiuses=self.res_r
                 )
                 etc4.place(self.region_kinInd)
+                self.region_ph -= etc4.metal_region.dup().size(20e3)
 
     def draw_bandages(self):
         """
