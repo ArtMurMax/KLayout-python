@@ -1618,6 +1618,16 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
                    crop_box.top - box_extension - design.Z0.b / 2)
         ]
 
+        wg_cropped_reg = design.cpwrl_ro_line.metal_region & Region(crop_box)
+        d_min = 1e6
+        for cpt in wg_cropped_reg.edges().each():
+            if  (
+                    np.abs(
+                        cpt.x - crop_box.left, cpt.x - crop_box.right,
+                        cpt.y - crop_box.top, cpt.y - crop_box.bottom
+                    ) < dmin
+            ).any():
+
         # transforming cropped box to the origin
         dr = DPoint(0, 0) - crop_box.p1
         design.transform_region(
@@ -1625,12 +1635,12 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
             DTrans(dr.x, dr.y),
             trans_ports=True
         )
-
+        print(design.sonnet_ports)
         # transfer design`s regions shapes to the corresponding layers in layout
         design.show()
         # show layout in UI window
         design.lv.zoom_fit()
-
+        break
         design.layout.write(
             os.path.join(PROJECT_DIR,
                          f"res_f_Q_{resonator_idx}_{dl}_um.gds")
@@ -2607,7 +2617,7 @@ if __name__ == "__main__":
     # )
 
     ''' C_qr sim '''
-    simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr", pts=11, par_d=10e3)
+    # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr", pts=11, par_d=10e3)
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cq", pts=3, par_d=20e3)
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr")
 
@@ -2620,7 +2630,7 @@ if __name__ == "__main__":
     #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(1e3, 1e3))
 
     ''' Resonators Q and f sim'''
-    # simulate_resonators_f_and_Q(resolution=(2e3,2e3))
+    simulate_resonators_f_and_Q(resolution=(2e3,2e3))
 
     ''' Resonators Q and f when placed together'''
     # simulate_resonators_f_and_Q_together()
