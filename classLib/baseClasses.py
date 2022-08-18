@@ -1,3 +1,4 @@
+from typing import Hashable, Union, Dict
 import pya
 from math import sqrt, cos, sin, atan2, pi, copysign
 from pya import Point, DPoint, DSimplePolygon, SimplePolygon, DPolygon, Polygon, Region
@@ -49,6 +50,7 @@ class ElementBase():
         self.region_id = region_id
         self.metal_regions[self.region_id] = self.metal_region
         self.empty_regions[self.region_id] = self.empty_region
+        self.region_ids = [self.region_id]
 
         self.metal_region.merged_semantics = True
         self.empty_region.merged_semantics = True
@@ -236,7 +238,7 @@ class ComplexBase(ElementBase):
     def __init__(self, origin, trans_in=None, region_id="default"):
         super().__init__(origin, trans_in, region_id=region_id)
         # ensures sequential order of drawing primitives
-        self.primitives = OrderedDict()
+        self.primitives: Dict[Hashable, Union[ElementBase, ComplexBase]] = OrderedDict()
         self._init_primitives_trans()
 
     def _init_regions_trans(self):
@@ -269,10 +271,13 @@ class ComplexBase(ElementBase):
         dCplxTrans_temp = DCplxTrans(1, 0, False, self.origin.x, self.origin.y)
         self.make_trans(dCplxTrans_temp)  # move to the origin
         self.origin += dr_origin.point(0)
-        # # FOLLOWING CYCLE GIVES WRONG INFO ABOUT FILLED AND ERASED AREAS
-        # for element in self.primitives.values():
-        #     self.metal_region += element.metal_region
-        #     self.empty_region += element.empty_region
+
+        # Intermediate object representation is kept in its metal regions.
+        # This is a tradeoff biased into memory size to simplify and speedup analysis of
+        # compound objects.
+        for element in self.primitives.values():
+            for reg_id in self.region_ids:
+                element.place(self.metal_regions[reg_id], region_id=reg_id)
 
     def place(self, dest, layer_i=-1, region_id="default"):
         if (layer_i != -1):
