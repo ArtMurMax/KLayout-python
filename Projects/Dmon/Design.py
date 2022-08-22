@@ -1696,6 +1696,15 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
         crop_box.top += box_extension
         crop_box.left -= box_extension
         crop_box.right += box_extension
+        crop_box.bottom, crop_box.top, crop_box.left, crop_box.right = \
+            list(
+                map(
+                    lambda x: int(round(x, -3)),  # up to 1 um
+                    [crop_box.bottom, crop_box.top,
+                     crop_box.left, crop_box.right]
+                )
+            )
+
 
         ### MESH CALCULATION SECTION START ###
         arr1 = np.round(np.array(
@@ -1711,24 +1720,23 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
 
         design.crop(crop_box, region=design.region_ph)
 
-        design.sonnet_ports = [
-            DPoint(crop_box.left,
-                   crop_box.top - box_extension - design.Z0.b / 2),
-            DPoint(crop_box.right,
-                   crop_box.top - box_extension - design.Z0.b / 2)
-        ]
+        design.sonnet_ports = []
 
-        wg_cropped_reg = design.cpwrl_ro_line.metal_region & Region(crop_box)
-        d_min = 1e6
-        for cpt in wg_cropped_reg.edges().each().centers(0,0):
+        ro_cpw_cropped = design.cpwrl_ro_line.metal_region & Region(
+            crop_box)
+        d_min = 10  # nm
+        for edge in ro_cpw_cropped.edges().centers(0, 0):
+            # iterator returns Edge() object that consists of 2 identical points
+            # exctract first point
+            cpt = edge.p1
             if  (
                     np.abs(
-                        cpt.x - crop_box.left, cpt.x - crop_box.right,
-                        cpt.y - crop_box.top, cpt.y - crop_box.bottom
-                    ) < dmin
+                        [cpt.x - crop_box.left, cpt.x - crop_box.right,
+                        cpt.y - crop_box.top, cpt.y - crop_box.bottom]
+                    ) < d_min
             ).any():
-                pass
-                raise NotImplementedError
+                design.sonnet_ports.append(cpt)
+
 
         # transforming cropped box to the origin
         dr = DPoint(0, 0) - crop_box.p1
@@ -1737,12 +1745,12 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
             DTrans(dr.x, dr.y),
             trans_ports=True
         )
-        print(design.sonnet_ports)
+        [print(port) for port in design.sonnet_ports]
         # transfer design`s regions shapes to the corresponding layers in layout
         design.show()
         # show layout in UI window
         design.lv.zoom_fit()
-        break
+        
         design.layout.write(
             os.path.join(PROJECT_DIR,
                          f"res_f_Q_{resonator_idx}_{dl}_um.gds")
@@ -2695,10 +2703,10 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
-    FABRICATION.OVERETCHING = 0.0e3
-    design = DesignDmon("testScript")
-    design.draw()
-    design.show()
+    # FABRICATION.OVERETCHING = 0.0e3
+    # design = DesignDmon("testScript")
+    # design.draw()
+    # design.show()
 
     # design.save_as_gds2(
     #     os.path.join(
@@ -2732,7 +2740,7 @@ if __name__ == "__main__":
     #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(1e3, 1e3))
 
     ''' Resonators Q and f sim'''
-    # simulate_resonators_f_and_Q(resolution=(2e3,2e3))
+    simulate_resonators_f_and_Q(resolution=(2e3,2e3))
 
     ''' Resonators Q and f when placed together'''
     # simulate_resonators_f_and_Q_together()
