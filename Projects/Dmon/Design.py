@@ -1,4 +1,4 @@
-__version__ = "v.0.0.2.2"
+__version__ = "v.0.0.2.3"
 
 '''
 Description:
@@ -7,6 +7,9 @@ main series chips. E.g. this one is based on v.0.3.0.8 Design.py
 
 
 Changes log
+v.0.0.2.3
+    1. Added proper text fields for test structures.
+    
 v.0.0.2.2
     1. Test structures include 1 JJ of each kind,
         1 kin. inductance of each kind and bridges.
@@ -1166,15 +1169,23 @@ class DesignDmon(ChipDesign):
         ''' choose squid for test structures '''
         # choosing squid with the smallest junction
         squid_par_idxs = [0, 3, 5]
-
+        Icrit_JJ_list = [20.1, 11.3, 28.2]
+        EL_kinInd_list = [5.2, 5.6, 10]
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
 
         struct_centers = [DPoint(1.5e6, 1.5e6), DPoint(5.2e6, 1.5e6),
                           DPoint(2.2e6, 3.2e6)]
         self.test_squids_pads = []
-        for struct_center, squid_par_idx in zip(
-                struct_centers, squid_par_idxs
-        ):
+        for struct_center, \
+            squid_par_idx,\
+            Icrit_JJ,\
+            EL_kin_ind in \
+                zip(
+                    struct_centers,
+                    squid_par_idxs,
+                    Icrit_JJ_list,
+                    EL_kinInd_list
+                ):
             ## JJ test structures ##
             # test structure for left leg (#1)
             test_struct1 = TestStructurePadsSquare(
@@ -1187,7 +1198,7 @@ class DesignDmon(ChipDesign):
             test_struct1.place(self.region_ph)
 
             text_reg = pya.TextGenerator.default_generator().text(
-                "56 nA", 0.001, 25, False, 0, 0)
+               str(Icrit_JJ) + " nA", 0.001, 25, False, 0, 0)
             text_bl = test_struct1.empty_rectangle.p1 - DVector(0, 20e3)
             text_reg.transform(
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
@@ -1211,7 +1222,7 @@ class DesignDmon(ChipDesign):
             test_struct2.place(self.region_ph)
 
             text_reg = pya.TextGenerator.default_generator().text(
-                "11 nA", 0.001, 25, False, 0, 0)
+                str(EL_kin_ind) + " GHz", 0.001, 25, False, 0, 0)
             text_bl = test_struct2.empty_rectangle.p1 - DVector(0, 20e3)
             text_reg.transform(
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
