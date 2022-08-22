@@ -1,4 +1,4 @@
-__version__ = "v.0.0.2.3"
+__version__ = "v.0.0.3.3"
 
 '''
 Description:
@@ -7,8 +7,11 @@ main series chips. E.g. this one is based on v.0.3.0.8 Design.py
 
 
 Changes log
+v.0.0.3.3
+    1. Changed qubit 4 (counting from 0) geom params to coincide
+        with qubit 3 geom params.
 v.0.0.2.3
-    1. Added proper text fields for test structures.
+    1. Added proper text fields for test structures.    
     
 v.0.0.2.2
     1. Test structures include 1 JJ of each kind,
@@ -373,7 +376,8 @@ class DesignDmon(ChipDesign):
         self.xmons_corrected: list[XmonCross] = []
 
         self.cross_len_x_list = np.array(
-            [1e3*x for x in [129.905, 65.602, 35.098, 0.001, 0.001, 196.603, 233.873, 233.415]]
+            [1e3*x for x in [129.905, 65.602, 35.098, 0, 0, 196.603,
+                             233.873, 233.415]]
         )
         self.cross_width_x_list = np.array(
             [1e3*x for x in [16, 16, 16, 16, 16, 32, 56, 56]]
@@ -426,7 +430,7 @@ class DesignDmon(ChipDesign):
         self.to_line_list = [45e3] * len(self.L1_list)
         # fork at the end of resonator parameters
         self.fork_metal_width_list = np.array(
-            [1e3*x for x in ([10]*3 + [6] + [10]*4)]
+            [1e3*x for x in ([10]*3 + [6]*2 + [10]*3)]
         )
         self.fork_gnd_gap = 10e3
         self.xmon_fork_gnd_gap = 10e3
@@ -435,12 +439,18 @@ class DesignDmon(ChipDesign):
                                 (self.xmon_fork_gnd_gap + self.fork_metal_width_list)
         # resonator-fork parameters
         # from simulation of g_qr
-        self.fork_y_span_list = [
-            x * 1e3 for x in
-            [53.6, 31.5, 13.7, 14.0, 9.7, 71.2, 75.3, 76.2]
-        ]
-        self.worm_x_list = [x * 1e6 for x in
-                       [1, 2.7, 3.5, 4.35, 5.5, 6.5, 7.6, 8.5]]
+        self.fork_y_span_list = np.array(
+            [
+                x * 1e3 for x in
+                [53.6, 31.5, 13.7, 14.0, 14.0, 71.2, 75.3, 76.2]
+            ]
+        )
+        self.worm_x_list = np.array(
+            [
+                x * 1e6 for x in
+                [1, 2.7, 3.5, 4.35, 5.5, 6.5, 7.6, 8.5]
+            ]
+        )
 
         # squids
         self.squids: List[Fluxonium] = []
