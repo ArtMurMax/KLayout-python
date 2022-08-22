@@ -59,6 +59,9 @@ class Rectangle(ElementBase):
         self.p1 = self.connections[0]
         self.p2 = self.connections[1]
 
+    def center(self):
+        return (self.p1 + self.p2)/2
+
 
 class Cross(ElementBase):
     def __init__(self, origin, inner_square_a, outer_square_a,

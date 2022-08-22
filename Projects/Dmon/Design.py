@@ -1,4 +1,4 @@
-__version__ = "v.0.0.2.0"
+__version__ = "v.0.0.2.2"
 
 '''
 Description:
@@ -7,10 +7,21 @@ main series chips. E.g. this one is based on v.0.3.0.8 Design.py
 
 
 Changes log
+v.0.0.2.2
+    1. Test structures include 1 JJ of each kind,
+        1 kin. inductance of each kind and bridges.
+        except for resonators №7,8; starting 
+        from 1.
+    2. Added CABL conversion rectangle for bandage test pads.
+    
+v.0.0.2.1
+    1. Added kinetic Inductances with proper values
+    2. Cqr and Cq values checked from simulations
+
 v.0.0.2.0
-1. Testing several Dmons with different E_C
-and 2 transmons with corresponding spectra.
-2. No flux lines, nor flux CPW pads.
+    1. Testing several Dmons with different E_C
+    and 2 transmons with corresponding spectra.
+    2. No flux lines, nor flux CPW pads.
 
 v.0.0.1.3
 1. Qubit beneath the RO line repeat corresponding from the 5Q design.
@@ -442,9 +453,19 @@ class DesignDmon(ChipDesign):
                            159.842, 203.785, 203.785]
         self.jj_dy_list = [149.842, 149.842, 149.842, 89.482, 89.482,
                            149.842, 193.785, 193.785]
+        self.kinInd_width = 120
+        self.kinInd_squaresN_list = np.array(
+            [1800]*3 + [1700]*2 + [920]+ [1800]*2
+        )
+        self.kinInd_length_list = \
+            self.kinInd_squaresN_list*self.kinInd_width
 
-        for i, (jj_dy, jj_dx) in enumerate(
-                zip(self.jj_dy_list, self.jj_dx_list)
+        for i, (jj_dy, jj_dx, kinInd_length) in enumerate(
+                zip(
+                    self.jj_dy_list,
+                    self.jj_dx_list,
+                    self.kinInd_length_list
+                )
         ):
             pars_i = AsymSquidParams(
                 band_ph_tol=1e3,
@@ -460,9 +481,8 @@ class DesignDmon(ChipDesign):
                 SQLTJJ_dx=jj_dx,
                 # eliminate junction on the rhs
                 SQRBJJ_dy=jj_dy,
-                SQRTJJ_dx=jj_dx # ,
-                # SQRBT_dx=0,
-                # SQRTT_dx=0
+                SQRTJJ_dx=jj_dx,
+
             )
             dx = pars_i.SQB_dx / 2
             if i < 6:
@@ -484,7 +504,13 @@ class DesignDmon(ChipDesign):
                     SQLBJJ_dy=jj_dy
                 )
                 pars_i.bot_wire_x = [-dx, dx]
-            self.squid_pars.append(RFSquidParams(asym_pars=pars_i))
+            self.squid_pars.append(
+                RFSquidParams(
+                    asym_pars=pars_i,
+                    line_width=self.kinInd_width,
+                    line_length=kinInd_length
+                )
+            )
 
 
         # el-dc concacts attributes
@@ -510,6 +536,7 @@ class DesignDmon(ChipDesign):
         self.bandage_r_inner = 2e3
         self.bandage_curve_pts_n = 40
         self.bandages_regs_list = []
+        self.test_bandage_list: List[Rectangle] = []
 
         # distance between microwave-drive central coplanar line
         # to the face of Xmon's cross metal. Assuming that microwave
@@ -585,7 +612,7 @@ class DesignDmon(ChipDesign):
         self.draw_express_test_structures_pads()
         self.draw_bandages()
         self.draw_recess()
-        self.draw_el_protection()
+        self.draw_CABL_conversion_rectangles()
 
         self.draw_photo_el_marks()
         # self.draw_bridges()
@@ -1138,17 +1165,16 @@ class DesignDmon(ChipDesign):
     def draw_test_structures(self):
         ''' choose squid for test structures '''
         # choosing squid with the smallest junction
-        test_squid_pars_idx = np.argmin(
-            map(lambda x: x.SQLTJJ_dx, self.squid_pars)
-        )
-        test_squid_pars = self.squid_pars[test_squid_pars_idx]
+        squid_par_idxs = [0, 3, 5]
 
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
 
         struct_centers = [DPoint(1.5e6, 1.5e6), DPoint(5.2e6, 1.5e6),
                           DPoint(2.2e6, 3.2e6)]
         self.test_squids_pads = []
-        for struct_center in struct_centers:
+        for struct_center, squid_par_idx in zip(
+                struct_centers, squid_par_idxs
+        ):
             ## JJ test structures ##
             # test structure for left leg (#1)
             test_struct1 = TestStructurePadsSquare(
@@ -1171,9 +1197,9 @@ class DesignDmon(ChipDesign):
             test_jj = Fluxonium(
                 squid_center + DVector(
                     0,
-                    -self.squid_vertical_shift_list[test_squid_pars_idx]
+                    -self.squid_vertical_shift_list[squid_par_idx]
                 ),
-                squid_params=test_squid_pars
+                squid_params=self.squid_pars[squid_par_idx]
             )
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
@@ -1192,7 +1218,7 @@ class DesignDmon(ChipDesign):
             self.region_ph -= text_reg
 
             # eliminate left leg
-            pars_local_tp2 = deepcopy(test_squid_pars)
+            pars_local_tp2 = deepcopy(self.squid_pars[squid_par_idx])
             pars_local_tp2.SQLTJJ_dx = 0
             pars_local_tp2.SQLBJJ_dy = 0
             pars_local_tp2.SQLBT_dx = 0
@@ -1202,7 +1228,7 @@ class DesignDmon(ChipDesign):
             test_jj = Fluxonium(
                 squid_center + DVector(
                     0,
-                    -self.squid_vertical_shift_list[test_squid_pars_idx]
+                    -self.squid_vertical_shift_list[squid_par_idx]
                 ),
                 pars_local_tp2
             )
@@ -1254,8 +1280,9 @@ class DesignDmon(ChipDesign):
             rec_width = 10e3
             rec_height = test_struct1.rectangles_gap + 2 * rec_width
             p1 = struct_center - DVector(rec_width / 2, rec_height / 2)
-            dc_rec = Rectangle(p1, rec_width, rec_height)
-            dc_rec.place(self.dc_bandage_reg)
+            test_bandage = Rectangle(p1, rec_width,rec_height)
+            self.test_bandage_list.append(test_bandage)
+            test_bandage.place(self.dc_bandage_reg)
 
     def draw_express_test_structures_pads(self):
         el_pad_height = 30e3
@@ -1430,16 +1457,27 @@ class DesignDmon(ChipDesign):
                 recess_reg = BC.metal_region.dup().size(-1e3)
                 self.region_ph -= recess_reg
 
-    def draw_el_protection(self):
+    def draw_CABL_conversion_rectangles(self):
         protection_a = 300e3
         for squid in (self.squids + self.test_squids):
             self.region_el_protection.insert(
                 pya.Box().from_dbox(
                     pya.DBox(
-                        squid.origin - 0.5 * DVector(protection_a,
-                                                     protection_a),
-                        squid.origin + 0.5 * DVector(protection_a,
-                                                     protection_a)
+                        squid.origin -
+                        0.5 * DVector(protection_a, protection_a),
+                        squid.origin +
+                        0.5 * DVector(protection_a, protection_a)
+                    )
+                )
+            )
+        for test_bondage in self.test_bandage_list:
+            self.region_el_protection.insert(
+                pya.Box().from_dbox(
+                    pya.DBox(
+                        test_bondage.center() -
+                        0.5 * DVector(protection_a, protection_a),
+                        test_bondage.center() +
+                        0.5 * DVector(protection_a,protection_a)
                     )
                 )
             )
