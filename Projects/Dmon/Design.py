@@ -1,4 +1,4 @@
-__version__ = "v.0.0.3.4"
+__version__ = "v.0.0.4.4"
 
 '''
 Description:
@@ -7,6 +7,11 @@ main series chips. E.g. this one is based on v.0.3.0.8 Design.py
 
 
 Changes log
+v.0.0.4.4
+    1. Contact pads for local flux added.
+    2. Two right-most resonators are shifted to the right by 0.3mm in 
+    order to avoid collision between resonator 7 (counting from 1) with 
+    the right-most top contact pad.
 v.0.0.3.4
     1. L1_list was fitted to produce proper resonator frequencies.
 v.0.0.3.3
@@ -92,7 +97,6 @@ import sonnetSim
 reload(sonnetSim)
 from sonnetSim import SonnetLab, SonnetPort, SimulationBox
 
-
 FABRICATION.OVERETCHING = 0.0e3
 PROJECT_DIR = os.path.dirname(__file__)
 
@@ -100,13 +104,12 @@ PROJECT_DIR = os.path.dirname(__file__)
 class RFSquidParams(AsymSquidParams):
     def __init__(
             self,
-            asym_pars: AsymSquidParams=AsymSquidParams(),
+            asym_pars: AsymSquidParams = AsymSquidParams(),
             line_width=115,
             line_length=120e3,
             line_gap=1.8e3,
             add_dx_mid=-1.8e3
     ):
-
         self.__dict__.update(asym_pars.__dict__)
         self.line_width = line_width
         self.line_length = line_length
@@ -127,7 +130,7 @@ class Fluxonium(AsymSquid):
         squid_params.SQRBJJ_dy = 0
         self.r_curve = squid_params.line_width
         # declare for proper code completion
-        self.squid_params : RFSquidParams = None
+        self.squid_params: RFSquidParams = None
         super().__init__(origin=origin, params=squid_params,
                          trans_in=trans_in)
 
@@ -136,7 +139,7 @@ class Fluxonium(AsymSquid):
         sqt_c = self.SQT.center()
         sqt_rect = self.SQT.metal_region.bbox()
         self.SQT = CPW(
-            start=sqt_c, end=DPoint(sqt_rect.left,sqt_c.y),
+            start=sqt_c, end=DPoint(sqt_rect.left, sqt_c.y),
             width=self.squid_params.SQT_dy, gap=0
         )
         self.primitives["SQT"] = self.SQT
@@ -144,17 +147,17 @@ class Fluxonium(AsymSquid):
         # draw kinetic wire
         if hasattr(self, "BCW1"):
             self.line_start_pt = self.BCW1.start + \
-                              DPoint(
-                                  self.squid_params.BCW_dx/2,
-                                  -self.squid_params.line_width/2
-                              )
+                                 DPoint(
+                                     self.squid_params.BCW_dx / 2,
+                                     -self.squid_params.line_width / 2
+                                 )
         else:
             return
 
         # make transition from large `TC` polygon to thin line:
         tc_bbx = self.TC.metal_region.bbox()
         tcwl_start = DPoint(
-            tc_bbx.right - self.squid_params.BCW_dx/2,
+            tc_bbx.right - self.squid_params.BCW_dx / 2,
             tc_bbx.bottom
         )
         self.TCWL = CPW(
@@ -166,10 +169,10 @@ class Fluxonium(AsymSquid):
         self.primitives["TCWL"] = self.TCWL
 
         self.line_end_pt = self.TCWL.end + \
-                             DPoint(
-                                 self.TCWL.width / 2,
-                                 self.squid_params.line_width / 2
-                             )
+                           DPoint(
+                               self.TCWL.width / 2,
+                               self.squid_params.line_width / 2
+                           )
 
         dr = self.line_end_pt - self.line_start_pt
         self.dy = dr.y
@@ -183,14 +186,14 @@ class Fluxonium(AsymSquid):
             )
             return
         self.n_periods = (self.dy - self.squid_params.line_gap) // \
-                         (2*self.squid_params.line_gap)
+                         (2 * self.squid_params.line_gap)
         self.n_periods = int(self.n_periods)
         self.dx_step = (self.dx) / (self.n_periods + 1)
-        self.dy_step = self.dy / (2*self.n_periods + 1)  # >= `line_gap`
+        self.dy_step = self.dy / (2 * self.n_periods + 1)  # >= `line_gap`
         # due to curved turns, line will be shorter by
         # the following amount:
         curvature_correction = \
-            self.r_curve*(2-np.pi/2)*(4*self.n_periods + 2)
+            self.r_curve * (2 - np.pi / 2) * (4 * self.n_periods + 2)
         self.s = (
                 (self.squid_params.line_length + curvature_correction
                  - self.dy + self.dx - 2 * self.squid_params.add_dx_mid) /
@@ -242,11 +245,11 @@ class Fluxonium(AsymSquid):
 
         # create top contact pad for kinetic inductance wire
         dr = self.TC.dr
-        tcki_width = 0.6*self.TC.width
+        tcki_width = 0.6 * self.TC.width
         shift_dv = DVector(self.TCWL.end.x - self.TC.end.x
-                           + self.TCWL.width/2 - tcki_width/2, 0)
+                           + self.TCWL.width / 2 - tcki_width / 2, 0)
         self.TC_KI = CPW(
-            start=self.TC.start + 0.45*dr + shift_dv,
+            start=self.TC.start + 0.45 * dr + shift_dv,
             end=self.TC.end + shift_dv,
             width=tcki_width, gap=0,
             region_id="kinInd"
@@ -311,7 +314,8 @@ class TestStructurePadsSquare(ComplexBase):
 class DesignDmon(ChipDesign):
     def __init__(self, cell_name):
         super().__init__(cell_name)
-        dc_bandage_layer_i = pya.LayerInfo(3, 0)  # for DC contact deposition
+        dc_bandage_layer_i = pya.LayerInfo(3,
+                                           0)  # for DC contact deposition
         self.dc_bandage_reg = Region()
         self.dc_bandage_layer = self.layout.layer(dc_bandage_layer_i)
 
@@ -350,15 +354,23 @@ class DesignDmon(ChipDesign):
         self.flux2ground_right_width = 4e3
         self.ro_Z: CPWParameters = self.chip.chip_Z
         contact_pads_trans_list = [Trans.R0] + [Trans.R270] + 2 * [
-            Trans.R90] + [Trans.R0] + [Trans.R270]*3
+            Trans.R90] + [Trans.R0] + [Trans.R270] * 3
         for i, trans in enumerate(contact_pads_trans_list):
-            contact_pads_trans_list[i] = DCplxTrans(DTrans(contact_pads_trans_list[i]))
+            contact_pads_trans_list[i] = DCplxTrans(
+                DTrans(contact_pads_trans_list[i]))
             if trans == DTrans.R270:
-                contact_pads_trans_list[i] = DCplxTrans(DVector(-self.chip.pad_length, self.chip.pcb_Z.b/2 + self.chip.back_metal_width))*contact_pads_trans_list[i]
+                contact_pads_trans_list[i] = DCplxTrans(
+                    DVector(-self.chip.pad_length,
+                            self.chip.pcb_Z.b / 2 + self.chip.back_metal_width)) * \
+                                             contact_pads_trans_list[i]
             elif trans == DTrans.R90:
-                contact_pads_trans_list[i] = DCplxTrans(DVector(-self.chip.pad_length, -self.chip.pcb_Z.b/2 -self.chip.back_metal_width))*contact_pads_trans_list[i]
+                contact_pads_trans_list[i] = DCplxTrans(
+                    DVector(-self.chip.pad_length,
+                            -self.chip.pcb_Z.b / 2 - self.chip.back_metal_width)) * \
+                                             contact_pads_trans_list[i]
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
-            [self.ro_Z] + [self.z_md_fl] * 3 + [self.ro_Z] + [self.z_md_fl] * 3,
+            [self.ro_Z] + [self.z_md_fl] * 3 + [self.ro_Z] + [
+                self.z_md_fl] * 3,
             cpw_trans_list=contact_pads_trans_list
         )
 
@@ -373,25 +385,26 @@ class DesignDmon(ChipDesign):
         # xmon parameters
         self.xmon_x_distance: float = 722e3
 
-        self.xmon_res_d_list = [40e3]*self.NQUBITS
+        self.xmon_res_d_list = [40e3] * self.NQUBITS
         self.xmons: list[XmonCross] = []
         self.xmons_corrected: list[XmonCross] = []
 
         self.cross_len_x_list = np.array(
-            [1e3*x for x in [129.905, 65.602, 35.098, 0, 0, 196.603,
-                             233.873, 233.415]]
+            [1e3 * x for x in [129.905, 65.602, 35.098, 0, 0, 196.603,
+                               233.873, 233.415]]
         )
         self.cross_width_x_list = np.array(
-            [1e3*x for x in [16, 16, 16, 16, 16, 32, 56, 56]]
+            [1e3 * x for x in [16, 16, 16, 16, 16, 32, 56, 56]]
         )
         self.cross_len_y_list = np.array(
-            [1e3*x for x in [245.0, 225.0, 211.0, 154.0, 154.0, 258.0, 267.0, 267.0 ]]
+            [1e3 * x for x in
+             [245.0, 225.0, 211.0, 154.0, 154.0, 258.0, 267.0, 267.0]]
         )
         self.cross_width_y_list = np.array(
-            [1e3*x for x in [16, 16, 16, 16, 16, 32, 56, 56]]
+            [1e3 * x for x in [16, 16, 16, 16, 16, 32, 56, 56]]
         )
         self.cross_gnd_gap_y_list = np.array(
-            [1e3*x for x in [60]*self.NQUBITS]
+            [1e3 * x for x in [60] * self.NQUBITS]
         )
         self.cross_gnd_gap_x = 60e3
         self.cross_gnd_gap_face_y = 20e3
@@ -414,12 +427,12 @@ class DesignDmon(ChipDesign):
         # horizontal coil line length
         self.L1_list = [
             1e3 * x for x in
-            [119.0,114.0,112.0,108.0,103.0,80.0,71.0,66.0]
+            [119.0, 114.0, 112.0, 108.0, 103.0, 80.0, 71.0, 66.0]
         ]
         # curvature radius of resonators CPW turns
         self.res_r = 60e3
         # coil consist of L1, 2r, L1, 2r segment
-        self.N_coils = [3]*self.NQUBITS
+        self.N_coils = [3] * self.NQUBITS
         # another vertical line connected to L0
         self.L2_list = [self.res_r] * len(self.L1_list)
         # horizontal line connected to L2
@@ -431,13 +444,14 @@ class DesignDmon(ChipDesign):
         self.to_line_list = [45e3] * len(self.L1_list)
         # fork at the end of resonator parameters
         self.fork_metal_width_list = np.array(
-            [1e3*x for x in ([10]*3 + [6]*2 + [10]*3)]
+            [1e3 * x for x in ([10] * 3 + [6] * 2 + [10] * 3)]
         )
         self.fork_gnd_gap = 10e3
         self.xmon_fork_gnd_gap = 10e3
         # fork at the end of resonator parameters
         self.fork_x_span_list = self.cross_width_y_list + + 2 * \
-                                (self.xmon_fork_gnd_gap + self.fork_metal_width_list)
+                                (
+                                            self.xmon_fork_gnd_gap + self.fork_metal_width_list)
         # resonator-fork parameters
         # from simulation of g_qr
         self.fork_y_span_list = np.array(
@@ -449,7 +463,7 @@ class DesignDmon(ChipDesign):
         self.worm_x_list = np.array(
             [
                 x * 1e6 for x in
-                [1, 2.7, 3.5, 4.35, 5.5, 6.5, 7.6, 8.5]
+                [1, 2.7, 3.5, 4.35, 5.5, 6.5, 7.9, 8.8]
             ]
         )
 
@@ -457,7 +471,7 @@ class DesignDmon(ChipDesign):
         self.squids: List[Fluxonium] = []
         self.test_squids: List[Fluxonium] = []
         # vertical shift of every squid local origin coordinates
-        self.squid_vertical_shift_list = [0e3]*6 + [3e3]*2
+        self.squid_vertical_shift_list = [0e3] * 6 + [0e3] * 2
         # minimal distance between squid loop and photo layer
         self.squid_ph_clearance = 1.5e3
 
@@ -469,10 +483,10 @@ class DesignDmon(ChipDesign):
                            149.842, 193.785, 193.785]
         self.kinInd_width = 120
         self.kinInd_squaresN_list = np.array(
-            [1800]*3 + [1700]*2 + [920]+ [1800]*2
+            [1800] * 3 + [1700] * 2 + [920] + [1800] * 2
         )
         self.kinInd_length_list = \
-            self.kinInd_squaresN_list*self.kinInd_width
+            self.kinInd_squaresN_list * self.kinInd_width
 
         for i, (jj_dy, jj_dx, kinInd_length) in enumerate(
                 zip(
@@ -486,7 +500,7 @@ class DesignDmon(ChipDesign):
                 squid_dx=14.2e3,
                 squid_dy=14.5e3,
                 TC_dx=2.5e3 * np.sqrt(2) + 1e3,
-                TC_dy=5e3 * np.sqrt(2) / 2 + 1e3,
+                TC_dy=5e3 * np.sqrt(2) / 2 + 2e3,
                 TCW_dy=0,
                 BCW_dy=1.5e3,
                 BC_dy=5e3 * np.sqrt(2) / 2 + 1e3,
@@ -502,13 +516,14 @@ class DesignDmon(ChipDesign):
             if i < 6:
                 pars_i.bot_wire_x = [-dx, 0]
             else:
+                dx = 35e3 / 2  # HARDCODED BY DARIA
                 pars_i = AsymSquidParams(
                     band_ph_tol=1e3,
-                    squid_dx=14.2e3,
-                    squid_dy=7e3,
+                    squid_dx=2*dx,
+                    squid_dy=13e3,
                     TC_dx=pars_i.TC_dx,
                     TC_dy=7e3,
-                    TCW_dy=6e3,
+                    TCW_dy=0,
                     BCW_dy=0e3,
                     BC_dy=7e3,
                     BC_dx=pars_i.BC_dx,
@@ -525,7 +540,6 @@ class DesignDmon(ChipDesign):
                     line_length=kinInd_length
                 )
             )
-
 
         # el-dc concacts attributes
         # e-beam polygon has to cover hole in photoregion and also
@@ -620,7 +634,7 @@ class DesignDmon(ChipDesign):
         self.draw_josephson_loops()
 
         # self.draw_microwave_drvie_lines()
-        # self.draw_flux_control_lines()
+        self.draw_flux_control_lines()
 
         self.draw_test_structures()
         self.draw_express_test_structures_pads()
@@ -635,7 +649,6 @@ class DesignDmon(ChipDesign):
         # holes from
         # contact pads
         for i, contact_pad in enumerate(self.contact_pads):
-            if i in [0, 4]:
                 contact_pad.place(self.region_ph)
         self.region_ph.merge()
         self.region_el.merge()
@@ -729,9 +742,7 @@ class DesignDmon(ChipDesign):
 
         self.region_ph.insert(self.chip_box)
         for i, contact_pad in enumerate(self.contact_pads):
-            # draw only ROWG pads
-            if (i==0) or (i==4):
-             contact_pad.place(self.region_ph)
+            contact_pad.place(self.region_ph)
 
     def draw_cut_marks(self):
         chip_box_poly = DPolygon(self.chip_box)
@@ -771,8 +782,8 @@ class DesignDmon(ChipDesign):
                                      zip(self.L2_list, self.L3_list,
                                          self.L4_list)]
         tail_turn_angles_list = [
-            [np.pi / 2, -np.pi / 2]
-        ]*8
+                                    [np.pi / 2, -np.pi / 2]
+                                ] * 8
         tail_trans_in_list = [Trans.R270] * 8
         ### RESONATORS TAILS CALCULATIONS SECTION END ###
 
@@ -870,7 +881,8 @@ class DesignDmon(ChipDesign):
             )
         )
         for res_idx, res in it_list:
-            d = self.xmon_res_d_list[res_idx] + self.cross_len_y_list[res_idx] + self.cross_width_x_list[res_idx] / 2 + \
+            d = self.xmon_res_d_list[res_idx] + self.cross_len_y_list[
+                res_idx] + self.cross_width_x_list[res_idx] / 2 + \
                 self.fork_metal_width_list[res_idx] + self.fork_gnd_gap
             if res_idx % 2 == 0:
                 # above RO line
@@ -955,7 +967,8 @@ class DesignDmon(ChipDesign):
         # place caplanar line 1md
         _p1 = self.contact_pads[7].end
         _p2 = DPoint(_p1.x, self.xmons[0].origin.y)
-        _p3 = DPoint(self.xmons[0].cpw_r.end.x + self.md_line_to_cross_metal, _p2.y)
+        _p3 = DPoint(
+            self.xmons[0].cpw_r.end.x + self.md_line_to_cross_metal, _p2.y)
         self.cpwrl_md1 = DPathCPW(
             points=[_p1, _p2, _p3],
             cpw_parameters=self.z_md_fl,
@@ -967,7 +980,8 @@ class DesignDmon(ChipDesign):
         # place caplanar line 2md
         _p1 = self.contact_pads[1].end
         _p2 = DPoint(_p1.x, self.xmons[1].origin.y)
-        _p3 = DPoint(self.xmons[1].cpw_l.end.x - self.md_line_to_cross_metal, _p2.y)
+        _p3 = DPoint(
+            self.xmons[1].cpw_l.end.x - self.md_line_to_cross_metal, _p2.y)
         self.cpwrl_md1 = DPathCPW(
             points=[_p1, _p2, _p3],
             cpw_parameters=self.z_md_fl,
@@ -979,7 +993,8 @@ class DesignDmon(ChipDesign):
         # place caplanar line 3md
         _p1 = self.contact_pads[6].end
         _p2 = DPoint(_p1.x, self.xmons[2].origin.y)
-        _p3 = DPoint(self.xmons[2].cpw_r.end.x + self.md_line_to_cross_metal, _p2.y)
+        _p3 = DPoint(
+            self.xmons[2].cpw_r.end.x + self.md_line_to_cross_metal, _p2.y)
         self.cpwrl_md1 = DPathCPW(
             points=[_p1, _p2, _p3],
             cpw_parameters=self.z_md_fl,
@@ -991,7 +1006,8 @@ class DesignDmon(ChipDesign):
         # place caplanar line 4md
         _p1 = self.contact_pads[2].end
         _p2 = DPoint(_p1.x, self.xmons[3].origin.y)
-        _p3 = DPoint(self.xmons[3].cpw_l.end.x - self.md_line_to_cross_metal, _p2.y)
+        _p3 = DPoint(
+            self.xmons[3].cpw_l.end.x - self.md_line_to_cross_metal, _p2.y)
         self.cpwrl_md1 = DPathCPW(
             points=[_p1, _p2, _p3],
             cpw_parameters=self.z_md_fl,
@@ -1003,7 +1019,8 @@ class DesignDmon(ChipDesign):
         # place caplanar line 5md
         _p1 = self.contact_pads[5].end
         _p2 = DPoint(_p1.x, self.xmons[4].origin.y)
-        _p3 = DPoint(self.xmons[4].cpw_r.end.x + self.md_line_to_cross_metal, _p2.y)
+        _p3 = DPoint(
+            self.xmons[4].cpw_r.end.x + self.md_line_to_cross_metal, _p2.y)
         self.cpwrl_md1 = DPathCPW(
             points=[_p1, _p2, _p3],
             cpw_parameters=self.z_md_fl,
@@ -1015,7 +1032,8 @@ class DesignDmon(ChipDesign):
         # place caplanar line 6md
         _p1 = self.contact_pads[3].end
         _p2 = DPoint(_p1.x, self.xmons[5].origin.y)
-        _p3 = DPoint(self.xmons[5].cpw_l.end.x - self.md_line_to_cross_metal, _p2.y)
+        _p3 = DPoint(
+            self.xmons[5].cpw_l.end.x - self.md_line_to_cross_metal, _p2.y)
         self.cpwrl_md1 = DPathCPW(
             points=[_p1, _p2, _p3],
             cpw_parameters=self.z_md_fl,
@@ -1029,16 +1047,18 @@ class DesignDmon(ChipDesign):
 
         # calculate flux line end horizontal shift from center of the
         # squid loop
-        self.flux_lines_x_shifts: List[float] = \
-            [
-                -SQUID_PARAMETERS.squid_dx/ 2 - SQUID_PARAMETERS.SQLBT_dx/ 2 -
-                self.z_md_fl2.width/ 2 + SQUID_PARAMETERS.BC_dx / 2 +
-                SQUID_PARAMETERS.band_ph_tol
-            ] * len(self.L1_list)
+        self.flux_lines_x_shifts: List[float] = []
+        for squid_pars in self.squid_pars:
+            self.flux_lines_x_shifts.append(
+                -squid_pars.squid_dx / 2 - squid_pars.SQLBT_dx / 2 -
+                self.z_md_fl2.width / 2 + squid_pars.BC_dx / 2 +
+                squid_pars.band_ph_tol
+        )
 
         # place caplanar line 1 fl
         _p1 = self.contact_pads[1].end
-        _p2 = DPoint(self.xmons[1].center.x + self.flux_lines_x_shifts[1], _p1.y)
+        _p2 = DPoint(self.xmons[1].center.x + self.flux_lines_x_shifts[1],
+                     _p1.y)
         _p3 = DPoint(_p2.x, self.xmons[1].cpw_bempt.end.y)
         self.cpwrl_fl1 = DPathCPW(
             points=[_p1, _p2, _p3],
@@ -1049,7 +1069,8 @@ class DesignDmon(ChipDesign):
 
         # place caplanar line 3 fl
         _p1 = self.contact_pads[2].end
-        _p2 = DPoint(self.xmons[3].center.x + self.flux_lines_x_shifts[3], _p1.y)
+        _p2 = DPoint(self.xmons[3].center.x + self.flux_lines_x_shifts[3],
+                     _p1.y)
         _p3 = DPoint(_p2.x, self.xmons[3].cpw_bempt.end.y)
         self.cpwrl_fl3 = DPathCPW(
             points=[_p1, _p2, _p3],
@@ -1060,7 +1081,8 @@ class DesignDmon(ChipDesign):
 
         # place caplanar line 5 fl
         _p1 = self.contact_pads[3].end
-        _p2 = DPoint(self.xmons[5].center.x + self.flux_lines_x_shifts[5], _p1.y)
+        _p2 = DPoint(self.xmons[5].center.x + self.flux_lines_x_shifts[5],
+                     _p1.y)
         _p3 = DPoint(_p2.x, self.xmons[5].cpw_bempt.end.y)
         self.cpwrl_fl5 = DPathCPW(
             points=[_p1, _p2, _p3],
@@ -1123,9 +1145,9 @@ class DesignDmon(ChipDesign):
         alpha_2 = 0.3
         alpha_3 = 1 - (alpha_1 + alpha_2)
         p1 = last_line.start
-        p2 = p1 + alpha_1*(last_line.end - last_line.start)
-        p3 = p2 + alpha_2*(last_line.end - last_line.start)
-        p4 = p3 + alpha_3*(last_line.end - last_line.start)
+        p2 = p1 + alpha_1 * (last_line.end - last_line.start)
+        p3 = p2 + alpha_2 * (last_line.end - last_line.start)
+        p4 = p3 + alpha_3 * (last_line.end - last_line.start)
         cpw_normal = CPW(
             start=p1,
             end=p2,
@@ -1139,7 +1161,7 @@ class DesignDmon(ChipDesign):
         )
         cpw_thick = CPW(
             # rounding error correction
-            start=p3 - 2*(p4-p3)/(p4-p3).abs(),
+            start=p3 - 2 * (p4 - p3) / (p4 - p3).abs(),
             end=p4,
             width=self.z_md_fl2.width,
             gap=self.z_md_fl2.gap
@@ -1156,7 +1178,7 @@ class DesignDmon(ChipDesign):
         # connect central conductor to ground at right
         p1 = cpw_thick.end + DVector(
             cpw_thick.width / 2,
-            -direction_y*self.flux2ground_right_width / 2
+            -direction_y * self.flux2ground_right_width / 2
         )
 
         p2 = p1 + DVector(cpw_thick.gap, 0)
@@ -1170,7 +1192,7 @@ class DesignDmon(ChipDesign):
         p1 = cpw_thick.end + \
              DVector(
                  -cpw_thick.width / 2,
-                 -direction_y*self.flux2ground_left_width / 2
+                 -direction_y * self.flux2ground_left_width / 2
              )
         p2 = p1 - DVector(cpw_thick.gap, 0)
         flux_gnd_cpw = CPW(
@@ -1191,8 +1213,8 @@ class DesignDmon(ChipDesign):
                           DPoint(2.2e6, 3.2e6)]
         self.test_squids_pads = []
         for struct_center, \
-            squid_par_idx,\
-            Icrit_JJ,\
+            squid_par_idx, \
+            Icrit_JJ, \
             EL_kin_ind in \
                 zip(
                     struct_centers,
@@ -1212,7 +1234,7 @@ class DesignDmon(ChipDesign):
             test_struct1.place(self.region_ph)
 
             text_reg = pya.TextGenerator.default_generator().text(
-               str(Icrit_JJ) + " nA", 0.001, 25, False, 0, 0)
+                str(Icrit_JJ) + " nA", 0.001, 25, False, 0, 0)
             text_bl = test_struct1.empty_rectangle.p1 - DVector(0, 20e3)
             text_reg.transform(
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
@@ -1305,7 +1327,7 @@ class DesignDmon(ChipDesign):
             rec_width = 10e3
             rec_height = test_struct1.rectangles_gap + 2 * rec_width
             p1 = struct_center - DVector(rec_width / 2, rec_height / 2)
-            test_bandage = Rectangle(p1, rec_width,rec_height)
+            test_bandage = Rectangle(p1, rec_width, rec_height)
             self.test_bandage_list.append(test_bandage)
             test_bandage.place(self.dc_bandage_reg)
 
@@ -1502,7 +1524,7 @@ class DesignDmon(ChipDesign):
                         test_bondage.center() -
                         0.5 * DVector(protection_a, protection_a),
                         test_bondage.center() +
-                        0.5 * DVector(protection_a,protection_a)
+                        0.5 * DVector(protection_a, protection_a)
                     )
                 )
             )
@@ -1576,7 +1598,7 @@ class DesignDmon(ChipDesign):
         avoid_resonator_points = []
         for res in self.resonators:
             avoid_resonator_points.append(
-                res.origin + DPoint(res.L_coupling/2, 0)
+                res.origin + DPoint(res.L_coupling / 2, 0)
             )
 
         Bridge1.bridgify_CPW(
@@ -1712,7 +1734,6 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
                 )
             )
 
-
         ### MESH CALCULATION SECTION START ###
         arr1 = np.round(np.array(
             design.to_line_list) - design.Z0.b / 2 - design.Z_res.b / 2)
@@ -1736,14 +1757,13 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
             # iterator returns Edge() object that consists of 2 identical points
             # exctract first point
             cpt = edge.p1
-            if  (
+            if (
                     np.abs(
                         [cpt.x - crop_box.left, cpt.x - crop_box.right,
-                        cpt.y - crop_box.top, cpt.y - crop_box.bottom]
+                         cpt.y - crop_box.top, cpt.y - crop_box.bottom]
                     ) < d_min
             ).any():
                 design.sonnet_ports.append(cpt)
-
 
         # transforming cropped box to the origin
         dr = DPoint(0, 0) - crop_box.p1
@@ -1757,7 +1777,7 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
         design.show()
         # show layout in UI window
         design.lv.zoom_fit()
-        
+
         design.layout.write(
             os.path.join(PROJECT_DIR,
                          f"res_f_Q_{resonator_idx}_{dl}_um.gds")
@@ -2114,7 +2134,7 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cq", pts=3, par_d=10e3):
     resolution_dy = resolution[1]
     # if linspace is requested with single point it will return
     # lhs border of the interval
-    dl_list = np.linspace(-par_d/2, par_d/2, pts)
+    dl_list = np.linspace(-par_d / 2, par_d / 2, pts)
     # dl_list = [0e3]
     from itertools import product
 
@@ -2180,12 +2200,14 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cq", pts=3, par_d=10e3):
 
         port_pt = None
         min_dist = 10e6
-        for center_edge in reg1.edges().centers(0,0).each():
+        for center_edge in reg1.edges().centers(0, 0).each():
             edge_center = center_edge.p1
             dist = np.min(
                 np.abs(
-                    [edge_center.x - crop_box.left, edge_center.x - crop_box.right,
-                     edge_center.y - crop_box.bottom, edge_center.y - crop_box.top]
+                    [edge_center.x - crop_box.left,
+                     edge_center.x - crop_box.right,
+                     edge_center.y - crop_box.bottom,
+                     edge_center.y - crop_box.top]
                 )
             )
             if dist < min_dist:
@@ -2195,7 +2217,7 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cq", pts=3, par_d=10e3):
         # place xmon port
         if xmonCross.sideX_length > xmonCross.sideY_length:
             design.sonnet_ports.append(xmonCross.cpw_l.end)
-        elif res_idx%2 == 0:
+        elif res_idx % 2 == 0:
             design.sonnet_ports.append(xmonCross.cpw_t.end)
         else:
             design.sonnet_ports.append(xmonCross.cpw_b.end)
@@ -2268,7 +2290,8 @@ def simulate_Cqr(resolution=(4e3, 4e3), mode="Cq", pts=3, par_d=10e3):
             y21 = -2 * s[1][0] / delta * 1 / R
             C12 = 1e15 / (2 * math.pi * freq0 * 1e9 * (1 / y21).imag)
 
-        print(f"cross_x_len[{res_idx}] = {design.cross_len_x_list[res_idx] / 1e3}")
+        print(
+            f"cross_x_len[{res_idx}] = {design.cross_len_x_list[res_idx] / 1e3}")
         print("C1 = ", C1)
         print("C12 = ", C12)
         print("C2 = ", C2)
@@ -2378,11 +2401,11 @@ def simulate_Cqq(q1_idx, q2_idx, resolution=(5e3, 5e3)):
 
         crop_box = (cross1.metal_region + cross2.metal_region).bbox()
         crop_box.left -= 4 * (
-                    cross1.sideX_length + cross2.sideX_length) / 2
+                cross1.sideX_length + cross2.sideX_length) / 2
         crop_box.bottom -= 4 * (
-                    cross1.sideY_length + cross2.sideY_length) / 2
+                cross1.sideY_length + cross2.sideY_length) / 2
         crop_box.right += 4 * (
-                    cross1.sideX_length + cross2.sideX_length) / 2
+                cross1.sideX_length + cross2.sideX_length) / 2
         crop_box.top += 4 * (cross1.sideY_length + cross2.sideY_length) / 2
         design.crop(crop_box)
         dr = DPoint(0, 0) - crop_box.p1
@@ -2718,7 +2741,7 @@ if __name__ == "__main__":
     design.save_as_gds2(
         os.path.join(
             PROJECT_DIR,
-            "Dmon_0.0.3.4_overetching_0um.gds"
+            "Dmon_" + __version__ + "_overetching_0um.gds"
         )
     )
 
@@ -2751,4 +2774,3 @@ if __name__ == "__main__":
 
     ''' Resonators Q and f when placed together'''
     # simulate_resonators_f_and_Q_together()
-
