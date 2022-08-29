@@ -1,4 +1,4 @@
-__version__ = "v.0.0.3.3"
+__version__ = "v.0.0.3.4"
 
 '''
 Description:
@@ -7,6 +7,8 @@ main series chips. E.g. this one is based on v.0.3.0.8 Design.py
 
 
 Changes log
+v.0.0.3.4
+    1. L1_list was fitted to produce proper resonator frequencies.
 v.0.0.3.3
     1. Changed qubit 4 (counting from 0) geom params to coincide
         with qubit 3 geom params.
@@ -627,19 +629,22 @@ class DesignDmon(ChipDesign):
         self.draw_CABL_conversion_rectangles()
 
         self.draw_photo_el_marks()
-        # self.draw_bridges()
-        # self.draw_pinning_holes()
-        # for contact_pad in self.contact_pads:  # delete holes from
-        #     # contact pads
-        #     contact_pad.place(self.region_ph)
+        self.draw_bridges()
+        self.draw_pinning_holes()
+        # delete
+        # holes from
+        # contact pads
+        for i, contact_pad in enumerate(self.contact_pads):
+            if i in [0, 4]:
+                contact_pad.place(self.region_ph)
         self.region_ph.merge()
         self.region_el.merge()
         self.region_kinInd.merge()
-        # self.extend_photo_overetching()
-        # self.inverse_destination(self.region_ph)
-        # self.draw_cut_marks()
-        # self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
-        # self.split_polygons_in_layers(max_pts=180)
+        self.extend_photo_overetching()
+        self.inverse_destination(self.region_ph)
+        self.draw_cut_marks()
+        self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
+        self.split_polygons_in_layers(max_pts=180)
 
     def draw_for_res_f_and_Q_sim(self, res_idxs2Draw):
         """
@@ -1578,7 +1583,7 @@ class DesignDmon(ChipDesign):
             self.cpwrl_ro_line, bridges_step,
             dest=self.region_bridges1, dest2=self.region_bridges2,
             avoid_points=avoid_resonator_points,
-            avoid_distances=3 / 4 * max(self.L_coupling_list) + self.r
+            avoid_distances=3 / 4 * max(self.L_coupling_list) + self.res_r
         )
 
     def draw_pinning_holes(self):
@@ -2705,18 +2710,18 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
-    # FABRICATION.OVERETCHING = 0.0e3
-    # design = DesignDmon("testScript")
-    # design.draw()
-    # design.show()
+    FABRICATION.OVERETCHING = 0.0e3
+    design = DesignDmon("testScript")
+    design.draw()
+    design.show()
 
-    # design.save_as_gds2(
-    #     os.path.join(
-    #         PROJECT_DIR,
-    #         "8Q_0.0.0.1_A482_A483_overetching_0um.gds"
-    #     )
-    # )
-    #
+    design.save_as_gds2(
+        os.path.join(
+            PROJECT_DIR,
+            "Dmon_0.0.3.4_overetching_0um.gds"
+        )
+    )
+
     # FABRICATION.OVERETCHING = 0.5e3
     # design = DesignDmon("testScript")
     # design.draw()
@@ -2742,7 +2747,7 @@ if __name__ == "__main__":
     #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(1e3, 1e3))
 
     ''' Resonators Q and f sim'''
-    simulate_resonators_f_and_Q(resolution=(2e3, 2e3))
+    # simulate_resonators_f_and_Q(resolution=(2e3, 2e3))
 
     ''' Resonators Q and f when placed together'''
     # simulate_resonators_f_and_Q_together()
