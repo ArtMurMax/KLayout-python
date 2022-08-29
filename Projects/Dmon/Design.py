@@ -412,8 +412,7 @@ class DesignDmon(ChipDesign):
         # horizontal coil line length
         self.L1_list = [
             1e3 * x for x in
-            [114.5219, 95.1897, 99.0318, 83.7159, 88.8686, 70.3649,
-             74.0874, 59.6982]
+            [119.0,114.0,112.0,108.0,103.0,80.0,71.0,66.0]
         ]
         # curvature radius of resonators CPW turns
         self.res_r = 60e3
@@ -1648,6 +1647,9 @@ class DesignDmon(ChipDesign):
 
 
 def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
+    def myround(x, base=2):
+        return base * round(x / base)
+
     resolution_dx = resolution[0]
     resolution_dy = resolution[1]
     freqs_span_corase = 1  # GHz
@@ -1660,7 +1662,7 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
     for dl, (resonator_idx, predef_freq) in list(product(
             dl_list,
             zip(range(8), estimated_freqs),
-    )):
+    ))[20:]:
         print()
         print("res №", resonator_idx)
         fine_resonance_success = False
@@ -1691,7 +1693,7 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
         # center of the readout CPW
         crop_box.top += -design.Z_res.b / 2 + design.to_line_list[
             resonator_idx] + design.Z0.b / 2
-        box_extension = 100e3
+        box_extension = design.resonators[resonator_idx].L_coupling
         crop_box.bottom -= box_extension
         crop_box.top += box_extension
         crop_box.left -= box_extension
@@ -1699,7 +1701,7 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
         crop_box.bottom, crop_box.top, crop_box.left, crop_box.right = \
             list(
                 map(
-                    lambda x: int(round(x, -3)),  # up to 1 um
+                    lambda x: int(myround(x, base=2e3)),  # up to 2 um
                     [crop_box.bottom, crop_box.top,
                      crop_box.left, crop_box.right]
                 )
@@ -1849,6 +1851,7 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
                     fine_resonance_success = True  # breaking frequency locating cycle condition is True
 
             all_params = design.get_geometry_parameters()
+            all_params["res_idx"] = resonator_idx
 
             # creating directory with simulation results
             results_dirname = "resonators_S21"
@@ -1884,11 +1887,10 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
                           newline='') as csv_file:
                     writer = csv.writer(csv_file)
                     # create header of the file
+                    all_params["filename"] = "result_1.csv"
                     writer.writerow(list(all_params.keys()))
                     # add first parameters row
                     reader = csv.reader(csv_file)
-                    existing_entries_n = len(list(reader))
-                    all_params["filename"] = "result_1.csv"
                     writer.writerow(list(all_params.values()))
             finally:
                 # copy result from sonnet folder and rename it accordingly
@@ -2740,7 +2742,7 @@ if __name__ == "__main__":
     #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(1e3, 1e3))
 
     ''' Resonators Q and f sim'''
-    simulate_resonators_f_and_Q(resolution=(2e3,2e3))
+    simulate_resonators_f_and_Q(resolution=(2e3, 2e3))
 
     ''' Resonators Q and f when placed together'''
     # simulate_resonators_f_and_Q_together()
