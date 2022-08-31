@@ -1,4 +1,4 @@
-__version__ = "v.0.0.4.4"
+__version__ = "v.0.0.5.4"
 
 '''
 Description:
@@ -7,6 +7,12 @@ main series chips. E.g. this one is based on v.0.3.0.8 Design.py
 
 
 Changes log
+v.0.0.5.4
+    1. Add additional recess in jj litography to smooth metal staircase
+    for kinInd litography.
+    2. Fix upper resonators flux ends (flux line center was connected to 
+    the wrong electrode of the SQUID-like structure). 
+    Plus, upper squids were made with mirroring M0. It is R180 now.
 v.0.0.4.4
     1. Contact pads for local flux added.
     2. Two right-most resonators are shifted to the right by 0.3mm in 
@@ -108,7 +114,8 @@ class RFSquidParams(AsymSquidParams):
             line_width=115,
             line_length=120e3,
             line_gap=1.8e3,
-            add_dx_mid=-1.8e3
+            add_dx_mid=-3e3,
+            jj_kinInd_recess_d=0e3
     ):
         self.__dict__.update(asym_pars.__dict__)
         self.line_width = line_width
@@ -116,6 +123,7 @@ class RFSquidParams(AsymSquidParams):
         self.line_gap = line_gap
         # signed shift of the middle meanders
         self.add_dx_mid = add_dx_mid
+        self.jj_kinInd_recess_d=jj_kinInd_recess_d
 
 
 class Fluxonium(AsymSquid):
@@ -154,12 +162,25 @@ class Fluxonium(AsymSquid):
         else:
             return
 
-        # make transition from large `TC` polygon to thin line:
-        tc_bbx = self.TC.metal_region.bbox()
-        tcwl_start = DPoint(
-            tc_bbx.right - self.squid_params.BCW_dx / 2,
-            tc_bbx.bottom
+        # shift BC1 onto the `kinInd` layer
+        self.BC1.change_region_id(self.BC1.region_id, "kinInd")
+        # shift BCW1 onto the `kinInd` layer
+        self.BCW1.change_region_id(self.BCW1.region_id, "kinInd")
+
+        # create top contact pad for kinetic inductance wire
+        dr = self.TC.dr
+        self.TC_KI = CPW(
+            start=self.TC.start +
+                  DVector(0, -3/2*self.squid_params.jj_kinInd_recess_d),
+            end=self.TC.end,
+            width=self.TC.width - 3*self.squid_params.jj_kinInd_recess_d,
+            gap=0,
+            region_id="kinInd"
         )
+        self.primitives["TC_KI"] = self.TC_KI
+
+        ''' make transition from large `TC_KI` polygon to thin line '''
+        tcwl_start = self.TC_KI.end
         self.TCWL = CPW(
             start=tcwl_start,
             end=tcwl_start + DPoint(0, -self.squid_params.BCW_dy),
@@ -238,23 +259,19 @@ class Fluxonium(AsymSquid):
         # print(self.line.get_total_length())
         self.primitives["line"] = self.line
 
-        # shift BC1 onto the `kinInd` layer
-        self.BC1.change_region_id(self.BC1.region_id, "kinInd")
-        # shift BCW1 onto the `kinInd` layer
-        self.BCW1.change_region_id(self.BCW1.region_id, "kinInd")
-
-        # create top contact pad for kinetic inductance wire
-        dr = self.TC.dr
-        tcki_width = 0.6 * self.TC.width
-        shift_dv = DVector(self.TCWL.end.x - self.TC.end.x
-                           + self.TCWL.width / 2 - tcki_width / 2, 0)
-        self.TC_KI = CPW(
-            start=self.TC.start + 0.45 * dr + shift_dv,
-            end=self.TC.end + shift_dv,
-            width=tcki_width, gap=0,
-            region_id="kinInd"
-        )
-        self.primitives["TC_KI"] = self.TC_KI
+        # create recess for kinInd layer in JJ layer
+        self.line.empty_regions["default"] = \
+            self.line.metal_region.sized(
+                self.squid_params.jj_kinInd_recess_d
+            )
+        self.TCWL.empty_regions["default"] = \
+            self.TCWL.metal_region.sized(
+                self.squid_params.jj_kinInd_recess_d
+            )
+        self.TC_KI.empty_regions["default"] = \
+            self.TC_KI.metal_region.sized(
+                -self.squid_params.jj_kinInd_recess_d/3
+            )
 
 
 class TestStructurePadsSquare(ComplexBase):
@@ -346,9 +363,8 @@ class DesignDmon(ChipDesign):
         self.chip = CHIP_10x5_8pads
         self.chip_box: pya.DBox = self.chip.box
         # Z = 50.09 E_eff = 6.235 (E = 11.45)
-        self.z_md_fl: CPWParameters = CPWParameters(11e3, 5.7e3)
-        # Z = 50.136  E_eff = 6.28826 (E = 11.45)
-        self.z_md_fl2: CPWParameters = CPWParameters(10e3, 5.7e3)
+        self.z_fl: CPWParameters = CPWParameters(11e3, 5.7e3)
+        self.z_fl2: CPWParameters = self.z_fl
         # flux line widths at the end of flux line
         self.flux2ground_left_width = 2e3
         self.flux2ground_right_width = 4e3
@@ -369,8 +385,8 @@ class DesignDmon(ChipDesign):
                             -self.chip.pcb_Z.b / 2 - self.chip.back_metal_width)) * \
                                              contact_pads_trans_list[i]
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
-            [self.ro_Z] + [self.z_md_fl] * 3 + [self.ro_Z] + [
-                self.z_md_fl] * 3,
+            [self.ro_Z] + [self.z_fl] * 3 + [self.ro_Z] + [
+                self.z_fl] * 3,
             cpw_trans_list=contact_pads_trans_list
         )
 
@@ -472,8 +488,6 @@ class DesignDmon(ChipDesign):
         self.test_squids: List[Fluxonium] = []
         # vertical shift of every squid local origin coordinates
         self.squid_vertical_shift_list = [0e3] * 6 + [0e3] * 2
-        # minimal distance between squid loop and photo layer
-        self.squid_ph_clearance = 1.5e3
 
         # josephson junctions
         self.squid_pars: List[RFSquidParams] = []
@@ -487,7 +501,10 @@ class DesignDmon(ChipDesign):
         )
         self.kinInd_length_list = \
             self.kinInd_squaresN_list * self.kinInd_width
-
+        # JJ layer polygons will shrnked in every direction by this amount
+        # and then substracted from photo layer to create a recess for a
+        # bandage
+        self.photo_recess_d = 1e3
         for i, (jj_dy, jj_dx, kinInd_length) in enumerate(
                 zip(
                     self.jj_dy_list,
@@ -497,7 +514,7 @@ class DesignDmon(ChipDesign):
         ):
             pars_i = AsymSquidParams(
                 band_ph_tol=1e3,
-                squid_dx=14.2e3,
+                squid_dx=11.2e3,
                 squid_dy=14.5e3,
                 TC_dx=2.5e3 * np.sqrt(2) + 1e3,
                 TC_dy=5e3 * np.sqrt(2) / 2 + 2e3,
@@ -509,12 +526,11 @@ class DesignDmon(ChipDesign):
                 SQLTJJ_dx=jj_dx,
                 # eliminate junction on the rhs
                 SQRBJJ_dy=jj_dy,
-                SQRTJJ_dx=jj_dx,
-
+                SQRTJJ_dx=jj_dx
             )
             dx = pars_i.SQB_dx / 2
             if i < 6:
-                pars_i.bot_wire_x = [-dx, 0]
+                pars_i.bot_wire_x = [-dx, dx]
             else:
                 dx = 35e3 / 2  # HARDCODED BY DARIA
                 pars_i = AsymSquidParams(
@@ -537,22 +553,12 @@ class DesignDmon(ChipDesign):
                 RFSquidParams(
                     asym_pars=pars_i,
                     line_width=self.kinInd_width,
-                    line_length=kinInd_length
+                    line_length=kinInd_length,
+                    # same as for photo_jj recess distance
+                    jj_kinInd_recess_d=self.photo_recess_d
                 )
             )
-
-        # el-dc concacts attributes
-        # e-beam polygon has to cover hole in photoregion and also
-        # overlap photo region by the following amount
-        self.el_overlaps_ph_by = 2e3
-        # required clearance of dc contacts from squid perimeter
-        self.dc_cont_el_clearance = 2e3  # 1.8e3
-        # required clearance of dc contacts from photo layer polygon
-        # perimeter
-        self.dc_cont_ph_clearance = 2e3
-        # required extension into photo region over the hole cutted
-        self.dc_cont_ph_ext = 10e3
-
+        ''' el-dc concacts attributes SECTION START '''
         # microwave and flux drive lines parameters
         self.ctr_lines_turn_radius = 40e3
         self.cont_lines_y_ref: float = 300e3  # nm
@@ -565,6 +571,7 @@ class DesignDmon(ChipDesign):
         self.bandage_curve_pts_n = 40
         self.bandages_regs_list = []
         self.test_bandage_list: List[Rectangle] = []
+        ''' el-dc concacts attributes SECTION END '''
 
         # distance between microwave-drive central coplanar line
         # to the face of Xmon's cross metal. Assuming that microwave
@@ -573,7 +580,6 @@ class DesignDmon(ChipDesign):
 
         self.flLine_squidLeg_gap = 5e3
         self.flux_lines_x_shifts: List[float] = [None] * len(self.L1_list)
-        self.current_line_width = 3.5e3 - 2 * FABRICATION.OVERETCHING
 
         self.md234_cross_bottom_dy = 55e3
         self.md234_cross_bottom_dx = 60e3
@@ -932,7 +938,7 @@ class DesignDmon(ChipDesign):
                 m = -1
                 squid_center = (xmon_cross.cpw_tempt.end +
                                 xmon_cross.cpw_tempt.start) / 2
-                trans = DTrans.M0
+                trans = DTrans.R180
             else:  # below RO line
                 m = 1
                 squid_center = (xmon_cross.cpw_bempt.end +
@@ -947,6 +953,7 @@ class DesignDmon(ChipDesign):
                     squid_pars,
                     trans_in=trans
                 )
+                squid.place(self.region_el, region_id="default")
                 squid.place(self.region_kinInd, region_id="kinInd")
             elif res_idx >= 6:
                 squid = AsymSquid(
@@ -957,8 +964,9 @@ class DesignDmon(ChipDesign):
                     squid_pars,
                     trans_in=trans
                 )
+                squid.place(self.region_el, region_id="default")
             self.squids.append(squid)
-            squid.place(self.region_el)
+
 
     def draw_microwave_drvie_lines(self):
 
@@ -971,7 +979,7 @@ class DesignDmon(ChipDesign):
             self.xmons[0].cpw_r.end.x + self.md_line_to_cross_metal, _p2.y)
         self.cpwrl_md1 = DPathCPW(
             points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
+            cpw_parameters=self.z_fl,
             turn_radiuses=self.ctr_lines_turn_radius
         )
         self.cpwrl_md1.place(tmp_reg)
@@ -984,7 +992,7 @@ class DesignDmon(ChipDesign):
             self.xmons[1].cpw_l.end.x - self.md_line_to_cross_metal, _p2.y)
         self.cpwrl_md1 = DPathCPW(
             points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
+            cpw_parameters=self.z_fl,
             turn_radiuses=self.ctr_lines_turn_radius
         )
         self.cpwrl_md1.place(tmp_reg)
@@ -997,7 +1005,7 @@ class DesignDmon(ChipDesign):
             self.xmons[2].cpw_r.end.x + self.md_line_to_cross_metal, _p2.y)
         self.cpwrl_md1 = DPathCPW(
             points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
+            cpw_parameters=self.z_fl,
             turn_radiuses=self.ctr_lines_turn_radius
         )
         self.cpwrl_md1.place(tmp_reg)
@@ -1010,7 +1018,7 @@ class DesignDmon(ChipDesign):
             self.xmons[3].cpw_l.end.x - self.md_line_to_cross_metal, _p2.y)
         self.cpwrl_md1 = DPathCPW(
             points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
+            cpw_parameters=self.z_fl,
             turn_radiuses=self.ctr_lines_turn_radius
         )
         self.cpwrl_md1.place(tmp_reg)
@@ -1023,7 +1031,7 @@ class DesignDmon(ChipDesign):
             self.xmons[4].cpw_r.end.x + self.md_line_to_cross_metal, _p2.y)
         self.cpwrl_md1 = DPathCPW(
             points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
+            cpw_parameters=self.z_fl,
             turn_radiuses=self.ctr_lines_turn_radius
         )
         self.cpwrl_md1.place(tmp_reg)
@@ -1036,7 +1044,7 @@ class DesignDmon(ChipDesign):
             self.xmons[5].cpw_l.end.x - self.md_line_to_cross_metal, _p2.y)
         self.cpwrl_md1 = DPathCPW(
             points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
+            cpw_parameters=self.z_fl,
             turn_radiuses=self.ctr_lines_turn_radius
         )
         self.cpwrl_md1.place(tmp_reg)
@@ -1048,12 +1056,15 @@ class DesignDmon(ChipDesign):
         # calculate flux line end horizontal shift from center of the
         # squid loop
         self.flux_lines_x_shifts: List[float] = []
-        for squid_pars in self.squid_pars:
-            self.flux_lines_x_shifts.append(
-                -squid_pars.squid_dx / 2 - squid_pars.SQLBT_dx / 2 -
-                self.z_md_fl2.width / 2 + squid_pars.BC_dx / 2 +
-                squid_pars.band_ph_tol
-        )
+        for i, squid_pars in enumerate(self.squid_pars):
+            flux_line_x_shift = \
+            -squid_pars.squid_dx / 2 - squid_pars.SQLBT_dx / 2 - \
+            self.z_fl2.width / 2 + squid_pars.BC_dx / 2 + \
+            squid_pars.band_ph_tol
+            if i%2 == 0:
+                flux_line_x_shift *= -1
+
+            self.flux_lines_x_shifts.append(flux_line_x_shift)
 
         # place caplanar line 1 fl
         _p1 = self.contact_pads[1].end
@@ -1062,7 +1073,7 @@ class DesignDmon(ChipDesign):
         _p3 = DPoint(_p2.x, self.xmons[1].cpw_bempt.end.y)
         self.cpwrl_fl1 = DPathCPW(
             points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
+            cpw_parameters=self.z_fl,
             turn_radiuses=self.ctr_lines_turn_radius,
         )
         self.cpw_fl_lines.append(self.cpwrl_fl1)
@@ -1074,7 +1085,7 @@ class DesignDmon(ChipDesign):
         _p3 = DPoint(_p2.x, self.xmons[3].cpw_bempt.end.y)
         self.cpwrl_fl3 = DPathCPW(
             points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
+            cpw_parameters=self.z_fl,
             turn_radiuses=self.ctr_lines_turn_radius,
         )
         self.cpw_fl_lines.append(self.cpwrl_fl3)
@@ -1086,7 +1097,7 @@ class DesignDmon(ChipDesign):
         _p3 = DPoint(_p2.x, self.xmons[5].cpw_bempt.end.y)
         self.cpwrl_fl5 = DPathCPW(
             points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
+            cpw_parameters=self.z_fl,
             turn_radiuses=self.ctr_lines_turn_radius,
         )
         self.cpw_fl_lines.append(self.cpwrl_fl5)
@@ -1098,7 +1109,7 @@ class DesignDmon(ChipDesign):
         _p3 = DPoint(_p2.x, self.xmons[0].cpw_tempt.end.y)
         self.cpwrl_fl0 = DPathCPW(
             points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
+            cpw_parameters=self.z_fl,
             turn_radiuses=self.ctr_lines_turn_radius,
         )
         self.cpw_fl_lines.append(self.cpwrl_fl0)
@@ -1110,7 +1121,7 @@ class DesignDmon(ChipDesign):
         _p3 = DPoint(_p2.x, self.xmons[2].cpw_tempt.end.y)
         self.cpwrl_fl4 = DPathCPW(
             points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
+            cpw_parameters=self.z_fl,
             turn_radiuses=self.ctr_lines_turn_radius,
         )
         self.cpw_fl_lines.append(self.cpwrl_fl4)
@@ -1122,84 +1133,83 @@ class DesignDmon(ChipDesign):
         _p3 = DPoint(_p2.x, self.xmons[4].cpw_tempt.end.y)
         self.cpwrl_fl2 = DPathCPW(
             points=[_p1, _p2, _p3],
-            cpw_parameters=self.z_md_fl,
+            cpw_parameters=self.z_fl,
             turn_radiuses=self.ctr_lines_turn_radius,
         )
         self.cpw_fl_lines.append(self.cpwrl_fl2)
 
         for i, flux_line in enumerate(self.cpw_fl_lines):
-            if i < 3:  # for lower squids
-                dir_y = 1
-            else:  # for upper squids
-                dir_y = -1
-            self.modify_flux_line_end(flux_line, direction_y=dir_y)
+            self.modify_flux_line_end_and_place(flux_line)
 
-    def modify_flux_line_end(self, flux_line: DPathCPW, direction_y=1):
+    def modify_flux_line_end_and_place(self, flux_line: DPathCPW):
         # make flux line wider to have a less chance to misalign
         # bandage-eBeam-photo layers at the qubit bandage region.
         last_line = list(flux_line.primitives.values())[-1]
         last_line_name = list(flux_line.primitives.keys())[-1]
 
-        # divide line into 3 sections
+        # divide line into 3 sections with proportions `alpha_i`
         alpha_1 = 0.6
         alpha_2 = 0.3
         alpha_3 = 1 - (alpha_1 + alpha_2)
+        last_line_dv = last_line.end - last_line.start
+        last_line_dv_s = last_line_dv / last_line_dv.abs()
         p1 = last_line.start
-        p2 = p1 + alpha_1 * (last_line.end - last_line.start)
-        p3 = p2 + alpha_2 * (last_line.end - last_line.start)
-        p4 = p3 + alpha_3 * (last_line.end - last_line.start)
+        p2 = p1 + alpha_1 * last_line_dv
+        p3 = p2 + alpha_2 * last_line_dv
+        p4 = p3 + alpha_3 * last_line_dv
         cpw_normal = CPW(
             start=p1,
             end=p2,
-            width=self.z_md_fl.width,
-            gap=self.z_md_fl.gap
+            width=self.z_fl2.width,
+            gap=self.z_fl2.gap
         )
         cpw_transition = CPW2CPW(
-            Z0=self.z_md_fl,
-            Z1=self.z_md_fl2,
+            Z0=self.z_fl2,
+            Z1=self.z_fl2,
             start=p2, end=p3
         )
         cpw_thick = CPW(
-            # rounding error correction
-            start=p3 - 2 * (p4 - p3) / (p4 - p3).abs(),
+            start=p3 - 2 * last_line_dv_s,  # rounding error correction
             end=p4,
-            width=self.z_md_fl2.width,
-            gap=self.z_md_fl2.gap
+            width=self.z_fl2.width,
+            gap=self.z_fl2.gap
         )
 
         del flux_line.primitives[last_line_name]
         flux_line.primitives[last_line_name + "_1"] = cpw_normal
         flux_line.primitives[last_line_name + "_2"] = cpw_transition
         flux_line.primitives[last_line_name + "_3"] = cpw_thick
-        flux_line._refresh_named_connections()
-        flux_line.place(self.region_ph)
 
-        # draw mutual inductance for squid
-        # connect central conductor to ground at right
-        p1 = cpw_thick.end + DVector(
-            cpw_thick.width / 2,
-            -direction_y * self.flux2ground_right_width / 2
-        )
+        # tangent vector
+        last_line_dv_s = last_line_dv / last_line_dv.abs()
+        # normal vector (90deg counterclockwise rotated tangent vector)
+        last_line_dv_n = DVector(-last_line_dv_s.y, last_line_dv_s.x)
 
-        p2 = p1 + DVector(cpw_thick.gap, 0)
+        # draw mutual inductance for squid, shunted to ground to the right
+        # (view from flux line start towards squid)
+        p1 = cpw_thick.end - cpw_thick.width / 2 * last_line_dv_n - \
+             self.flux2ground_right_width / 2 * last_line_dv_s
+        p2 = p1 - cpw_thick.gap * last_line_dv_n
         inductance_cpw = CPW(
             start=p1, end=p2,
             width=self.flux2ground_right_width, gap=0
         )
-        inductance_cpw.place(self.region_ph)
+        flux_line.primitives["fl_end_ind_right"] = inductance_cpw
 
-        # connect central conductor to ground at left
-        p1 = cpw_thick.end + \
-             DVector(
-                 -cpw_thick.width / 2,
-                 -direction_y * self.flux2ground_left_width / 2
-             )
-        p2 = p1 - DVector(cpw_thick.gap, 0)
+        # connect central conductor to ground to the left (view from
+        # flux line start towards squid)
+        p1 = cpw_thick.end + cpw_thick.width / 2 * last_line_dv_n - \
+             self.flux2ground_left_width / 2 * last_line_dv_s
+        p2 = p1 + cpw_thick.gap * last_line_dv_n
         flux_gnd_cpw = CPW(
             start=p1, end=p2,
             width=self.flux2ground_left_width, gap=0
         )
-        flux_gnd_cpw.place(self.region_ph)
+        flux_line.primitives["fl_end_ind_left"] = flux_gnd_cpw
+        flux_line.connections[1] = list(flux_line.primitives.values())[
+            -3].end
+        flux_line._refresh_named_connections()
+        flux_line.place(self.region_ph)
 
     def draw_test_structures(self):
         ''' choose squid for test structures '''
@@ -1495,13 +1505,13 @@ class DesignDmon(ChipDesign):
     def draw_recess(self):
         for squid in itertools.chain(self.squids, self.test_squids):
             # top recess
-            recess_reg = squid.TC.metal_region.dup().size(-1e3)
+            recess_reg = squid.TC.metal_region.dup().size(-self.photo_recess_d)
             self.region_ph -= recess_reg
 
             # bottom recess(es)
             for i, _ in enumerate(squid.squid_params.bot_wire_x):
                 BC = getattr(squid, "BC" + str(i))
-                recess_reg = BC.metal_region.dup().size(-1e3)
+                recess_reg = BC.metal_region.dup().size(-self.photo_recess_d)
                 self.region_ph -= recess_reg
 
     def draw_CABL_conversion_rectangles(self):

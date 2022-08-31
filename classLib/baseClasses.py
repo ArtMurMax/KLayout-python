@@ -1,10 +1,10 @@
-from typing import Hashable, Union, Dict
+from typing import Hashable, Union, Dict, Any
 import pya
 from math import sqrt, cos, sin, atan2, pi, copysign
 from pya import Point, DPoint, DSimplePolygon, SimplePolygon, DPolygon, Polygon, Region
 from pya import Trans, DTrans, CplxTrans, DCplxTrans, ICplxTrans
 
-from classLib._PROG_SETTINGS import *
+from classLib._PROG_SETTINGS import PROGRAM
 
 from collections import OrderedDict
 import itertools
@@ -43,8 +43,8 @@ class ElementBase():
         #  something "blank" at the creation moment. This may be solved
         #  by either shrinking resulting region to shapes it contains,
         #  or by refusing of usage of empty `Region()`s
-        self.metal_regions = OrderedDict()
-        self.empty_regions = OrderedDict()
+        self.metal_regions: Dict[Any, Region] = OrderedDict()
+        self.empty_regions: Dict[Any, Region] = OrderedDict()
         self.metal_region = Region()
         self.empty_region = Region()
         self.region_id = region_id
@@ -205,20 +205,21 @@ class ElementBase():
         self.region_id = new_reg_id
 
     def place(self, dest, layer_i=-1, region_id="default", merge=False):
-        metal_region = None
-        empty_region = None
-
-        if (region_id in self.metal_regions):
-            metal_region = self.metal_regions[region_id]
-            empty_region = self.empty_regions[region_id]
-        else:
+        if all([
+                region_id not in self.metal_regions,
+                region_id not in self.empty_regions
+        ]):
             return
 
         if (layer_i != -1):
             r_cell = Region(dest.begin_shapes_rec(layer_i))
             temp_i = dest.layout().layer(pya.LayerInfo(PROGRAM.LAYER1_NUM, 0))
-            r_cell += metal_region
-            r_cell -= empty_region
+            if (region_id in self.metal_regions):
+                metal_region = self.metal_regions[region_id]
+                r_cell += metal_region
+            if (region_id in self.empty_regions):
+                empty_region = self.empty_regions[region_id]
+                r_cell -= empty_region
 
             if (merge is True):
                 r_cell.merge()
@@ -228,8 +229,12 @@ class ElementBase():
             dest.layout().move_layer(temp_i, layer_i)
             dest.layout().delete_layer(temp_i)
         if (layer_i == -1):  # dest is interpreted as instance of Region() class
-            dest += metal_region
-            dest -= empty_region
+            if (region_id in self.metal_regions):
+                metal_region = self.metal_regions[region_id]
+                dest += metal_region
+            if (region_id in self.empty_regions):
+                empty_region = self.empty_regions[region_id]
+                dest -= empty_region
             if (merge is True):
                 dest.merge()
 
