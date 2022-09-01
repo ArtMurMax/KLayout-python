@@ -1,12 +1,15 @@
-__version__ = "v.0.0.5.4"
+__version__ = "v.0.0.5.5"
 
 '''
 Description:
 This program is made to generate litography blueprints for testing of the 
-main series chips. E.g. this one is based on v.0.3.0.8 Design.py
+main series chips. E.g. this one is based on 8Q_v.0.0.0.1 Design.py
 
 
 Changes log
+v.0.0.5.5
+    1. Modify flux ending line. Inductor width 3 um -> 5 um, grounding 
+    wire width 2 um -> 3 um
 v.0.0.5.4
     1. Add additional recess in jj litography to smooth metal staircase
     for kinInd litography.
@@ -366,8 +369,8 @@ class DesignDmon(ChipDesign):
         self.z_fl: CPWParameters = CPWParameters(11e3, 5.7e3)
         self.z_fl2: CPWParameters = self.z_fl
         # flux line widths at the end of flux line
-        self.flux2ground_left_width = 2e3
-        self.flux2ground_right_width = 4e3
+        self.flux2ground_left_width = 3e3
+        self.flux2ground_right_width = 5e3
         self.ro_Z: CPWParameters = self.chip.chip_Z
         contact_pads_trans_list = [Trans.R0] + [Trans.R270] + 2 * [
             Trans.R90] + [Trans.R0] + [Trans.R270] * 3
