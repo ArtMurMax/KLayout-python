@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Union
+from typing import Union, List
 from math import pi
 
 import numpy as np
@@ -11,6 +11,7 @@ from pya import Trans, DTrans, DVector, DPath
 from classLib.baseClasses import ElementBase, ComplexBase
 from classLib.shapes import Circle, Kolbaska, DPathCL
 from classLib.coplanars import CPW, CPWParameters, CPWRLPath, CPW2CPW
+
 
 # print("josJ reloaded")
 # nice solution for parameters, man. Had really appreciated this one and put to use already (SH).
@@ -24,12 +25,12 @@ class AsymSquidParams:
             squid_dy=5e3,
             TC_dx=8e3,
             TC_dy=10e3,
-            BC_dx=5e3,
+            BC_dx: Union[List[float], float] = 5e3,
             BC_dy=7e3,
             beta=0.5,
             TCW_dx=1e3,
             TCW_dy=10e3,
-            BCW_dx=1e3,
+            BCW_dx: Union[List[float], float] = 1e3,
             BCW_dy=1.5e3,
             SQT_dy=500,
             SQLTT_dx=None,
@@ -50,7 +51,7 @@ class AsymSquidParams:
             SQLBJJ_dy=114.551,  # j1_dy
             SQLBJJ_dx=2e3,
             SQRTJJ_dx=398.086,  # j2_dx
-            SQRBJJ_dy=250,      # j2_dy
+            SQRBJJ_dy=250,  # j2_dy
             SQRBJJ_dx=None,
             bot_wire_x=0,
             SQRBT_dy=None
@@ -64,11 +65,11 @@ class AsymSquidParams:
         squid_dx : float
         squid_dy : float
         TC_dx : float
-        BC_dx : float
+        BC_dx : Union[List[float], float]
         beta : float
             0 < beta < 1
         TCW_dx : float
-        BCW_dx : float
+        BCW_dx : Union[List[float],float]
         SQT_dy : float
         SQLTT_dx : Optional[float]
         SQRTT_dx : Optional[float]
@@ -90,7 +91,12 @@ class AsymSquidParams:
         self.squid_dx = squid_dx
         self.squid_dy = squid_dy
 
-        self.bot_wire_x = bot_wire_x
+        try:
+            iter(bot_wire_x)
+        except TypeError:
+            self.bot_wire_x = [bot_wire_x]
+        else:
+            self.bot_wire_x = bot_wire_x
         # squid loop top side width
         self.JJC = JJC
         self.SQT_dy = SQT_dy
@@ -117,20 +123,33 @@ class AsymSquidParams:
         self.shadow_gap = shadow_gap
 
         self.TC_dx = TC_dx
-        self.BC_dx = BC_dx
-        pads_top_left = (pads_d/2 - self.SQT_dy - squid_dy/2)
-        pads_bottom_left = (pads_d/2 - self.SQB_dy - squid_dy/2)
+
+        # check if iterable and set iterable
+        try:
+            iter(BC_dx)
+        except TypeError:
+            self.BC_dx = [BC_dx] * len(self.bot_wire_x)
+        else:
+            self.BC_dx = BC_dx
+
+        pads_top_left = (pads_d / 2 - self.SQT_dy - squid_dy / 2)
+        pads_bottom_left = (pads_d / 2 - self.SQB_dy - squid_dy / 2)
         self.beta = beta
         self.TC_dy = TC_dy
         self.BC_dy = BC_dy
         self.TCW_dx = TCW_dx
         self.TCW_dy = TCW_dy
         self.BCW_dy = BCW_dy
-        self.BCW_dx = BCW_dx
+        try:
+            iter(BCW_dx)
+        except TypeError:
+            self.BCW_dx = [BCW_dx] * len(self.bot_wire_x)
+        else:
+            self.BCW_dx = BCW_dx
 
-        self.SQT_dx = self.squid_dx + self.SQLBT_dx/2 - self.JJC + \
-                      self.SQLTT_dx/2 + self.SQRBT_dx/2 - self.JJC + \
-                      self.SQRTT_dx/2
+        self.SQT_dx = self.squid_dx + self.SQLBT_dx / 2 - self.JJC + \
+                      self.SQLTT_dx / 2 + self.SQRBT_dx / 2 - self.JJC + \
+                      self.SQRTT_dx / 2
 
         self.TCB_dx = TCB_dx
         self.TCB_dy = TCB_dy
@@ -170,7 +189,7 @@ class AsymSquid(ComplexBase):
         trans_in : DCplxTrans
             transformation to perform in object's reference frame
         """
-        self.center=origin
+        self.center = origin
         self.squid_params = params
         super().__init__(origin=origin, trans_in=trans_in)
 
@@ -180,7 +199,7 @@ class AsymSquid(ComplexBase):
         pars = self.squid_params
 
         # (TC) Top contact polygon
-        tc_p1 = DPoint(0, pars.squid_dy/2 + pars.SQT_dy + pars.TCW_dy +
+        tc_p1 = DPoint(0, pars.squid_dy / 2 + pars.SQT_dy + pars.TCW_dy +
                        pars.TC_dy)
         tc_p2 = tc_p1 + DVector(0, -pars.TC_dy)
         self.TC = CPW(start=tc_p1, end=tc_p2, width=pars.TC_dx, gap=0)
@@ -193,15 +212,15 @@ class AsymSquid(ComplexBase):
         self.primitives["TCW"] = self.TCW
 
         # (SQT) squid loop top
-        sqt_p1 = origin + DVector(-pars.SQT_dx/2,
-                                 pars.squid_dy/2 + pars.SQT_dy/2)
+        sqt_p1 = origin + DVector(-pars.SQT_dx / 2,
+                                  pars.squid_dy / 2 + pars.SQT_dy / 2)
         sqt_p2 = sqt_p1 + DVector(pars.SQT_dx, 0)
         self.SQT = CPW(start=sqt_p1, end=sqt_p2, width=pars.SQT_dy, gap=0)
         self.primitives["SQT"] = self.SQT
 
         # (SQLTT) squid loop left top thick
         sqltt_p1 = self.SQT.start + DVector(
-            pars.SQLTT_dx / 2, -pars.SQT_dy/2
+            pars.SQLTT_dx / 2, -pars.SQT_dy / 2
         )
         sqltt_p2 = sqltt_p1 + DVector(0, -pars.SQLTT_dy)
         self.SQLTT = CPW(
@@ -219,7 +238,7 @@ class AsymSquid(ComplexBase):
 
         # (SQB) squid bottom
         sqb_p1 = origin + DVector(-pars.squid_dx / 2 - pars.SQLBT_dx,
-                                       -pars.squid_dy/2 - pars.SQB_dy/2)
+                                  -pars.squid_dy / 2 - pars.SQB_dy / 2)
         sqb_p2 = sqb_p1 + DVector(pars.squid_dx + pars.SQLBT_dx +
                                   pars.SQRBT_dx, 0)
         self.SQB = CPW(start=sqb_p1, end=sqb_p2, width=pars.SQB_dy, gap=0)
@@ -239,7 +258,7 @@ class AsymSquid(ComplexBase):
                 pars.JJC):
             raise Warning("please, increase SQLBJJ_dy is too low")
         sqlbjj_p1 = self.SQLBT.start + DVector(pars.SQLBT_dx / 2,
-                                             -pars.SQLBJJ_dy / 2)
+                                               -pars.SQLBJJ_dy / 2)
         sqlbjj_p2 = sqlbjj_p1 + DVector(pars.SQLBJJ_dx, 0)
         self.SQLBJJ = CPW(start=sqlbjj_p1, end=sqlbjj_p2,
                           width=pars.SQLBJJ_dy,
@@ -248,7 +267,7 @@ class AsymSquid(ComplexBase):
 
         # (SQRTT) squid loop right top thick
         sqrtt_p1 = self.SQT.end + DVector(
-            -pars.SQRTT_dx / 2, -pars.SQT_dy/2
+            -pars.SQRTT_dx / 2, -pars.SQT_dy / 2
         )
         sqrtt_p2 = sqrtt_p1 + DVector(0, -pars.SQRTT_dy)
         self.SQRTT = CPW(
@@ -285,45 +304,37 @@ class AsymSquid(ComplexBase):
                           gap=0)
         self.primitives["SQRBJJ"] = self.SQRBJJ
 
-
         ''' following code can enclude multiple bottom connections '''
-        if isinstance(pars.bot_wire_x, list):
-            pass
-        else:
-            pars.bot_wire_x = [pars.bot_wire_x]
-
+        self.BC_list = []
+        self.BCW_list = []
         for i, x in enumerate(pars.bot_wire_x):
+            if x is None:
+                self.BC_list.append(None)
+                self.BCW_list.append(None)
+                continue
             # (BC) bottom contact pad polygon
             bc_p1 = DPoint(x, -pars.squid_dy / 2 - pars.BCW_dy)
             bc_p2 = bc_p1 + DVector(0, -pars.BC_dy)
-            name = "BC" + str(i)
-            setattr(
-                self,
-                name,
-                CPW(start=bc_p1, end=bc_p2, width=pars.BC_dx, gap=0)
-            )
-            self.primitives[name] = getattr(self, name)
+
+            BCi = CPW(start=bc_p1, end=bc_p2, width=pars.BC_dx[i], gap=0)
+            self.BC_list.append(BCi)
+            self.primitives["BC" + str(i)] = BCi
 
             # (BCW) Bottom contact wire
-            bcw_p1 = getattr(self, "BC"+str(i)).start + \
-                     DVector(0, pars.BCW_dy)
+            bcw_p1 = self.BC_list[-1].start + DVector(0, pars.BCW_dy)
             bcw_p2 = bcw_p1 + DVector(0, -pars.BCW_dy)
-            name = "BCW" + str(i)
-            setattr(
-                self,
-                name,
-                CPW(start=bcw_p1, end=bcw_p2, width=pars.BCW_dx, gap=0)
-            )
-            self.primitives[name] = getattr(self, name)
+            BCWi = CPW(start=bcw_p1, end=bcw_p2, width=pars.BCW_dx[i], gap=0)
+            self.BCW_list.append(BCWi)
+            self.primitives["BCW" + str(i)] = BCWi
 
             # (BCE) bottom contact extension
-            if x < (-pars.SQB_dx / 2+pars.BCW_dx/2):
-                bce_p1 = getattr(self, "BCW"+str(i)).start + \
-                         DVector(-pars.BCW_dx/2, pars.SQB_dy/2)
+            if x < (-pars.SQB_dx / 2 + pars.BCW_dx[i] / 2):
+                bce_p1 = self.BCW_list[i].start + \
+                         DVector(-pars.BCW_dx[i] / 2, pars.SQB_dy / 2)
                 bce_p2 = self.SQB.start
-            elif x > (pars.SQB_dx /2 - pars.BCW_dx/2):
-                bce_p1 = getattr(self, "BCW" + str(i)).start + \
-                         DVector(pars.BCW_dx / 2, pars.SQB_dy / 2)
+            elif x > (pars.SQB_dx / 2 - pars.BCW_dx[i] / 2):
+                bce_p1 = self.BCW_list[i].start + \
+                         DVector(pars.BCW_dx[i] / 2, pars.SQB_dy / 2)
                 bce_p2 = self.SQB.end
             else:
                 continue
@@ -336,7 +347,7 @@ class AsymSquid(ComplexBase):
             self.primitives[name] = getattr(self, name)
 
     def _refresh_named_connections(self):
-        self.center=self.origin
+        self.center = self.origin
 
 
 AsymSquidDCFluxParams = namedtuple(
@@ -611,7 +622,7 @@ class AsymSquidDCFlux(ComplexBase):
         '''
         bot_inter_lead_dy = pars.sq_dy / 2 + j_dy / 2
         top_inter_lead_dy = pars.sq_dy / 2 - (top_jj_lead_dy + j_dy / 2 +
-                                               pars.bridge)
+                                              pars.bridge)
         self.bot_inter_lead_dx = (
                 pars.sq_area / pars.sq_dy / 2 +
                 (pars.inter_leads_width / 2 + 2 / 3 * pars.b_ext) / 2
@@ -896,7 +907,8 @@ class AsymSquidOneLeg(ComplexBase):
                 shape="LRL",
                 cpw_parameters=
                 [
-                    CPWParameters(width=pars.flux_line_contact_width, gap=0),
+                    CPWParameters(width=pars.flux_line_contact_width,
+                                  gap=0),
                     CPWParameters(smoothing=True),
                     CPWParameters(width=pars.flux_line_outer_width, gap=0)
                 ],
@@ -921,7 +933,8 @@ class AsymSquidOneLeg(ComplexBase):
                 shape="LRL",
                 cpw_parameters=
                 [
-                    CPWParameters(width=pars.flux_line_contact_width, gap=0),
+                    CPWParameters(width=pars.flux_line_contact_width,
+                                  gap=0),
                     CPWParameters(smoothing=True),
                     CPWParameters(width=pars.flux_line_outer_width, gap=0)
                 ],
@@ -985,7 +998,7 @@ class AsymSquidOneLeg(ComplexBase):
         '''
         bot_inter_lead_dy = pars.sq_dy / 2 + j_dy / 2
         top_inter_lead_dy = pars.sq_dy / 2 - (top_jj_lead_dy + j_dy / 2 +
-                                               pars.bridge)
+                                              pars.bridge)
         self.bot_inter_lead_dx = (
                 pars.sq_area / pars.sq_dy / 2 +
                 (pars.inter_leads_width / 2 + 2 / 3 * pars.b_ext) / 2
@@ -1024,7 +1037,7 @@ class AsymSquidOneLeg(ComplexBase):
         top_jj_lead_cpw2cpw_p1 = top_inter_p3
         top_jj_lead_cpw2cpw_p2 = top_jj_lead_cpw2cpw_p1 + DPoint(
             0,
-            -top_jj_lead_dy/2
+            -top_jj_lead_dy / 2
         )
         top_jj_rigid_lead = CPW2CPW(
             Z0=CPWParameters(width=pars.inter_leads_width, gap=0),
@@ -1037,7 +1050,7 @@ class AsymSquidOneLeg(ComplexBase):
         top_jj_lead_p1 = top_jj_rigid_lead.end
         top_jj_lead_p2 = top_jj_lead_p1 + DPoint(
             0,
-            -top_jj_lead_dy/2
+            -top_jj_lead_dy / 2
         )
         self.primitives["top_jj_lead" + suff] = DPathCL(
             pts=[top_jj_lead_p1, top_jj_lead_p2],
@@ -1080,7 +1093,7 @@ class AsymSquidOneLeg(ComplexBase):
             -j_dy / 2
         )
         bot_jj_lead_rigid_p2 = bot_jj_lead_rigid_p1 + DPoint(
-            -side * pars.b_ext/3,
+            -side * pars.b_ext / 3,
             0
         )
         bot_jj_lead_rigid = CPW2CPW(
@@ -1167,7 +1180,8 @@ class LineNJJ(ElementBase):
         self.d2 = params[9]
         self.w = params[10]
 
-        self.poly1 = self._make_polygon(self.b, self.w, self.d1, self.f1, self.d2)
+        self.poly1 = self._make_polygon(self.b, self.w, self.d1, self.f1,
+                                        self.d2)
 
         super().__init__(origin, trans_in)
 
