@@ -1,4 +1,4 @@
-__version__ = "v.0.0.5.5"
+__version__ = "v.0.0.5.6"
 
 '''
 Description:
@@ -7,6 +7,10 @@ main series chips. E.g. this one is based on 8Q_v.0.0.0.1 Design.py
 
 
 Changes log
+v.0.0.5.6
+    1. Express test pads for kinInd express test pad fix.
+    2. Recess for kinInd layer widened to be atleast 2 um.
+    3. Recess for eBeam layer for resonators 6,7 transformed to the rhs.
 v.0.0.5.5
     1. Modify flux ending line. Inductor width 3 um -> 5 um, grounding 
     wire width 2 um -> 3 um
@@ -156,8 +160,8 @@ class Fluxonium(AsymSquid):
         self.primitives["SQT"] = self.SQT
 
         # draw kinetic wire
-        if hasattr(self, "BCW1"):
-            self.line_start_pt = self.BCW1.start + \
+        if len(self.BCW_list) > 1:
+            self.line_start_pt = self.BCW_list[1].start + \
                                  DPoint(
                                      self.squid_params.BCW_dx[1] / 2,
                                      -self.squid_params.line_width / 2
@@ -166,17 +170,18 @@ class Fluxonium(AsymSquid):
             return
 
         # shift BC1 onto the `kinInd` layer
-        self.BC1.change_region_id(self.BC1.region_id, "kinInd")
+        self.BC_list[1].change_region_id(self.BC_list[1].region_id, \
+                                                        "kinInd")
         # shift BCW1 onto the `kinInd` layer
-        self.BCW1.change_region_id(self.BCW1.region_id, "kinInd")
+        self.BCW_list[1].change_region_id(self.BCW_list[1].region_id,
+                                          "kinInd")
 
         # create top contact pad for kinetic inductance wire
-        dr = self.TC.dr
         self.TC_KI = CPW(
             start=self.TC.start +
                   DVector(0, -3/2*self.squid_params.jj_kinInd_recess_d),
             end=self.TC.end,
-            width=self.TC.width - 3*self.squid_params.jj_kinInd_recess_d,
+            width=self.TC.width - self.squid_params.jj_kinInd_recess_d,
             gap=0,
             region_id="kinInd"
         )
@@ -187,7 +192,7 @@ class Fluxonium(AsymSquid):
         self.TCWL = CPW(
             start=tcwl_start,
             end=tcwl_start + DPoint(0, -self.squid_params.BCW_dy),
-            width=self.squid_params.BCW_dx[0], gap=0,
+            width=self.squid_params.BCW_dx[1], gap=0,
             region_id="kinInd"
         )
         self.primitives["TCWL"] = self.TCWL
@@ -507,7 +512,8 @@ class DesignDmon(ChipDesign):
         # JJ layer polygons will shrnked in every direction by this amount
         # and then substracted from photo layer to create a recess for a
         # bandage
-        self.photo_recess_d = 1e3
+        self.photo_recess_d = 0.75e3
+        self.jj_kinInd_recess_d = 1.4e3
         for i, (jj_dy, jj_dx, kinInd_length) in enumerate(
                 zip(
                     self.jj_dy_list,
@@ -562,7 +568,7 @@ class DesignDmon(ChipDesign):
                     line_width=self.kinInd_width,
                     line_length=kinInd_length,
                     # same as for photo_jj recess distance
-                    jj_kinInd_recess_d=self.photo_recess_d
+                    jj_kinInd_recess_d=self.jj_kinInd_recess_d
                 )
             )
         ''' el-dc concacts attributes SECTION START '''
@@ -656,21 +662,21 @@ class DesignDmon(ChipDesign):
         self.draw_CABL_conversion_rectangles()
 
         self.draw_photo_el_marks()
-        # self.draw_bridges()
-        # self.draw_pinning_holes()
-        # # delete
-        # # holes from
-        # # contact pads
-        # for i, contact_pad in enumerate(self.contact_pads):
-        #         contact_pad.place(self.region_ph)
-        # self.region_ph.merge()
-        # self.region_el.merge()
-        # self.region_kinInd.merge()
-        # self.extend_photo_overetching()
-        # self.inverse_destination(self.region_ph)
-        # self.draw_cut_marks()
-        # self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
-        # self.split_polygons_in_layers(max_pts=180)
+        self.draw_bridges()
+        self.draw_pinning_holes()
+        # delete
+        # holes from
+        # contact pads
+        for i, contact_pad in enumerate(self.contact_pads):
+                contact_pad.place(self.region_ph)
+        self.region_ph.merge()
+        self.region_el.merge()
+        self.region_kinInd.merge()
+        self.extend_photo_overetching()
+        self.inverse_destination(self.region_ph)
+        self.draw_cut_marks()
+        self.resolve_holes()  # convert to gds acceptable polygons (without inner holes)
+        self.split_polygons_in_layers(max_pts=180)
 
     def draw_for_res_f_and_Q_sim(self, res_idxs2Draw):
         """
@@ -1287,7 +1293,7 @@ class DesignDmon(ChipDesign):
             pars_local_tp2.SQLBT_dx = 0
             pars_local_tp2.SQLTT_dx = 0
             pars_local_tp2.BCW_dx = [0, pars_local_tp2.BCW_dx[0]]
-            pars_local_tp2.BC_dx = [0, pars_local_tp2.BCW_dx[0]]
+            pars_local_tp2.BC_dx = [0, pars_local_tp2.BC_dx[0]]
             pars_local_tp2.bot_wire_x = [None,
                                          pars_local_tp2.bot_wire_x[1]]
 
@@ -1390,7 +1396,7 @@ class DesignDmon(ChipDesign):
                 self.region_ph -= tp_cpw.metal_region.dup().size(20e3)
                 tp_cpw.place(self.region_el)
 
-                p3 = squid.BC_list[0].center()
+                p3 = squid.BC_list[0].start
                 p4 = tp_cpw.center()
                 etc3 = CPW(
                     start=p3, end=p4,
@@ -1434,13 +1440,17 @@ class DesignDmon(ChipDesign):
                 etc3.place(self.region_kinInd)
                 self.region_ph -= etc3.metal_region.dup().size(20e3)
 
-                p1 = squid.TC_KI.center()
+                p1 = squid.TC_KI.end
                 p2 = DPoint(etc3.center().x, p1.y)
                 etc4 = CPW(
                     start=p1, end=p2,
                     cpw_params=c_cpw
                 )
                 etc4.place(self.region_kinInd)
+                cut_reg = etc4.metal_region.dup()
+                cut_reg.transform(Trans(Vector(1e3,0))).size(self.photo_recess_d)
+                self.region_ph -= cut_reg
+                self.region_el -= cut_reg
 
     def draw_bandages(self):
         """
@@ -1514,17 +1524,20 @@ class DesignDmon(ChipDesign):
         return bandage_reg
 
     def draw_recess(self):
-        for squid in itertools.chain(self.squids, self.test_squids):
+        for i, squid in enumerate(
+                itertools.chain(self.squids, self.test_squids)
+        ):
             # top recess
             recess_reg = squid.TC.metal_region.dup().size(-self.photo_recess_d)
+            if i in [6,7]:
+                recess_reg.transform(Trans(Vector(13.061e3, 0)))
             self.region_ph -= recess_reg
 
             # bottom recess(es)
             for i, _ in enumerate(squid.squid_params.bot_wire_x):
-                try:
-                    BC = getattr(squid, "BC" + str(i))
-                except AttributeError:
+                if squid.BC_list[i] is None:
                     continue
+                BC = squid.BC_list[i]
                 recess_reg = BC.metal_region.dup().size(-self.photo_recess_d)
                 self.region_ph -= recess_reg
 
@@ -2762,23 +2775,23 @@ if __name__ == "__main__":
     design.draw()
     design.show()
 
-    # design.save_as_gds2(
-    #     os.path.join(
-    #         PROJECT_DIR,
-    #         "Dmon_" + __version__ + "_overetching_0um.gds"
-    #     )
-    # )
+    design.save_as_gds2(
+        os.path.join(
+            PROJECT_DIR,
+            "Dmon_" + __version__ + "_overetching_0um.gds"
+        )
+    )
 
-    # FABRICATION.OVERETCHING = 0.5e3
-    # design = DesignDmon("testScript")
-    # design.draw()
-    # design.show()
-    # design.save_as_gds2(
-    #     os.path.join(
-    #         PROJECT_DIR,
-    #         "Dmon_" + __version__ + "_overetching_0um5.gds"
-    #     )
-    # )
+    FABRICATION.OVERETCHING = 0.5e3
+    design = DesignDmon("testScript")
+    design.draw()
+    design.show()
+    design.save_as_gds2(
+        os.path.join(
+            PROJECT_DIR,
+            "Dmon_" + __version__ + "_overetching_0um5.gds"
+        )
+    )
 
     ''' C_qr sim '''
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr", pts=11, par_d=10e3)
