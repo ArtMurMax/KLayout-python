@@ -706,7 +706,8 @@ class CPWRLPath(ComplexBase):
 class DPathCPW(ComplexBase):
 
     def __init__(self, points, cpw_parameters,
-                 turn_radiuses, trans_in=None, region_id="default"):
+                 turn_radiuses, trans_in=None, region_id="default",
+                 extend_segments_l=0):
         """
         A piecewise-linear coplanar waveguide with rounded turns.
 
@@ -741,6 +742,7 @@ class DPathCPW(ComplexBase):
         # if len(points) < 3:
         #     raise Warning("DPathCPW received < 3 points. Use `CPW` class "
         #                   "or increase anchor points number ")
+        self.extend_segments_l = extend_segments_l
         self.points: List[DPoint] = points
         # force conversion since "DVector" has no method "distance()"
         for i, point in enumerate(self.points):
@@ -847,12 +849,12 @@ class DPathCPW(ComplexBase):
                 turn_radius = self._turn_radiuses[idx_r]
                 turn_angle = self._turn_angles[idx_r]
 
-                if abs(turn_radius) < self._cpw_parameters[i].b / 2:
-                    raise Warning(
-                        f"for round segment with index {idx_r}:\n"
-                        "turn radius may be depicted incorrectly due to "
-                        "the fact that curvature radius is lesser that "
-                        "CPW metal width")
+                # if abs(turn_radius) < self._cpw_parameters[i].b / 2:
+                #     print(
+                #         f"for round segment with index {idx_r}:\n"
+                #         "turn radius may be depicted incorrectly due to "
+                #         "the fact that curvature radius is lesser that "
+                #         "CPW metal width")
 
                 if turn_angle < 0:
                     turn_radius *= -1
@@ -954,9 +956,12 @@ class DPathCPW(ComplexBase):
                     cpw = CPW(
                         self._cpw_parameters[i].width,
                         self._cpw_parameters[i].gap,
-                        prev_primitive_end,
+                        prev_primitive_end + DPoint(
+                            -self.extend_segments_l,-self.extend_segments_l),
                         prev_primitive_end +
-                        DPoint(self._segment_lengths[idx_l], 0),
+                        DPoint(self._segment_lengths[idx_l] +
+                               2*self.extend_segments_l,
+                               0),
                         trans_in=DCplxTrans(
                             1,
                             prev_primitive_end_angle * 180 / np.pi,

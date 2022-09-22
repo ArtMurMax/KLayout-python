@@ -1,4 +1,4 @@
-__version__ = "v.0.0.5.6"
+__version__ = "v.0.0.5.7"
 
 '''
 Description:
@@ -7,6 +7,8 @@ main series chips. E.g. this one is based on 8Q_v.0.0.0.1 Design.py
 
 
 Changes log
+v.0.0.5.7
+    1. Kin. ind. lines are now have sharp edges instead of rounded ones.
 v.0.0.5.6
     1. Express test pads for kinInd express test pad fix.
     2. Recess for kinInd layer widened to be atleast 2 um.
@@ -69,6 +71,9 @@ v.0.0.0.0
 Copied fromv.0.3.0.8.T3
 '''
 
+import warnings
+warnings.filterwarnings("ignore")
+
 # Enter your Python code here
 from math import cos, sin, tan, atan2, pi, degrees
 import itertools
@@ -113,6 +118,25 @@ from sonnetSim import SonnetLab, SonnetPort, SimulationBox
 FABRICATION.OVERETCHING = 0.5e3
 PROJECT_DIR = os.path.dirname(__file__)
 
+class DPathCPWStraght(ComplexBase):
+    def __init__(self, points, cpw_parameters, trans_in=None,
+             region_id="default", extend_segments_l=0.0):
+        self.points = points
+        self.cpw_pars = cpw_parameters
+        self.extend_segments_l = extend_segments_l
+        super().__init__(self.points[0], trans_in, region_id=region_id)
+
+    def init_primitives(self):
+        new_pts = [(pt - self.points[0]) for pt in self.points]
+        for i, (p1, p2) in enumerate(zip(new_pts, new_pts[1:])):
+            dr = p2 - p1
+            dr_s = dr/dr.abs()
+            dr_n = DPoint(-dr_s.y, dr_s.x)
+            p2_new = p2 + dr_s*(self.extend_segments_l - 1)
+            cpw = CPW(start=p1, end=p2_new, cpw_params=self.cpw_pars,
+                      region_id=self.region_id)
+            self.primitives["cpw" + str(i)] = cpw
+
 
 class RFSquidParams(AsymSquidParams):
     def __init__(
@@ -131,7 +155,6 @@ class RFSquidParams(AsymSquidParams):
         # signed shift of the middle meanders
         self.add_dx_mid = add_dx_mid
         self.jj_kinInd_recess_d=jj_kinInd_recess_d
-
 
 class Fluxonium(AsymSquid):
     def __init__(self, origin: DPoint, squid_params: RFSquidParams,
@@ -256,13 +279,13 @@ class Fluxonium(AsymSquid):
         # shift all but first and last point by certain amount
         # in Ox direction
         line_pts[1:-1] += DVector(self.squid_params.add_dx_mid, 0)
-        self.line = DPathCPW(
+        self.line = DPathCPWStraght(
             points=line_pts,
             cpw_parameters=CPWParameters(
                 width=self.squid_params.line_width, gap=0
             ),
-            turn_radiuses=self.r_curve,
-            region_id="kinInd"
+            region_id="kinInd",
+            extend_segments_l=self.squid_params.line_width/2
         )
         # print(self.line.get_total_length())
         self.primitives["line"] = self.line
@@ -652,7 +675,7 @@ class DesignDmon(ChipDesign):
 
         self.draw_josephson_loops()
 
-        # self.draw_microwave_drvie_lines()
+        self.draw_microwave_drvie_lines()
         self.draw_flux_control_lines()
 
         self.draw_test_structures()
