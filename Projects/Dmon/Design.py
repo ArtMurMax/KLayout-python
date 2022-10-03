@@ -1,4 +1,4 @@
-__version__ = "v.0.0.5.8.1"
+__version__ = "v.0.0.5.10"
 
 '''
 Description:
@@ -7,6 +7,11 @@ main series chips. E.g. this one is based on 8Q_v.0.0.0.1 Design.py
 
 
 Changes log
+v.0.0.5.10
+    based on v.0.0.5.8.1
+    1. Squid dx and dy are increased in np.sqrt(1.25) times. Reason - 
+    fabrication critical currents are 25% lower than needed.
+    
 v.0.0.5.8.1
     1. Vertical segments of kin.Ind. wire width is back to 120 nm.
     This is update for v.0.0.5.8
@@ -567,10 +572,14 @@ class DesignDmon(ChipDesign):
 
         # josephson junctions
         self.squid_pars: List[RFSquidParams] = []
-        self.jj_dx_list = [159.842, 159.842, 159.842, 99.482, 99.482,
-                           159.842, 203.785, 203.785]
-        self.jj_dy_list = [149.842, 149.842, 149.842, 89.482, 89.482,
-                           149.842, 193.785, 193.785]
+        self.jj_dx_list = np.array(
+            [159.842, 159.842, 159.842, 99.482, 99.482, 159.842,
+             203.785, 203.785]
+        ) * np.sqrt(1.25)
+        self.jj_dy_list = np.array(
+            [149.842, 149.842, 149.842, 89.482, 89.482, 149.842,
+             193.785, 193.785]
+        ) * np.sqrt(1.25)
         self.kinInd_width = 120
         self.kinInd_squaresN_list = np.array(
             [1800] * 3 + [1700] * 2 + [920] + [1800] * 2
