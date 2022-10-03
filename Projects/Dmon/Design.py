@@ -1,4 +1,4 @@
-__version__ = "v.0.0.5.8"
+__version__ = "v.0.0.5.9"
 
 '''
 Description:
@@ -7,6 +7,9 @@ main series chips. E.g. this one is based on 8Q_v.0.0.0.1 Design.py
 
 
 Changes log
+v.0.0.5.9
+    1. Test pad structure #3 now drawn correctly.
+    2. Vertical segments of kin.Ind. wire width is 180 nm.
 v.0.0.5.8
     1. Express test pads thin wires are horizontal at kin.Ind layer.
     2. kin ind squid-GP contact pads are rounded at their GP side. 
@@ -78,7 +81,6 @@ Copied fromv.0.3.0.8.T3
 import warnings
 warnings.filterwarnings("ignore")
 
-# Enter your Python code here
 from math import cos, sin, tan, atan2, pi, degrees
 import itertools
 from dataclasses import dataclass
@@ -124,11 +126,10 @@ PROJECT_DIR = os.path.dirname(__file__)
 
 
 class DPathCPWStraght(ComplexBase):
-    def __init__(self, points, cpw_parameters, trans_in=None,
-             region_id="default", extend_segments_l=0.0):
+    def __init__(self, points, cpw_pars_list, trans_in=None,
+             region_id="default"):
         self.points = points
-        self.cpw_pars = cpw_parameters
-        self.extend_segments_l = extend_segments_l
+        self.cpw_pars_list = cpw_pars_list
         super().__init__(self.points[0], trans_in, region_id=region_id)
 
     def init_primitives(self):
@@ -137,9 +138,14 @@ class DPathCPWStraght(ComplexBase):
             dr = p2 - p1
             dr_s = dr/dr.abs()
             dr_n = DPoint(-dr_s.y, dr_s.x)
-            p2_new = p2 + dr_s*(self.extend_segments_l - 1)
-            cpw = CPW(start=p1, end=p2_new, cpw_params=self.cpw_pars,
-                      region_id=self.region_id)
+            if (i+1) < len(self.cpw_pars_list):
+                p2_new = p2 + dr_s*(self.cpw_pars_list[i + 1].width/2 - 1)
+            else:
+                p2_new = p2
+            cpw = CPW(
+                start=p1, end=p2_new, cpw_params=self.cpw_pars_list[i],
+                region_id=self.region_id
+            )
             self.primitives["cpw" + str(i)] = cpw
 
 
@@ -173,7 +179,7 @@ class Fluxonium(AsymSquid):
         squid_params.SQRTT_dx = 0
         squid_params.SQRBJJ_dy = 0
         self.r_curve = squid_params.line_width
-        self.TCBC_round_r = 200  # nm
+        self.TCBC_round_r = 500  # nm
         # declare for proper code completion
         self.squid_params: RFSquidParams = None
         super().__init__(origin=origin, params=squid_params,
@@ -310,13 +316,18 @@ class Fluxonium(AsymSquid):
         # shift all but first and last point by certain amount
         # in Ox direction
         line_pts[1:-1] += DVector(self.squid_params.add_dx_mid, 0)
+        cpw_pars1 = CPWParameters(
+            width=self.squid_params.line_width, gap=0
+        )
+        cpw_pars2 = CPWParameters(
+            width=180, gap=0
+        )
+        cpw_params_list = [cpw_pars1, cpw_pars2, cpw_pars1] + [
+            cpw_pars2, cpw_pars1, cpw_pars2, cpw_pars1]*self.n_periods
         self.line = DPathCPWStraght(
             points=line_pts,
-            cpw_parameters=CPWParameters(
-                width=self.squid_params.line_width, gap=0
-            ),
-            region_id="kinInd",
-            extend_segments_l=self.squid_params.line_width/2
+            cpw_pars_list=cpw_params_list,
+            region_id="kinInd"
         )
         # print(self.line.get_total_length())
         self.primitives["line"] = self.line
@@ -1280,7 +1291,7 @@ class DesignDmon(ChipDesign):
     def draw_test_structures(self):
         ''' choose squid for test structures '''
         # choosing squid with the smallest junction
-        squid_par_idxs = [0, 3, 5]
+        squid_par_idxs = [0, 3, 6]
         Icrit_JJ_list = [20.1, 11.3, 28.2]
         EL_kinInd_list = [5.2, 5.6, 10]
         # DRAW CONCTACT FOR BANDAGES WITH 5um CLEARANCE
