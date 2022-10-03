@@ -1,4 +1,4 @@
-__version__ = "v.0.0.5.10.2"
+__version__ = "v.0.0.5.11.1"
 
 '''
 Description:
@@ -7,6 +7,8 @@ main series chips. E.g. this one is based on 8Q_v.0.0.0.1 Design.py
 
 
 Changes log
+v.0.0.5.11.1
+    1. Recess rounding fixed.
 v.0.0.5.10.2
     1. Vertical segments of kin.Ind. wire width is 180 nm.
     based on v.0.0.5.10.1
@@ -331,7 +333,7 @@ class Fluxonium(AsymSquid):
             width=self.squid_params.line_width, gap=0
         )
         cpw_pars2 = CPWParameters(
-            width=180, gap=0
+            width=self.squid_params.line_width, gap=0,  # width=180, gap=0
         )
         cpw_params_list = [cpw_pars1, cpw_pars2, cpw_pars1] + [
             cpw_pars2, cpw_pars1, cpw_pars2, cpw_pars1]*self.n_periods
@@ -1605,7 +1607,9 @@ class DesignDmon(ChipDesign):
                 itertools.chain(self.squids, self.test_squids)
         ):
             # top recess
-            recess_reg = squid.TC.metal_region.dup().size(-self.photo_recess_d)
+            recess_reg = Region(
+                squid.TC.metal_region.bbox()
+            ).size(-self.photo_recess_d)
             if i in [6,7]:
                 recess_reg.transform(Trans(Vector(13.061e3, 0)))
             self.region_ph -= recess_reg
@@ -1615,7 +1619,9 @@ class DesignDmon(ChipDesign):
                 if squid.BC_list[i] is None:
                     continue
                 BC = squid.BC_list[i]
-                recess_reg = BC.metal_region.dup().size(-self.photo_recess_d)
+                recess_reg = Region(
+                    BC.metal_region.bbox()
+                ).size(-self.photo_recess_d)
                 self.region_ph -= recess_reg
 
     def draw_CABL_conversion_rectangles(self):
