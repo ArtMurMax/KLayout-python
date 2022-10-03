@@ -1,4 +1,4 @@
-__version__ = "v.0.0.5.7"
+__version__ = "v.0.0.5.8"
 
 '''
 Description:
@@ -7,6 +7,10 @@ main series chips. E.g. this one is based on 8Q_v.0.0.0.1 Design.py
 
 
 Changes log
+v.0.0.5.8
+    1. Express test pads thin wires are horizontal at kin.Ind layer.
+    2. kin ind squid-GP contact pads are rounded at their GP side. 
+    Rounding radius is 200 nm.
 v.0.0.5.7
     1. Kin. ind. lines are now have sharp edges instead of rounded ones.
 v.0.0.5.6
@@ -118,6 +122,7 @@ from sonnetSim import SonnetLab, SonnetPort, SimulationBox
 FABRICATION.OVERETCHING = 0.5e3
 PROJECT_DIR = os.path.dirname(__file__)
 
+
 class DPathCPWStraght(ComplexBase):
     def __init__(self, points, cpw_parameters, trans_in=None,
              region_id="default", extend_segments_l=0.0):
@@ -156,6 +161,7 @@ class RFSquidParams(AsymSquidParams):
         self.add_dx_mid = add_dx_mid
         self.jj_kinInd_recess_d=jj_kinInd_recess_d
 
+
 class Fluxonium(AsymSquid):
     def __init__(self, origin: DPoint, squid_params: RFSquidParams,
                  trans_in=None):
@@ -167,6 +173,7 @@ class Fluxonium(AsymSquid):
         squid_params.SQRTT_dx = 0
         squid_params.SQRBJJ_dy = 0
         self.r_curve = squid_params.line_width
+        self.TCBC_round_r = 200  # nm
         # declare for proper code completion
         self.squid_params: RFSquidParams = None
         super().__init__(origin=origin, params=squid_params,
@@ -193,8 +200,22 @@ class Fluxonium(AsymSquid):
             return
 
         # shift BC1 onto the `kinInd` layer
-        self.BC_list[1].change_region_id(self.BC_list[1].region_id, \
-                                                        "kinInd")
+        self.BC_list[1].change_region_id(
+            self.BC_list[1].region_id, "kinInd"
+        )
+        # shrink rectangular regoin and move it in proper direction
+        tmp_reg = self.BC_list[1].metal_region.sized(
+            -1, -self.TCBC_round_r-1, 0
+        )
+        tmp_reg.size(1, 1, 0)
+        tmp_reg.transform(Trans(Vector(0, self.TCBC_round_r)))
+        # round courners
+        self.BC_list[1].metal_region.round_corners(
+            0, self.TCBC_round_r, 50
+        )
+        # add old with rectangular courners
+        self.BC_list[1].metal_region += tmp_reg
+
         # shift BCW1 onto the `kinInd` layer
         self.BCW_list[1].change_region_id(self.BCW_list[1].region_id,
                                           "kinInd")
@@ -208,6 +229,16 @@ class Fluxonium(AsymSquid):
             gap=0,
             region_id="kinInd"
         )
+
+        # shrink rectangular regoin and move it in proper direction
+        tmp_reg = self.TC_KI.metal_region.sized(-1, -self.TCBC_round_r-1, 0)
+        tmp_reg.size(1,1,0)
+        tmp_reg.transform(Trans(Vector(0, -self.TCBC_round_r)))
+        # round courners
+        self.TC_KI.metal_region.round_corners(0, self.TCBC_round_r, 50)
+        # add old with rectangular courners
+        self.TC_KI.metal_region += tmp_reg
+
         self.primitives["TC_KI"] = self.TC_KI
 
         ''' make transition from large `TC_KI` polygon to thin line '''
@@ -256,7 +287,7 @@ class Fluxonium(AsymSquid):
         # print("dx_step:", self.dx_step)
         # print("dy_step:", self.dy_step)
         # print("s:", self.s)
-
+        ''' draw meander '''
         # creating points for kin.ind. line
         # first 180 turn
         line_pts = []
@@ -675,7 +706,7 @@ class DesignDmon(ChipDesign):
 
         self.draw_josephson_loops()
 
-        self.draw_microwave_drvie_lines()
+        # self.draw_microwave_drvie_lines()
         self.draw_flux_control_lines()
 
         self.draw_test_structures()
@@ -1419,8 +1450,8 @@ class DesignDmon(ChipDesign):
                 self.region_ph -= tp_cpw.metal_region.dup().size(20e3)
                 tp_cpw.place(self.region_el)
 
-                p3 = squid.BC_list[0].start
-                p4 = tp_cpw.center()
+                p3 = squid.BCW_list[0].center()
+                p4 = DPoint(tp_cpw.center().x, p4.y)
                 etc3 = CPW(
                     start=p3, end=p4,
                     cpw_params=c_cpw
@@ -1441,11 +1472,8 @@ class DesignDmon(ChipDesign):
                 etc1.place(self.region_kinInd)
                 self.region_ph -= etc1.metal_region.dup().size(20e3)
 
-                p1 = squid.BC_list[1].start + DVector(
-                    squid.BC_list[1].b / 2,
-                    -c_cpw.b / 2
-                )
-                p2 = etc1.center()
+                p1 = squid.BCW_list[1].center()
+                p2 = DPoint(etc1.center().x, p1.y)
                 etc2 = CPW(
                     start=p1, end=p2,
                     cpw_params=c_cpw
