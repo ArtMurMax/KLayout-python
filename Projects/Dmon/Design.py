@@ -1,4 +1,4 @@
-__version__ = "v.0.0.5.10"
+__version__ = "v.0.0.5.10.1"
 
 '''
 Description:
@@ -7,7 +7,7 @@ main series chips. E.g. this one is based on 8Q_v.0.0.0.1 Design.py
 
 
 Changes log
-v.0.0.5.10
+v.0.0.5.10.1
     based on v.0.0.5.8.1
     1. Squid dx and dy are increased in np.sqrt(1.25) times. Reason - 
     fabrication critical currents are 25% lower than needed.
