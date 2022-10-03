@@ -1,4 +1,4 @@
-__version__ = "v.0.0.5.9"
+__version__ = "v.0.0.5.8.1"
 
 '''
 Description:
@@ -7,6 +7,9 @@ main series chips. E.g. this one is based on 8Q_v.0.0.0.1 Design.py
 
 
 Changes log
+v.0.0.5.8.1
+    1. Vertical segments of kin.Ind. wire width is back to 120 nm.
+    This is update for v.0.0.5.8
 v.0.0.5.9
     1. Test pad structure #3 now drawn correctly.
     2. Vertical segments of kin.Ind. wire width is 180 nm.
@@ -320,7 +323,7 @@ class Fluxonium(AsymSquid):
             width=self.squid_params.line_width, gap=0
         )
         cpw_pars2 = CPWParameters(
-            width=180, gap=0
+            width=self.squid_params.line_width, gap=0
         )
         cpw_params_list = [cpw_pars1, cpw_pars2, cpw_pars1] + [
             cpw_pars2, cpw_pars1, cpw_pars2, cpw_pars1]*self.n_periods
