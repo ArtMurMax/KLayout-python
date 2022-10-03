@@ -7,8 +7,8 @@ main series chips. E.g. this one is based on 8Q_v.0.0.0.1 Design.py
 
 
 Changes log
-v.0.0.5.11.1
-    1. Recess rounding fixed.
+v.0.0.5.11.2
+    1. Recess rounding fixed. Both in photo en JJ layers.
 v.0.0.5.10.2
     1. Vertical segments of kin.Ind. wire width is 180 nm.
     based on v.0.0.5.10.1
@@ -333,7 +333,7 @@ class Fluxonium(AsymSquid):
             width=self.squid_params.line_width, gap=0
         )
         cpw_pars2 = CPWParameters(
-            width=self.squid_params.line_width, gap=0,  # width=180, gap=0
+            width=self.squid_params.line_width, gap=0  # width=180, gap=0
         )
         cpw_params_list = [cpw_pars1, cpw_pars2, cpw_pars1] + [
             cpw_pars2, cpw_pars1, cpw_pars2, cpw_pars1]*self.n_periods
@@ -351,11 +351,11 @@ class Fluxonium(AsymSquid):
                 self.squid_params.jj_kinInd_recess_d
             )
         self.TCWL.empty_regions["default"] = \
-            self.TCWL.metal_region.sized(
+            Region(self.TCWL.metal_region.bbox()).sized(
                 self.squid_params.jj_kinInd_recess_d
             )
         self.TC_KI.empty_regions["default"] = \
-            self.TC_KI.metal_region.sized(
+            Region(self.TC_KI.metal_region.bbox()).sized(
                 -self.squid_params.jj_kinInd_recess_d/3
             )
 
