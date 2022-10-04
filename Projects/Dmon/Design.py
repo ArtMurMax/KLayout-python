@@ -1,4 +1,4 @@
-__version__ = "v.0.0.5.12.1"
+__version__ = "v.0.0.5.13.1"
 
 '''
 Description:
@@ -7,6 +7,10 @@ main series chips. E.g. this one is based on 8Q_v.0.0.0.1 Design.py
 
 
 Changes log
+v.0.0.5.13.1-2
+    1. After fabrication, kin inductance TC_KI dimensions demanded to 
+    be changed.
+    2. Also test kin.Ind structure for 10 GHz has changed.
 v.0.0.5.12.1-2
     Number of squares in kin.Ind wire has changed
 v.0.0.5.11.2
@@ -248,10 +252,9 @@ class Fluxonium(AsymSquid):
 
         # create top contact pad for kinetic inductance wire
         self.TC_KI = CPW(
-            start=self.TC.start +
-                  DVector(0, -3/2*self.squid_params.jj_kinInd_recess_d),
+            start=self.TC.start + DVector(0, -1.328e3),
             end=self.TC.end,
-            width=self.TC.width - self.squid_params.jj_kinInd_recess_d,
+            width=2.784e3,
             gap=0,
             region_id="kinInd"
         )
@@ -1535,7 +1538,7 @@ class DesignDmon(ChipDesign):
                 etc3.place(self.region_kinInd)
                 self.region_ph -= etc3.metal_region.dup().size(20e3)
 
-                p1 = squid.TC_KI.end
+                p1 = squid.TC_KI.end + DPoint(0, 5/4*c_cpw.b)
                 p2 = DPoint(etc3.center().x, p1.y)
                 etc4 = CPW(
                     start=p1, end=p2,
