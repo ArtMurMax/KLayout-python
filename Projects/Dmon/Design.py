@@ -1,4 +1,4 @@
-__version__ = "v.0.0.5.11.1"
+__version__ = "v.0.0.5.12.1"
 
 '''
 Description:
@@ -7,6 +7,8 @@ main series chips. E.g. this one is based on 8Q_v.0.0.0.1 Design.py
 
 
 Changes log
+v.0.0.5.12.1-2
+    Number of squares in kin.Ind wire has changed
 v.0.0.5.11.2
     1. Recess rounding fixed. Both in photo en JJ layers.
 v.0.0.5.10.2
@@ -166,19 +168,23 @@ class RFSquidParams(AsymSquidParams):
     def __init__(
             self,
             asym_pars: AsymSquidParams = AsymSquidParams(),
-            line_width=115,
-            line_length=120e3,
+            line_width_dx=115,
+            line_width_dy=115,
+            line_squares_n=120e3,
             line_gap=1.8e3,
             add_dx_mid=-3e3,
             jj_kinInd_recess_d=0e3
     ):
         self.__dict__.update(asym_pars.__dict__)
-        self.line_width = line_width
-        self.line_length = line_length
+        self.line_width_dx = line_width_dx
+        self.line_width_dy = line_width_dy
+        self.line_squares_n = line_squares_n
         self.line_gap = line_gap
         # signed shift of the middle meanders
         self.add_dx_mid = add_dx_mid
         self.jj_kinInd_recess_d=jj_kinInd_recess_d
+
+        self.line_length = None  # will be calculated later
 
 
 class Fluxonium(AsymSquid):
@@ -191,7 +197,8 @@ class Fluxonium(AsymSquid):
         squid_params.SQRTJJ_dx = 0
         squid_params.SQRTT_dx = 0
         squid_params.SQRBJJ_dy = 0
-        self.r_curve = squid_params.line_width
+        self.r_curve = max(squid_params.line_width_dx,
+                           squid_params.line_width_dy)
         self.TCBC_round_r = 500  # nm
         # declare for proper code completion
         self.squid_params: RFSquidParams = None
@@ -213,7 +220,7 @@ class Fluxonium(AsymSquid):
             self.line_start_pt = self.BCW_list[1].start + \
                                  DPoint(
                                      self.squid_params.BCW_dx[1] / 2,
-                                     -self.squid_params.line_width / 2
+                                     -self.squid_params.line_width_dx / 2
                                  )
         else:
             return
@@ -273,7 +280,7 @@ class Fluxonium(AsymSquid):
         self.line_end_pt = self.TCWL.end + \
                            DPoint(
                                self.TCWL.width / 2,
-                               self.squid_params.line_width / 2
+                               self.squid_params.line_width_dx / 2
                            )
 
         dr = self.line_end_pt - self.line_start_pt
@@ -289,9 +296,16 @@ class Fluxonium(AsymSquid):
             return
         self.n_periods = (self.dy - self.squid_params.line_gap) // \
                          (2 * self.squid_params.line_gap)
+
         self.n_periods = int(self.n_periods)
         self.dx_step = (self.dx) / (self.n_periods + 1)
         self.dy_step = self.dy / (2 * self.n_periods + 1)  # >= `line_gap`
+        y_squares_n = self.dy/self.squid_params.line_width_dy
+        if y_squares_n > self.squid_params.line_squares_n:
+            print("error, to little squares for fixed transmon height.")
+        self.squid_params.line_length = self.dy + (
+            self.squid_params.line_squares_n -
+            y_squares_n ) * self.squid_params.line_width_dx
         # due to curved turns, line will be shorter by
         # the following amount:
         curvature_correction = \
@@ -330,10 +344,10 @@ class Fluxonium(AsymSquid):
         # in Ox direction
         line_pts[1:-1] += DVector(self.squid_params.add_dx_mid, 0)
         cpw_pars1 = CPWParameters(
-            width=self.squid_params.line_width, gap=0
+            width=self.squid_params.line_width_dx, gap=0
         )
         cpw_pars2 = CPWParameters(
-            width=self.squid_params.line_width, gap=0  # width=180, gap=0
+            width=self.squid_params.line_width_dy, gap=0  # width=180, gap=0
         )
         cpw_params_list = [cpw_pars1, cpw_pars2, cpw_pars1] + [
             cpw_pars2, cpw_pars1, cpw_pars2, cpw_pars1]*self.n_periods
@@ -470,7 +484,7 @@ class DesignDmon(ChipDesign):
                     DVector(-self.chip.pad_length,
                             -self.chip.pcb_Z.b / 2 - self.chip.back_metal_width)) * \
                                              contact_pads_trans_list[i]
-        self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
+        self.contact_pads: List[ContactPad] = self.chip.get_contact_pads(
             [self.ro_Z] + [self.z_fl] * 3 + [self.ro_Z] + [
                 self.z_fl] * 3,
             cpw_trans_list=contact_pads_trans_list
@@ -585,22 +599,23 @@ class DesignDmon(ChipDesign):
             [149.842, 149.842, 149.842, 89.482, 89.482, 149.842,
              193.785, 193.785]
         ) * np.sqrt(1.25)
-        self.kinInd_width = 120
+        # width of horizontal kin.Ind. wire segments
+        self.kinInd_width_dx = 120
+        # width of vertical kin.Ind. wire segments
+        self.kinInd_width_dy = 120
         self.kinInd_squaresN_list = np.array(
-            [1800] * 3 + [1700] * 2 + [920] + [1800] * 2
+            [2200] * 3 + [2100] * 2 + [1300] + [2200] * 2
         )
-        self.kinInd_length_list = \
-            self.kinInd_squaresN_list * self.kinInd_width
         # JJ layer polygons will shrnked in every direction by this amount
         # and then substracted from photo layer to create a recess for a
         # bandage
         self.photo_recess_d = 0.75e3
         self.jj_kinInd_recess_d = 1.4e3
-        for i, (jj_dy, jj_dx, kinInd_length) in enumerate(
+        for i, (jj_dy, jj_dx, kin_ind_squares_n) in enumerate(
                 zip(
                     self.jj_dy_list,
                     self.jj_dx_list,
-                    self.kinInd_length_list
+                    self.kinInd_squaresN_list
                 )
         ):
             pars_i = AsymSquidParams(
@@ -647,8 +662,9 @@ class DesignDmon(ChipDesign):
             self.squid_pars.append(
                 RFSquidParams(
                     asym_pars=pars_i,
-                    line_width=self.kinInd_width,
-                    line_length=kinInd_length,
+                    line_width_dx=self.kinInd_width_dx,
+                    line_width_dy=self.kinInd_width_dy,
+                    line_squares_n=kin_ind_squares_n,
                     # same as for photo_jj recess distance
                     jj_kinInd_recess_d=self.jj_kinInd_recess_d
                 )
