@@ -1,3 +1,4 @@
+#OK
 # $description: test_script
 # $version: 1.0.0
 # $show-in-menu

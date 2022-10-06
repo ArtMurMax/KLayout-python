@@ -1,4 +1,5 @@
 
+#OK
 
 # Enter your Python code here
 import pya
@@ -10,6 +11,8 @@ reload(classLib)
 from classLib import *
 
 from classLib.coplanars import *
+from classLib.coplanars import CPWParameters, CPW, CPW2CPW
+from classLib.contactPads import *
 
 
 class CHIP:
@@ -52,28 +55,28 @@ lv.add_missing_layers()
 ### DRAW SECTION START ###
 cell.shapes( layer_photo ).insert( pya.Box( Point( -CHIP.dx/2, -CHIP.dy/2 ), Point( CHIP.dx/2, CHIP.dy/2 ) ) )
 
-cp1 = Contact_Pad(origin = DPoint(-5e6, -2.5e6), feedline_cpw_params = {"w":20e3, "g":10e3})
+cp1 = ContactPad(origin = DPoint(-5e6, -2.5e6), chip_cpw_params = CPWParameters(width=20e3, gap=10e3))
 cp1.place(cell, layer_photo)
 
-cp2 = Contact_Pad(DPoint(-5e6, 2.5e6), {"w":20e3, "g":10e3})
-cp2.place(cell, layer_photo)
+#cp2 = ContactPad(DPoint(-5e6, 2.5e6), chip_cpw_params = CPWParameters(width=20e3, gap=10e3))
+#cp2.place(cell, layer_photo)
 
-cp3 = Contact_Pad(DPoint(-2.5e6, 5e6), {"w":20e3, "g":10e3}, trans_in = DTrans.R270)
+cp3 = ContactPad(DPoint(-2.5e6, 5e6), chip_cpw_params = CPWParameters(width=20e3, gap=10e3), trans_in = DTrans.R270)
 cp3.place(cell, layer_photo)
 
-cp4 = Contact_Pad(DPoint(2.5e6, 5e6), {"w":20e3, "g":10e3}, trans_in = DTrans.R270)
+cp4 = ContactPad(DPoint(2.5e6, 5e6), chip_cpw_params = CPWParameters(width=20e3, gap=10e3), trans_in = DTrans.R270)
 cp4.place(cell, layer_photo)
 
-cp5 = Contact_Pad(DPoint(5e6, 2.5e6), {"w":20e3, "g":10e3}, trans_in = DTrans.R180)
+cp5 = ContactPad(DPoint(5e6, 2.5e6), chip_cpw_params = CPWParameters(width=20e3, gap=10e3), trans_in = DTrans.R180)
 cp5.place(cell, layer_photo)
 
-cp6 = Contact_Pad(DPoint(5e6, -2.5e6), {"w":20e3, "g":10e3}, trans_in = DTrans.R180)
+cp6 = ContactPad(DPoint(5e6, -2.5e6), chip_cpw_params = CPWParameters(width=20e3, gap=10e3), trans_in = DTrans.R180)
 cp6.place(cell, layer_photo)
 
-cp7 = Contact_Pad(DPoint(2.5e6, -5e6), {"w":20e3, "g":10e3}, trans_in = DTrans.R90)
+cp7 = ContactPad(DPoint(2.5e6, -5e6), chip_cpw_params = CPWParameters(width=20e3, gap=10e3), trans_in = DTrans.R90)
 cp7.place(cell, layer_photo)
 
-cp8 = Contact_Pad(DPoint(-2.5e6, -5e6), {"w":20e3, "g":10e3}, trans_in = DTrans.R90)
+cp8 = ContactPad(DPoint(-2.5e6, -5e6), chip_cpw_params = CPWParameters(width=20e3, gap=10e3), trans_in = DTrans.R90)
 cp8.place(cell, layer_photo)
 
 #First feedline
