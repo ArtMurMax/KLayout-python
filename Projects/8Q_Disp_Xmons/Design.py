@@ -1583,32 +1583,42 @@ class Design8Q(ChipDesign):
         return res_length
 
 
-def simulate_resonators_f_and_Q():
-    freqs_span_corase = 0.5  # GHz
+def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
+    def myround(x, base=2):
+        return base * round(x / base)
+
+    resolution_dx = resolution[0]
+    resolution_dy = resolution[1]
+    freqs_span_corase = 1  # GHz
     corase_only = False
     freqs_span_fine = 0.050
-    # dl_list = [0, 15e3, -15e3]
-    dl_list = [0e3]
+    dl_list = [15e3, 0, -15e3]
+    estimated_freqs = np.linspace(7.2, 7.76, 8)
+    # dl_list = [0e3]
     from itertools import product
-
-    for dl, resonator_idx in list(product(
+    for dl, (resonator_idx, predef_freq) in list(product(
             dl_list,
-            range(5)
-    )):
-        if resonator_idx > 0:
-            continue
+            zip(range(8), estimated_freqs),
+    ))[20:]:
+        print()
+        print("res №", resonator_idx)
         fine_resonance_success = False
         freqs_span = freqs_span_corase
 
-        design = Design8Q("testScript")
-        design.L1_list = [L1 + dl for L1 in design.L1_list]
-        design.draw_for_res_f_and_Q_sim(resonator_idx)
-        estimated_freq = \
+        design = DesignDmon("testScript")
+        design.L1_list[resonator_idx] += dl
+        # print(f"res length: {design.L1_list[resonator_idx]:3.5} um")
+        design.draw_for_res_f_and_Q_sim(res_idxs2Draw=[resonator_idx])
+
+        an_estimated_freq = \
             design.resonators[resonator_idx].get_approx_frequency(
                 refractive_index=np.sqrt(6.26423)
             )
-        print("start drawing")
-        print(estimated_freq)
+        # print(f"formula estimated freq: {an_estimated_freq:3.5} GHz")
+        estimated_freq = predef_freq
+        # print("start drawing")
+        # print(f"previous result estimated freq: {estimated_freq:3.5} GHz")
+        # print(design.resonators[resonator_idx].length(exception="fork"))
 
         crop_box = (
                 design.resonators[resonator_idx].metal_region +
@@ -1620,11 +1630,19 @@ def simulate_resonators_f_and_Q():
         # center of the readout CPW
         crop_box.top += -design.Z_res.b / 2 + design.to_line_list[
             resonator_idx] + design.Z0.b / 2
-        box_extension = 100e3
+        box_extension = design.resonators[resonator_idx].L_coupling
         crop_box.bottom -= box_extension
         crop_box.top += box_extension
         crop_box.left -= box_extension
         crop_box.right += box_extension
+        crop_box.bottom, crop_box.top, crop_box.left, crop_box.right = \
+            list(
+                map(
+                    lambda x: int(myround(x, base=2e3)),  # up to 2 um
+                    [crop_box.bottom, crop_box.top,
+                     crop_box.left, crop_box.right]
+                )
+            )
 
         ### MESH CALCULATION SECTION START ###
         arr1 = np.round(np.array(
@@ -1632,27 +1650,30 @@ def simulate_resonators_f_and_Q():
         arr2 = np.array([box_extension, design.Z0.gap, design.Z0.width,
                          design.Z_res.width, design.Z_res.gap])
         arr = np.hstack((arr1, arr2))
-        resolution_dy = np.gcd.reduce(arr.astype(int))
-        # print(arr)
-        # print(resolution_dy)
-        # resolution_dy = 8e3
-        resolution_dx = 4e3
-
-        # cut part of the ground plane due to rectangular mesh in Sonnet
         crop_box.bottom = crop_box.bottom - int(
             crop_box.height() % resolution_dy)
-        print(crop_box.top, " ", crop_box.bottom)
-        print(crop_box.height() / resolution_dy)
+        # print(crop_box.top, " ", crop_box.bottom)
+        # print(crop_box.height() / resolution_dy)
         ### MESH CALCULATION SECTION END ###
 
         design.crop(crop_box, region=design.region_ph)
 
-        design.sonnet_ports = [
-            DPoint(crop_box.left,
-                   crop_box.top - box_extension - design.Z0.b / 2),
-            DPoint(crop_box.right,
-                   crop_box.top - box_extension - design.Z0.b / 2)
-        ]
+        design.sonnet_ports = []
+
+        ro_cpw_cropped = design.cpwrl_ro_line.metal_region & Region(
+            crop_box)
+        d_min = 10  # nm
+        for edge in ro_cpw_cropped.edges().centers(0, 0):
+            # iterator returns Edge() object that consists of 2 identical points
+            # exctract first point
+            cpt = edge.p1
+            if (
+                    np.abs(
+                        [cpt.x - crop_box.left, cpt.x - crop_box.right,
+                         cpt.y - crop_box.top, cpt.y - crop_box.bottom]
+                    ) < d_min
+            ).any():
+                design.sonnet_ports.append(cpt)
 
         # transforming cropped box to the origin
         dr = DPoint(0, 0) - crop_box.p1
@@ -1661,7 +1682,7 @@ def simulate_resonators_f_and_Q():
             DTrans(dr.x, dr.y),
             trans_ports=True
         )
-
+        [print(port) for port in design.sonnet_ports]
         # transfer design`s regions shapes to the corresponding layers in layout
         design.show()
         # show layout in UI window
@@ -1701,7 +1722,7 @@ def simulate_resonators_f_and_Q():
             ml_terminal.send_polygons(design.cell, design.layer_ph)
             ml_terminal.set_ABS_sweep(estimated_freq - freqs_span / 2,
                                       estimated_freq + freqs_span / 2)
-            print(f"simulating...{resonator_idx}")
+            # print(f"simulating...{resonator_idx}")
             result_path = ml_terminal.start_simulation(wait=True)
             ml_terminal.release()
 
@@ -1724,8 +1745,8 @@ def simulate_resonators_f_and_Q():
                 min_freq_idx, min_s21_abs = min(enumerate(s12_abs_list),
                                                 key=lambda x: x[1])
                 min_freq = freqs[min_freq_idx]
-                min_freq_idx = len(s12_abs_list) / 2  # Note: FOR DEBUG
-
+                # min_freq_idx = len(s12_abs_list) / 2  # Note: FOR DEBUG
+            print("min freq idx: ", min_freq_idx, "/", len(freqs))
             # processing the results
             if min_freq_idx == 0:
                 # local minimum is located to the left of current interval
@@ -1764,36 +1785,8 @@ def simulate_resonators_f_and_Q():
                     # fine approximation ended, go to saving the result
                     fine_resonance_success = True  # breaking frequency locating cycle condition is True
 
-            # unreachable code:
-            # TODO: add approximation of the resonance if minimum is nonlocal during corase approximation
-            # fr_approx = (2*derivative/second_derivative) + min_freq
-            # B = -4*derivative**3/second_derivative**2
-            # A = min_freq - 2*derivative**2/second_derivative
-            # print(f"fr = {min_freq:3.3} GHz,  fr_err = not implemented(")
-            ### RESONANCE FINDING SECTION END  ###
-
-            ### RESULT SAVING SECTION START ###
-
-            # geometry parameters gathering
-            res_params = design.resonators[
-                resonator_idx].get_geometry_params_dict(prefix="worm_")
-            Z0_params = design.Z0.get_geometry_params_dict(
-                prefix="S21Line_")
-
-            from collections import OrderedDict
-
-            all_params = OrderedDict(
-                itertools.chain(
-                    res_params.items(),
-                    Z0_params.items(),
-                    {
-                        "to_line, um": design.to_line_list[
-                                           resonator_idx] / 1e3,
-                        "filename": None,
-                        "resonator_idx": resonator_idx
-                    }.items()
-                )
-            )
+            all_params = design.get_geometry_parameters()
+            all_params["res_idx"] = resonator_idx
 
             # creating directory with simulation results
             results_dirname = "resonators_S21"
@@ -1829,11 +1822,10 @@ def simulate_resonators_f_and_Q():
                           newline='') as csv_file:
                     writer = csv.writer(csv_file)
                     # create header of the file
+                    all_params["filename"] = "result_1.csv"
                     writer.writerow(list(all_params.keys()))
                     # add first parameters row
                     reader = csv.reader(csv_file)
-                    existing_entries_n = len(list(reader))
-                    all_params["filename"] = "result_1.csv"
                     writer.writerow(list(all_params.values()))
             finally:
                 # copy result from sonnet folder and rename it accordingly
@@ -2159,8 +2151,16 @@ if __name__ == "__main__":
     design.draw()
     design.show()
 
-    # simulate_resonators_f_and_Q()
-    # simulate_Cqr()
+    ''' C_qr sim '''
+    # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr", pts=11, par_d=10e3)
+    # simulate_Cqr(resolution=(1e3, 1e3), mode="Cq", pts=3, par_d=20e3)
+    # simulate_Cqr(resolution=(1e3, 1e3), mode="Cqr")
 
     ''' Simulation of C_{q1,q2} in fF '''
-    # simulate_Cqq(3, 4, resolution2e3, 2e3))
+    # simulate_Cqq(2, 3, resolution=(1e3, 1e3))
+
+    ''' Resonators Q and f sim'''
+    # simulate_resonators_f_and_Q(resolution=(2e3, 2e3))
+
+    ''' Resonators Q and f when placed together'''
+    # simulate_resonators_f_and_Q_together()

@@ -170,7 +170,7 @@ class Design8Q(ChipDesign):
         # squid parameters
         self.squid_pars = AsymSquidParams()
         # readout coplanar transverse geometry parameters
-        self.Z_ro: CPWParameters = self.z_fl1
+        self.Z_ro: CPWParameters = CPWParameters(24e3, 12e3)
         # contact pads obejct array
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
             [self.Z_ro] * 2 + [self.z_md1, self.z_fl1] * 4 + [
@@ -1843,14 +1843,16 @@ class Design8Q(ChipDesign):
 
 
 def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
+    def myround(x, base=2):
+        return base * round(x / base)
     resolution_dx = resolution[0]
     resolution_dy = resolution[1]
     freqs_span_corase = 1  # GHz
     corase_only = False
     freqs_span_fine = 0.050
-    dl_list = [15e3, 0, -15e3]
+    # dl_list = [15e3, 0, -15e3]
     estimated_freqs = np.linspace(7.2, 7.76, 8)
-    # dl_list = [0e3]
+    dl_list = [0e3]
     from itertools import product
     for dl, (resonator_idx, predef_freq) in list(product(
             dl_list,
@@ -1886,32 +1888,55 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
         # center of the readout CPW
         crop_box.top += -design.Z_res.b / 2 + design.to_line_list[
             resonator_idx] + design.Z0.b / 2
-        box_extension = 100e3
+        box_extension = design.resonators[resonator_idx].L_coupling
         crop_box.bottom -= box_extension
         crop_box.top += box_extension
         crop_box.left -= box_extension
         crop_box.right += box_extension
+        crop_box.bottom, crop_box.top, crop_box.left, crop_box.right = \
+            list(
+                map(
+                    lambda x: int(myround(x, base=2e3)),  # up to 2 um
+                    [crop_box.bottom, crop_box.top,
+                     crop_box.left, crop_box.right]
+                )
+            )
 
-        ### MESH CALCULATION SECTION START ###
-        arr1 = np.round(np.array(
-            design.to_line_list) - design.Z0.b / 2 - design.Z_res.b / 2)
-        arr2 = np.array([box_extension, design.Z0.gap, design.Z0.width,
-                         design.Z_res.width, design.Z_res.gap])
-        arr = np.hstack((arr1, arr2))
-        crop_box.bottom = crop_box.bottom - int(
-            crop_box.height() % resolution_dy)
+        ''' BOX DIMENSION TO FIT 2um SIMULATION GRID SECTION START '''
+        if resonator_idx < 4:
+            crop_box.bottom = crop_box.bottom - int(
+                ro_cpw_cropped.bbox().top % 2)
+        elif resonator_idx >=4 :
+            crop_box.height = crop_box.height + int(
+                ro_cpw_cropped.bbox().top % 2)
         # print(crop_box.top, " ", crop_box.bottom)
         # print(crop_box.height() / resolution_dy)
-        ### MESH CALCULATION SECTION END ###
+        ''' BOX DIMENSION TO FIT 2um SIMULATION GRID SECTION START '''
 
+        ### PORT CALCULATION PLACES START ###
         design.crop(crop_box, region=design.region_ph)
 
-        design.sonnet_ports = [
-            DPoint(crop_box.left,
-                   crop_box.top - box_extension - design.Z0.b / 2),
-            DPoint(crop_box.right,
-                   crop_box.top - box_extension - design.Z0.b / 2)
-        ]
+        design.sonnet_ports = []
+        ro_cpw_cropped = None
+        if resonator_idx < 4:
+            ro_cpw_cropped = design.cpwrl_ro_line1
+        elif resonator_idx >= 4:
+            ro_cpw_cropped = design.cpwrl_ro_line2
+        ro_cpw_cropped = ro_cpw_cropped.metal_region & Region(
+            crop_box)
+        d_min = 10  # nm
+        for edge in ro_cpw_cropped.edges().centers(0, 0):
+            # iterator returns Edge() object that consists of 2 identical points
+            # exctract first point
+            cpt = edge.p1
+            if (
+                    np.abs(
+                        [cpt.x - crop_box.left, cpt.x - crop_box.right,
+                         cpt.y - crop_box.top, cpt.y - crop_box.bottom]
+                    ) < d_min
+            ).any():
+                design.sonnet_ports.append(cpt)
+        ### PORT CALCULATION SECTION ENDS ###
 
         # transforming cropped box to the origin
         dr = DPoint(0, 0) - crop_box.p1
@@ -2024,6 +2049,7 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
                     fine_resonance_success = True  # breaking frequency locating cycle condition is True
 
             all_params = design.get_geometry_parameters()
+            all_params["res_idx"] = resonator_idx
 
             # creating directory with simulation results
             results_dirname = "resonators_S21"
@@ -2863,26 +2889,26 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
     FABRICATION.OVERETCHING = 0.0e3
-    design = Design8Q("testScript")
-    design.draw()
-    design.show()
-    design.save_as_gds2(
-        os.path.join(
-            PROJECT_DIR,
-            "8Q_0.0.0.1_A482_A483_overetching_0um.gds"
-        )
-    )
-
-    FABRICATION.OVERETCHING = 0.5e3
-    design = Design8Q("testScript")
-    design.draw()
-    design.show()
-    design.save_as_gds2(
-        os.path.join(
-            PROJECT_DIR,
-            "8Q_0.0.0.1_A482_A483_overetching_0um5.gds"
-        )
-    )
+    # design = Design8Q("testScript")
+    # design.draw()
+    # design.show()
+    # design.save_as_gds2(
+    #     os.path.join(
+    #         PROJECT_DIR,
+    #         "8Q_0.0.0.1_A482_A483_overetching_0um.gds"
+    #     )
+    # )
+    #
+    # FABRICATION.OVERETCHING = 0.5e3
+    # design = Design8Q("testScript")
+    # design.draw()
+    # design.show()
+    # design.save_as_gds2(
+    #     os.path.join(
+    #         PROJECT_DIR,
+    #         "8Q_0.0.0.1_A482_A483_overetching_0um5.gds"
+    #     )
+    # )
 
     ''' C_qr sim '''
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cq")
@@ -2897,7 +2923,7 @@ if __name__ == "__main__":
     #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(1e3, 1e3))
 
     ''' Resonators Q and f sim'''
-    # simulate_resonators_f_and_Q(resolution=(2e3,2e3))
+    simulate_resonators_f_and_Q(resolution=(2e3,2e3))
 
     ''' Resonators Q and f when placed together'''
     # simulate_resonators_f_and_Q_together()

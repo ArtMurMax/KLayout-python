@@ -346,7 +346,7 @@ class DesignDmon(ChipDesign):
         # flux line widths at the end of flux line
         self.flux2ground_left_width = 2e3
         self.flux2ground_right_width = 4e3
-        self.ro_Z: CPWParameters = self.chip.chip_Z
+        self.Z_ro: CPWParameters = self.chip.chip_Z
         contact_pads_trans_list = [Trans.R0] + [Trans.R270] + 2 * [
             Trans.R90] + [Trans.R0] + [Trans.R270]*3
         for i, trans in enumerate(contact_pads_trans_list):
@@ -356,7 +356,7 @@ class DesignDmon(ChipDesign):
             elif trans == DTrans.R90:
                 contact_pads_trans_list[i] = DCplxTrans(DVector(-self.chip.pad_length, -self.chip.pcb_Z.b/2 -self.chip.back_metal_width))*contact_pads_trans_list[i]
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
-            [self.ro_Z] + [self.z_md_fl] * 3 + [self.ro_Z] + [self.z_md_fl] * 3,
+            [self.Z_ro] + [self.z_md_fl] * 3 + [self.Z_ro] + [self.z_md_fl] * 3,
             cpw_trans_list=contact_pads_trans_list
         )
 
@@ -1662,7 +1662,7 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
     for dl, (resonator_idx, predef_freq) in list(product(
             dl_list,
             zip(range(8), estimated_freqs),
-    ))[20:]:
+    )):
         print()
         print("res №", resonator_idx)
         fine_resonance_success = False
@@ -1709,17 +1709,13 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
 
 
         ### MESH CALCULATION SECTION START ###
-        arr1 = np.round(np.array(
-            design.to_line_list) - design.Z0.b / 2 - design.Z_res.b / 2)
-        arr2 = np.array([box_extension, design.Z0.gap, design.Z0.width,
-                         design.Z_res.width, design.Z_res.gap])
-        arr = np.hstack((arr1, arr2))
         crop_box.bottom = crop_box.bottom - int(
             crop_box.height() % resolution_dy)
         # print(crop_box.top, " ", crop_box.bottom)
         # print(crop_box.height() / resolution_dy)
         ### MESH CALCULATION SECTION END ###
 
+        ### PORT CALCULATION PLACES START ###
         design.crop(crop_box, region=design.region_ph)
 
         design.sonnet_ports = []
@@ -1738,7 +1734,7 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
                     ) < d_min
             ).any():
                 design.sonnet_ports.append(cpt)
-
+        ### PORT CALCULATION SECTION ENDS ###
 
         # transforming cropped box to the origin
         dr = DPoint(0, 0) - crop_box.p1
