@@ -170,7 +170,8 @@ class Design8Q(ChipDesign):
         # squid parameters
         self.squid_pars = AsymSquidParams()
         # readout coplanar transverse geometry parameters
-        self.Z_ro: CPWParameters = CPWParameters(24e3, 12e3)
+        # Z = 49.75, e_eff = 6.21
+        self.Z_ro: CPWParameters = CPWParameters(60e3, 30e3)
         # contact pads obejct array
         self.contact_pads: list[ContactPad] = self.chip.get_contact_pads(
             [self.Z_ro] * 2 + [self.z_md1, self.z_fl1] * 4 + [
@@ -224,7 +225,7 @@ class Design8Q(ChipDesign):
         self.resonators_dx: float = self.xmon_x_distance
         # resonator parameters
         self.L_coupling_list: list[float] = [
-            1e3 * x for x in [450, 320, 320, 310] * 2
+            1e3 * x for x in [450, 450, 450, 450] * 2
         ]
         # corresponding to resonanse freq is linspaced in
         # interval [7.2,7.44] GHz
@@ -235,7 +236,7 @@ class Design8Q(ChipDesign):
         # horizontal coil line length
         self.L1_list = [
             1e3 * x for x in
-            [300, 95.1897, 99.0318, 83.7159, 88.8686, 70.3649,
+            [98, 281.0, 312.5, 88.8686, 70.3649, 346.2,
              74.0874, 59.6982]
         ]
         # curvature radius of resonators CPW turns
@@ -248,9 +249,9 @@ class Design8Q(ChipDesign):
         self.L3_list = [0e3] * len(self.L1_list)  # to be constructed
         # vertical line connected to L3
         self.L4_list = [self.res_r] * len(self.L1_list)
-        # Z = 51.0, E_eff = 6.29
-        self.Z_res = CPWParameters(10e3, 6e3)
-        self.to_line_list = [45e3] * len(self.L1_list)
+        # Z = 49.6, E_eff = 6.23
+        self.Z_res = CPWParameters(20e3, 10e3)
+        self.to_line_list = [140e3] * len(self.L1_list)
         # fork at the end of resonator parameters
         self.fork_metal_width = 15e3
         self.fork_gnd_gap = 10e3
@@ -261,7 +262,7 @@ class Design8Q(ChipDesign):
         # from simulation of g_qr
         self.fork_y_span_list = [
             x * 1e3 for x in
-            [33.18, 91.43, 39.36, 95.31, 44.34, 96.58, 49.92, 99.59]
+            [33.18, 90, 90, 95.31, 44.34, 90, 49.92, 99.59]
         ]
 
         # bandages
@@ -775,12 +776,12 @@ class Design8Q(ChipDesign):
             # print(self.cross_len_y)
             # print()
             # place xmon
-            self.xmons[-1].place(self.region_ph)
+            # self.xmons[-1].place(self.region_ph)
             # place resonator with fork. May corrupt xmon cross due to
             # ground space around fork teeth.
             res.place(self.region_ph)
             # repair xmon cross
-            xmonCross_corrected.place(self.region_ph)
+            # xmonCross_corrected.place(self.region_ph)
 
     def draw_readout_waveguide(self):
         """
@@ -1052,7 +1053,7 @@ class Design8Q(ChipDesign):
             # )
 
     def modify_md_line_end_and_place(self, md_line: DPathCPW,
-                                     mod_length=100e3, smoothing=20e3):
+                                     mod_length=95e3, smoothing=20e3):
         """
         Changes coplanar for `mod_length` length from the end of `md_line`.
         Transition region length along the `md_line` is controlled by passing `smoothing` value.
@@ -1847,22 +1848,21 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
         return base * round(x / base)
     resolution_dx = resolution[0]
     resolution_dy = resolution[1]
-    freqs_span_corase = 1  # GHz
+    freqs_span_corase = 1.0 # GHz
     corase_only = False
-    freqs_span_fine = 0.050
+    freqs_span_fine = 0.020
     # dl_list = [15e3, 0, -15e3]
-    estimated_freqs = np.linspace(7.2, 7.76, 8)
-    dl_list = [0e3]
+    estimated_freqs = [5.4, 5.2, 5.0]  # GHz
+    dl_list = [-20e3, 0, 20e3]
     from itertools import product
     for dl, (resonator_idx, predef_freq) in list(product(
             dl_list,
-            zip(range(0), estimated_freqs),
+            zip([1,2,5], estimated_freqs),
     )):
         print()
         print("res №", resonator_idx)
         fine_resonance_success = False
-        freqs_span = freqs_span_corase
-
+        freqs_span = freqs_span_corase  # for only coarse runs
         design = Design8Q("testScript")
         design.L1_list[resonator_idx] += dl
         # print(f"res length: {design.L1_list[resonator_idx]:3.5} um")
@@ -1915,7 +1915,7 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
             crop_box.bottom = crop_box.bottom - int(
                 ro_cpw_cropped.bbox().top % 2)
         elif resonator_idx >=4 :
-            crop_box.height = crop_box.height + int(
+            crop_box.top = crop_box.top+ int(
                 ro_cpw_cropped.bbox().top % 2)
         # print(crop_box.top, " ", crop_box.bottom)
         # print(crop_box.height() / resolution_dy)
@@ -2042,6 +2042,7 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
                         # terminate simulation after corase simulation
                         fine_resonance_success = True
                     else:
+                        print("going to fine freqs span")
                         # go to fine approximation step
                         freqs_span = freqs_span_fine
                         continue
@@ -2050,7 +2051,7 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
                     fine_resonance_success = True  # breaking frequency locating cycle condition is True
 
             all_params = design.get_geometry_parameters()
-            all_params["res_idx"] = resonator_idx
+            all_params["resonator_idx"] = resonator_idx
 
             # creating directory with simulation results
             results_dirname = "resonators_S21"
@@ -2085,12 +2086,12 @@ def simulate_resonators_f_and_Q(resolution=(4e3, 4e3)):
                 with open(output_metaFile_path, "w+",
                           newline='') as csv_file:
                     writer = csv.writer(csv_file)
+                    all_params["filename"] = "result_1.csv"
                     # create header of the file
                     writer.writerow(list(all_params.keys()))
                     # add first parameters row
                     reader = csv.reader(csv_file)
                     existing_entries_n = len(list(reader))
-                    all_params["filename"] = "result_1.csv"
                     writer.writerow(list(all_params.values()))
             finally:
                 # copy result from sonnet folder and rename it accordingly
@@ -2924,7 +2925,7 @@ if __name__ == "__main__":
     #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(1e3, 1e3))
 
     ''' Resonators Q and f sim'''
-    simulate_resonators_f_and_Q(resolution=(2e3,2e3))
+    simulate_resonators_f_and_Q(resolution=(2e3, 2e3))
 
     ''' Resonators Q and f when placed together'''
     # simulate_resonators_f_and_Q_together()
