@@ -1,4 +1,4 @@
-__version__ = "8Q_0.0.0.1"
+__version__ = "FCK_0.0.0.1"
 
 '''
 Changes log
@@ -121,7 +121,11 @@ SQUID_PARS = AsymSquidParams(
     TCW_dx=0.5e3,
     BCW_dy=0e3,
     BC_dy=5e3 * np.sqrt(2) / 2 + 1e3,
-    BC_dx=2.5e3 * np.sqrt(2) + 1e3
+    BC_dx=2.5e3 * np.sqrt(2) + 1e3,
+    SQLBJJ_dy=114,
+    SQLTJJ_dx=124,
+    SQRBJJ_dy=120,
+    SQRTJJ_dx=600
 )
 
 VERT_ARR_SHIFT = DVector(-50e3, -150e3)
@@ -186,24 +190,20 @@ class Design8Q(ChipDesign):
         self.xmon_x_distance: float = 722e3  # from simulation of g_12
         # distance between open end (excluding fork) of resonator
         # and cross polygons
-        self.xmon_res_d = 254e3
+        self.xmon_res_d = 224e3
         self.xmon_dys_Cg_coupling = [14e3] * self.NQUBITS
         self.xmons: list[XmonCross] = []
         self.xmons_corrected: list[XmonCross] = []
 
         # C11 = 107
-        self.cross_len_x = 270e3
-        self.cross_width_x = 45e3  # from C11 sim
-        self.cross_gnd_gap_x_list = np.array([60e3] * self.NQUBITS)
-        self.cross_gnd_gap_face_x = 35e3
-        self.cross_len_y = 180e3
-        self.cross_width_y = 45e3  # from C11 sim
-        self.cross_gnd_gap_y_list = [
-            1e3 * x for x in
-            [26.955, 48.462, 27.669, 49.494, 28.311, 53.563, 29.764,
-             55.887]
-        ]
-        self.cross_gnd_gap_face_y = 30e3
+        self.cross_len_x = 180e3
+        self.cross_width_x = 60e3  # from C11 sim
+        self.cross_gnd_gap_x_list = np.array([20e3] * self.NQUBITS)
+        self.cross_gnd_gap_face_x = 20e3
+        self.cross_len_y = 155e3
+        self.cross_width_y = 60e3  # from C11 sim
+        self.cross_gnd_gap_y_list = np.array([20e3]*self.NQUBITS)
+        self.cross_gnd_gap_face_y = 20e3
 
         # readout line parameters
         self.ro_line_turn_radius: float = 100e3
@@ -435,39 +435,39 @@ class Design8Q(ChipDesign):
         TODO: This drawings sequence can be decoupled in the future.
         '''
         self.create_resonator_objects()
-        self.draw_xmons_and_resonators()
+        self.draw_xmons_and_resonators(res_idxs2Draw=[1,2,5])
         self.draw_readout_waveguide()
 
         self.draw_josephson_loops()
 
-        self.draw_microwave_drvie_lines()
-        self.draw_flux_control_lines()
+        # self.draw_microwave_drvie_lines()
+        # self.draw_flux_control_lines()
+        #
+        # self.draw_test_structures()
+        # self.draw_express_test_structures_pads()
+        # self.draw_bandages()
+        # self.draw_recess()
 
-        self.draw_test_structures()
-        self.draw_express_test_structures_pads()
-        self.draw_bandages()
-        self.draw_recess()
-
-        self.add_chip_marking(chip_name="8Q_0.0.0.1")
-
-        self.region_el.merge()
-        self.draw_el_protection()
-
-        self.draw_photo_el_marks()
-        self.draw_bridges()
-        self.draw_pinning_holes()
-        # v.0.3.0.8 p.12 - ensure that contact pads has no holes
-        for contact_pad in self.contact_pads:
-            contact_pad.place(self.region_ph)
-        self.extend_photo_overetching()
-        self.inverse_destination(self.region_ph)
-        # convert to gds acceptable polygons (without inner holes)
-        self.draw_cut_marks()
-        self.region_ph.merge()
-        self.resolve_holes()
-        # convert to litograph readable format. Litograph can't handle
-        # polygons with more than 200 vertices.
-        self.split_polygons_in_layers(max_pts=180)
+        # self.add_chip_marking(chip_name="8Q_0.0.0.1")
+        #
+        # self.region_el.merge()
+        # self.draw_el_protection()
+        #
+        # self.draw_photo_el_marks()
+        # self.draw_bridges()
+        # self.draw_pinning_holes()
+        # # v.0.3.0.8 p.12 - ensure that contact pads has no holes
+        # for contact_pad in self.contact_pads:
+        #     contact_pad.place(self.region_ph)
+        # self.extend_photo_overetching()
+        # self.inverse_destination(self.region_ph)
+        # # convert to gds acceptable polygons (without inner holes)
+        # self.draw_cut_marks()
+        # self.region_ph.merge()
+        # self.resolve_holes()
+        # # convert to litograph readable format. Litograph can't handle
+        # # polygons with more than 200 vertices.
+        # self.split_polygons_in_layers(max_pts=180)
 
     def draw_for_res_f_and_Q_sim(self, res_idxs2Draw):
         """
@@ -547,7 +547,7 @@ class Design8Q(ChipDesign):
         self.lv.zoom_fit()
 
     def draw_chip(self):
-        self.region_bridges2.insert(self.chip_box)
+        # self.region_bridges2.insert(self.chip_box)
 
         self.region_ph.insert(self.chip_box)
         for contact_pad in self.contact_pads:
@@ -774,12 +774,16 @@ class Design8Q(ChipDesign):
             # print(self.cross_len_x)
             # print(self.cross_width_x)
             # print(self.cross_len_y)
-            # print()
+            # print()4
             # place xmon
             # self.xmons[-1].place(self.region_ph)
             # place resonator with fork. May corrupt xmon cross due to
             # ground space around fork teeth.
+            if res_idx == 5:
+                xmonCross.place(self.region_ph)
             res.place(self.region_ph)
+            if res_idx == 5:
+                xmonCross_corrected.place(self.region_ph)
             # repair xmon cross
             # xmonCross_corrected.place(self.region_ph)
 
@@ -872,6 +876,8 @@ class Design8Q(ChipDesign):
         pars_local.SQB_dy = 0
 
         for xmon_idx, xmon in enumerate(self.xmons):
+            if xmon_idx != 5:
+                continue
             if xmon_idx < 4:  # 1st group
                 squid_center = xmon.cpw_bempt.center() + \
                                DVector(0, self.squid_vertical_shifts_list[
@@ -2891,26 +2897,26 @@ def simulate_md_Cg(md_idx, q_idx, resolution=(5e3, 5e3)):
 if __name__ == "__main__":
     ''' draw and show design for manual design evaluation '''
     FABRICATION.OVERETCHING = 0.0e3
-    # design = Design8Q("testScript")
-    # design.draw()
-    # design.show()
-    # design.save_as_gds2(
-    #     os.path.join(
-    #         PROJECT_DIR,
-    #         "8Q_0.0.0.1_A482_A483_overetching_0um.gds"
-    #     )
-    # )
-    #
-    # FABRICATION.OVERETCHING = 0.5e3
-    # design = Design8Q("testScript")
-    # design.draw()
-    # design.show()
-    # design.save_as_gds2(
-    #     os.path.join(
-    #         PROJECT_DIR,
-    #         "8Q_0.0.0.1_A482_A483_overetching_0um5.gds"
-    #     )
-    # )
+    design = Design8Q("testScript")
+    design.draw()
+    design.show()
+    design.save_as_gds2(
+        os.path.join(
+            PROJECT_DIR,
+            "FCK_0.0.0.1_overetching_0um.gds"
+        )
+    )
+
+    FABRICATION.OVERETCHING = 0.15e3
+    design = Design8Q("testScript")
+    design.draw()
+    design.show()
+    design.save_as_gds2(
+        os.path.join(
+            PROJECT_DIR,
+            "FCK_0.0.0.1_overetching_0um15.gds"
+        )
+    )
 
     ''' C_qr sim '''
     # simulate_Cqr(resolution=(1e3, 1e3), mode="Cq")
@@ -2925,7 +2931,7 @@ if __name__ == "__main__":
     #         simulate_md_Cg(md_idx=md_idx, q_idx=q_idx, resolution=(1e3, 1e3))
 
     ''' Resonators Q and f sim'''
-    simulate_resonators_f_and_Q(resolution=(2e3, 2e3))
+    # simulate_resonators_f_and_Q(resolution=(2e3, 2e3))
 
     ''' Resonators Q and f when placed together'''
     # simulate_resonators_f_and_Q_together()
