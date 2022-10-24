@@ -443,8 +443,7 @@ class Design8Q(ChipDesign):
         # self.draw_microwave_drvie_lines()
         # self.draw_flux_control_lines()
         #
-        # self.draw_test_structures()
-        # self.draw_express_test_structures_pads()
+        self.draw_test_structures()
         # self.draw_bandages()
         # self.draw_recess()
 
@@ -1372,7 +1371,7 @@ class Design8Q(ChipDesign):
             test_struct1.place(self.region_ph)
 
             text_reg = pya.TextGenerator.default_generator().text(
-                "56 nA", 0.001, 25, False, 0, 0)
+                "14.5 nA", 0.001, 25, False, 0, 0)
             text_bl = test_struct1.empty_rectangle.p1 - DVector(0, 20e3)
             text_reg.transform(
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
@@ -1402,7 +1401,7 @@ class Design8Q(ChipDesign):
             test_struct2.place(self.region_ph)
 
             text_reg = pya.TextGenerator.default_generator().text(
-                "11 nA", 0.001, 25, False, 0, 0)
+                "48.3 nA", 0.001, 25, False, 0, 0)
             text_bl = test_struct2.empty_rectangle.p1 - DVector(0, 20e3)
             text_reg.transform(
                 ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
@@ -1422,108 +1421,60 @@ class Design8Q(ChipDesign):
             self.test_squids.append(test_jj)
             test_jj.place(self.region_el)
 
-            # test structure for bridge DC contact (#3)
-            test_struct3 = TestStructurePadsSquare(
-                struct_center + DPoint(0.6e6, 0))
-            test_struct3.place(self.region_ph)
-            text_reg = pya.TextGenerator.default_generator().text(
-                "3xBrg 100um", 0.001, 25, False, 0, 0
-            )
-            text_bl = test_struct3.empty_rectangle.p1 - DVector(0, 20e3)
-            text_reg.transform(
-                ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y)
-            )
-            self.region_ph -= text_reg
-
-            test_bridges = []
-            for i in range(3):
-                bridge = Bridge1(
-                    test_struct3.center + DPoint(50e3 * (i - 1), 0),
-                    gnd2gnd_dy=100e3,
-                    gnd_touch_dx=20e3
-                )
-                test_bridges.append(bridge)
-                bridge.place(self.region_bridges1, region_id="bridges_1")
-                bridge.place(self.region_bridges2, region_id="bridges_2")
-
-        # bandages test structures
-        if isinstance(self.chip, CHIP_16p5x16p5_20pads):
-            test_dc_el2_centers = [
-                DPoint(3.3e6, 9.0e6),
-                DPoint(13.3e6, 9.0e6),
-                DPoint(13.3e6, 7.1e6)
-            ]
-        elif isinstance(self.chip, CHIP_14x14_20pads):
-            test_dc_el2_centers = [
-                DPoint(1.8e6, 7.8e6),
-                DPoint(12.5e6, 7.8e6),
-                DPoint(12.5e6, 6.2e6)
-            ]
-        for struct_center in test_dc_el2_centers:
-            test_struct1 = TestStructurePadsSquare(struct_center)
-            test_struct1.place(self.region_ph)
-            text_reg = pya.TextGenerator.default_generator().text(
-                "Bandage", 0.001, 40, False, 0, 0)
-            text_bl = test_struct1.empty_rectangle.origin + DPoint(
-                test_struct1.gnd_gap, -4 * test_struct1.gnd_gap
-            )
-            text_reg.transform(
-                ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
-            self.region_ph -= text_reg
-
-            rec_width = 10e3
-            rec_height = test_struct1.pads_gap + 2 * rec_width
-            p1 = struct_center - DVector(rec_width / 2, rec_height / 2)
-            dc_rec = Rectangle(p1, rec_width, rec_height)
-            dc_rec.place(self.dc_bandage_reg)
-
-    def draw_express_test_structures_pads(self):
-        el_pad_height = 30e3
-        el_pad_width = 40e3
-        for squid, test_pad in zip(
-                self.test_squids,
-                self.test_squids_pads
-        ):
-            if squid.squid_params.SQRBJJ_dy == 0:
-                ## only left JJ is present ##
-                # test pad to the right
-                p1 = DPoint(test_pad.top_rec.p2.x, test_pad.center.y)
-                p2 = p1 + DVector(-el_pad_width, 0)
-                tp_cpw = CPW(
-                    start=p1, end=p2,
-                    width=el_pad_height, gap=0
-                )
-                tp_cpw.place(self.region_el)
-
-                p3 = squid.TCW.center()
-                p4 = tp_cpw.center()
-                etc3 = CPW(
-                    start=p3, end=p4,
-                    width=1e3,  # TODO: hardcoded value
-                    gap=0
-                )
-                etc3.place(self.region_el)
-
-                # test pad on the left
-                p1 = DPoint(test_pad.top_rec.p1.x, test_pad.center.y)
-                p2 = p1 + DVector(el_pad_width, 0)
-                tp_cpw = CPW(
-                    start=p1, end=p2,
-                    width=el_pad_height, gap=0
-                )
-                tp_cpw.place(self.region_el)
-
-                p3 = squid.BC0.center()
-                p4 = tp_cpw.center()
-                etc3 = CPW(
-                    start=p3, end=p4,
-                    width=1e3,  # TODO: hardcoded value
-                    gap=0
-                )
-                etc3.place(self.region_el)
-
-            # elif squid.squid_params.SQLBJJ_dy == 0:
-            #     pass
+        #     # test structure for bridge DC contact (#3)
+        #     test_struct3 = TestStructurePadsSquare(
+        #         struct_center + DPoint(0.6e6, 0))
+        #     test_struct3.place(self.region_ph)
+        #     text_reg = pya.TextGenerator.default_generator().text(
+        #         "3xBrg 100um", 0.001, 25, False, 0, 0
+        #     )
+        #     text_bl = test_struct3.empty_rectangle.p1 - DVector(0, 20e3)
+        #     text_reg.transform(
+        #         ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y)
+        #     )
+        #     self.region_ph -= text_reg
+        #
+        #     test_bridges = []
+        #     for i in range(3):
+        #         bridge = Bridge1(
+        #             test_struct3.center + DPoint(50e3 * (i - 1), 0),
+        #             gnd2gnd_dy=100e3,
+        #             gnd_touch_dx=20e3
+        #         )
+        #         test_bridges.append(bridge)
+        #         bridge.place(self.region_bridges1, region_id="bridges_1")
+        #         bridge.place(self.region_bridges2, region_id="bridges_2")
+        #
+        # # bandages test structures
+        # if isinstance(self.chip, CHIP_16p5x16p5_20pads):
+        #     test_dc_el2_centers = [
+        #         DPoint(3.3e6, 9.0e6),
+        #         DPoint(13.3e6, 9.0e6),
+        #         DPoint(13.3e6, 7.1e6)
+        #     ]
+        # elif isinstance(self.chip, CHIP_14x14_20pads):
+        #     test_dc_el2_centers = [
+        #         DPoint(1.8e6, 7.8e6),
+        #         DPoint(12.5e6, 7.8e6),
+        #         DPoint(12.5e6, 6.2e6)
+        #     ]
+        # for struct_center in test_dc_el2_centers:
+        #     test_struct1 = TestStructurePadsSquare(struct_center)
+        #     test_struct1.place(self.region_ph)
+        #     text_reg = pya.TextGenerator.default_generator().text(
+        #         "Bandage", 0.001, 40, False, 0, 0)
+        #     text_bl = test_struct1.empty_rectangle.origin + DPoint(
+        #         test_struct1.gnd_gap, -4 * test_struct1.gnd_gap
+        #     )
+        #     text_reg.transform(
+        #         ICplxTrans(1.0, 0, False, text_bl.x, text_bl.y))
+        #     self.region_ph -= text_reg
+        #
+        #     rec_width = 10e3
+        #     rec_height = test_struct1.pads_gap + 2 * rec_width
+        #     p1 = struct_center - DVector(rec_width / 2, rec_height / 2)
+        #     dc_rec = Rectangle(p1, rec_width, rec_height)
+        #     dc_rec.place(self.dc_bandage_reg)
 
     def draw_bandages(self):
         """
