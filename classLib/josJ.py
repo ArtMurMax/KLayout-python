@@ -97,6 +97,7 @@ class AsymSquidParams:
             self.bot_wire_x = [bot_wire_x]
         else:
             self.bot_wire_x = bot_wire_x
+
         # squid loop top side width
         self.JJC = JJC
         self.SQT_dy = SQT_dy

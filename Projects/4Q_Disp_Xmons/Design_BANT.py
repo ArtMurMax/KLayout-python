@@ -725,10 +725,13 @@ class Design5QTest(ChipDesign):
         pars_local.bot_wire_x = [-dx, dx]
         pars_local.SQB_dy = 0
         for res_idx, xmon_cross in enumerate(self.xmons[:-2]):
-            pars_local.BC_dx = self.bandages_width_list[res_idx]
+            pars_local.BC_dx = [self.bandages_width_list[res_idx]]*len(
+                pars_local.bot_wire_x)
+            pars_local.BCW_dx = [pars_local.BCW_dx[0]]*len(
+                pars_local.bot_wire_x)
             pars_local.BC_dy = (self.bandages_height_list[res_idx])/2 + \
                                3.5e3 - 1e3
-            pars_local.TC_dx = pars_local.BC_dx
+            pars_local.TC_dx = pars_local.BC_dx[0]
             pars_local.TC_dy = (self.bandages_height_list[res_idx])/2 + \
                                3e3 - 1e3
             if res_idx % 2 == 0:  # above RO line
@@ -1118,7 +1121,7 @@ class Design5QTest(ChipDesign):
                 etc2.place(self.region_el)
 
                 # test pad expanded to the left
-                p1 = squid.BCW0.end
+                p1 = squid.BCW_list[0].end
                 p2 = p1 - DVector(10e3, 0)
                 etc3 = CPW(
                     start=p1, end=p2,
@@ -1157,7 +1160,7 @@ class Design5QTest(ChipDesign):
                 etc2.place(self.region_el)
 
                 # test pad expanded to the right
-                p1 = squid.BCW0.end
+                p1 = squid.BCW_list[0].end
                 p2 = p1 + DVector(10e3, 0)
                 etc3 = CPW(
                     start=p1, end=p2,
@@ -1209,7 +1212,7 @@ class Design5QTest(ChipDesign):
 
         # collect all bottom contacts
         for i, _ in enumerate(test_jj.squid_params.bot_wire_x):
-            BC = getattr(test_jj, "BC" + str(i))
+            BC = test_jj.BC_list[0]
             bot_bandage_reg = self._get_bandage_reg(BC.end, jjLoop_idx)
             bandages_regs_list.append(bot_bandage_reg)
             self.dc_bandage_reg += bot_bandage_reg
@@ -1247,7 +1250,7 @@ class Design5QTest(ChipDesign):
             self.region_ph -= recess_reg
 
             for i, _ in enumerate(squid.squid_params.bot_wire_x):
-                BC = getattr(squid, "BC"+str(i))
+                BC = squid.BC_list[0]
                 recess_reg = BC.metal_region.dup().size(-self.dc_cont_ph_clearance)
                 self.region_ph -= recess_reg
 
@@ -1851,5 +1854,5 @@ if __name__ == "__main__":
     design.draw()
     design.show()
 
-    simulate_resonators_f_and_Q()
+    # simulate_resonators_f_and_Q()
     # simulate_Cqr()
