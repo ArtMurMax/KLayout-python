@@ -3,7 +3,7 @@ from pya import Region, DPoint, Cell, Vector, Trans, DSimplePolygon
 
 from classLib._PROG_SETTINGS import PROGRAM
 
-from collections import OrderedDict
+from collections import OrderedDict, Iterable
 import numpy as np
 from numbers import Number
 from typing import Union
@@ -33,6 +33,9 @@ class ChipDesign:
         # basic regions for sample
         self.region_ph = Region()
         self.region_el = Region()
+
+        # box representing chip
+        self.chip_box = "not implemented"
 
         # this insures that lv and cv are valid objects
         if (self.lv == None):
@@ -119,6 +122,11 @@ class ChipDesign:
             self.__crop_box_in_region(self.region_el, box)
         else:
             self.__crop_box_in_region(region, box)
+            if not isinstance(region, Iterable):
+                self.__crop_box_in_region(region, box)
+            else:
+                for reg in region:
+                    self.__crop_box_in_region(reg, box)
 
     # Erases everything outside the box in width layer
     def __crop_box_in_region(self, region, box):
@@ -177,7 +185,7 @@ class ChipDesign:
 
         Parameters
         ----------
-        reg : rEGiOn
+        reg : Union[Region, Iterable[Region]]
             layer index, >0
         trans : Union[DcplxTrans, DTrans]
             transformation to perform
@@ -189,12 +197,33 @@ class ChipDesign:
         -------
         None
         """
-        reg.transform(trans)
+        if not isinstance(reg, Iterable):
+            reg.transform(trans)
+        else:
+            for r in reg:
+                r.transform(trans)
 
         if trans_ports:
             self.sonnet_ports = list(
                 DSimplePolygon(self.sonnet_ports).transform(trans).each_point()
             )
+
+    # def snap_to_origin(self, reg):
+    #     origin = DPoint(0, 0)
+    #     if not isinstance(reg, Iterable):
+    #         translation_vec = origin - reg.bbox().p1
+    #         self.transform_region(
+    #             reg,
+    #             ICplxTrans(translation_vec.x, translation_vec.y)
+    #         )
+    #     else:
+    #         for r in reg:
+    #             translation_vec = origin - r.bbox().p1
+    #             self.transform_region(
+    #                 r,
+    #                 ICplxTrans(translation_vec.x, translation_vec.y)
+    #             )
+
 
     # Save your design as GDS-II
     def save_as_gds2(self, filename):
