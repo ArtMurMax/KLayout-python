@@ -55,6 +55,10 @@ import  classLib.chipTemplates
 reload(classLib.chipTemplates)
 from classLib import chipTemplates
 
+import  classLib.purcell
+reload(classLib.purcell)
+from .purcell import *
+
 from . import marks
 reload(marks)
 from .marks import *
